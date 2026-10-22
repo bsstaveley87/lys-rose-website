@@ -33,6 +33,19 @@ test('silently ignores preferredDates from an old cached form',async()=>{
     assert.equal(text.includes('Saturday mornings'),false);
   }
 });
+test('accepts the full new parent experience and lists it in the signup email',async()=>{
+  const interest='The full new parent experience';
+  const signup=validateSignup({...valid,interests:['Milk bath',interest,'Other']});
+  assert.deepEqual(signup.interests,['Milk bath',interest,'Other']);
+  let sent;
+  const response=await handleRequest(request({...valid,interests:[interest]}),env,async value=>{sent=value;});
+  assert.equal(response.status,200);
+  assert.deepEqual(sent.interests,[interest]);
+  const {composeSignup}=await import('../worker/src/compose.ts');
+  const raw=composeSignup(signup);
+  const text=[...raw.matchAll(/Content-Transfer-Encoding: base64\r?\n\r?\n([A-Za-z0-9+/=\r\n]+)/g)].map(part=>Buffer.from(part[1].replace(/\s/g,''),'base64').toString('utf8')).join('\n');
+  assert.ok(text.includes('interests: Milk bath, The full new parent experience, Other'));
+});
 test('composes actual MIME email including Reply-To and Unicode fields',async()=>{
   const {composeSignup}=await import('../worker/src/compose.ts');
   const raw=composeSignup(validateSignup({...valid,parentName:'Élodie',babyAge:'0–3 months'}));

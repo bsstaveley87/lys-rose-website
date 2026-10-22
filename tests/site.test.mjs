@@ -133,7 +133,8 @@ test('versioned assets are referenced consistently',async()=>{
 });
 
 test('preview copy removes the flagged phrases and keeps the approved lines', async () => {
-  assert.deepEqual(interestOptions, ['Milk bath', 'Infant massage', 'Other']);
+  assert.deepEqual(interestOptions, ['Milk bath', 'Infant massage', 'The full new parent experience', 'Other']);
+  assert.deepEqual([...(await documentFor('index.html')).querySelectorAll('[name=interests]')].map(input => input.getAttribute('value')), interestOptions);
   const read = file => readFile(new URL(file, root), 'utf8');
   const home = await read('index.html');
   const about = await read('about/index.html');

@@ -25,7 +25,7 @@ a,button { transition:background-color .2s,color .2s,transform .2s; }
 .hero { min-height:620px; }
 .hero-media { position:absolute; inset:0; overflow:hidden; }
 .photo-frame { width:100%; height:100%; }
-.hero-photo { width:100%; height:100%; object-fit:cover; object-position:70% 60%; }
+.hero-photo { width:100%; height:100%; object-fit:cover; object-position:center; }
 .hero-inner { min-height:620px; padding-top:48px; padding-bottom:80px; }
 .hero-copy { gap:24px; }
 .hero-lockup { width:260px; }
@@ -66,6 +66,10 @@ details[open] [data-plus] { transform:rotate(45deg); }
 #site-menu { position:fixed; inset:0; width:100%; max-width:none; height:100%; max-height:none; margin:0; padding:24px clamp(20px,6vw,100px); overflow-y:auto; border:0; background:var(--cream); color:var(--ink); }
 #site-menu::backdrop { background:var(--cream); }
 .menu-inner { max-width:900px; margin:auto; display:flex; align-items:flex-start; flex-direction:column; gap:14px; }
+.menu-logo-link { display:inline-flex; line-height:0; margin:8px 0 4px; }
+.menu-logo { width:80px; height:80px; }
+.about-portrait { margin:0 0 32px; max-width:420px; }
+.about-portrait img { display:block; width:100%; height:auto; border:1px solid var(--champagne); background:var(--stone); }
 .menu-close { align-self:flex-end; min-height:44px; background:none; border:0; letter-spacing:.18em; color:var(--ink); cursor:pointer; }
 .menu-inner nav { display:flex; flex-direction:column; margin:4px 0 12px; }
 .menu-inner nav a { font:400 clamp(32px,7svh,64px)/1.2 'Cormorant Garamond',Georgia,serif; min-height:44px; padding:3px 0; text-decoration:none; }
@@ -115,13 +119,24 @@ body.menu-open { overflow:hidden; }
   .menu-toggle { width:44px; justify-content:center; padding:0; }
   .menu-toggle > span { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
   .hero { min-height:0; }
-  .hero-media { position:relative; inset:auto; aspect-ratio:1536 / 1022; }
+  .hero-media { position:relative; inset:auto; aspect-ratio:16 / 9; }
   .hero-parallax { inset:0; }
   .hero-photo { object-fit:contain; object-position:center; }
   .hero-scrim { display:none; }
-  .hero-inner { display:block; min-height:0; padding:24px 16px 40px; }
+  .hero-inner { display:block; min-height:0; padding:0 16px 40px; }
   .hero-copy { gap:18px; }
-  .hero-lockup { display:none; }
+  .hero-lockup {
+    --hero-logo-width:min(200px, 56vw);
+    /* 91px is the fleur-de-lis height in the 592px-wide lockup. */
+    --hero-fleur:calc(var(--hero-logo-width) * 91 / 592);
+    display:block;
+    width:var(--hero-logo-width);
+    height:auto;
+    margin-top:var(--hero-fleur);
+    margin-right:var(--hero-fleur);
+    margin-bottom:calc(var(--hero-fleur) - 18px);
+    margin-left:var(--hero-fleur);
+  }
   .hero-tagline { font-size:clamp(36px,9vw,48px); order:0; }
   .hero-copy .primary-button { order:1; min-height:52px; }
   .hero-intro { order:2; font-size:17px; }

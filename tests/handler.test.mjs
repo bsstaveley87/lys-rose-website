@@ -33,18 +33,19 @@ test('silently ignores preferredDates from an old cached form',async()=>{
     assert.equal(text.includes('Saturday mornings'),false);
   }
 });
-test('accepts the full new parent experience and lists it in the signup email',async()=>{
-  const interest='The full new parent experience';
-  const signup=validateSignup({...valid,interests:['Milk bath',interest,'Other']});
-  assert.deepEqual(signup.interests,['Milk bath',interest,'Other']);
+test('accepts the new interests and lists them in the signup email',async()=>{
+  const interests=['Milk bath','Guided baby face care','The full new parent experience','Other'];
+  const signup=validateSignup({...valid,interests});
+  assert.deepEqual(signup.interests,interests);
   let sent;
-  const response=await handleRequest(request({...valid,interests:[interest]}),env,async value=>{sent=value;});
+  const response=await handleRequest(request({...valid,interests:['Guided baby face care']}),env,async value=>{sent=value;});
   assert.equal(response.status,200);
-  assert.deepEqual(sent.interests,[interest]);
+  assert.deepEqual(sent.interests,['Guided baby face care']);
   const {composeSignup}=await import('../worker/src/compose.ts');
   const raw=composeSignup(signup);
   const text=[...raw.matchAll(/Content-Transfer-Encoding: base64\r?\n\r?\n([A-Za-z0-9+/=\r\n]+)/g)].map(part=>Buffer.from(part[1].replace(/\s/g,''),'base64').toString('utf8')).join('\n');
-  assert.ok(text.includes('interests: Milk bath, The full new parent experience, Other'));
+  assert.ok(text.includes('interests: Milk bath, Guided baby face care, The full new parent experience, Other'));
+  assert.equal(text.toLowerCase().includes('facial'),false);
 });
 test('composes actual MIME email including Reply-To and Unicode fields',async()=>{
   const {composeSignup}=await import('../worker/src/compose.ts');

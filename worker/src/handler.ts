@@ -48,8 +48,8 @@ export async function handleRequest(request: Request, env: Pick<Env,'LIMITER'>, 
     await send(signup);
     console.log(JSON.stringify({event:'waitlist_email_accepted'}));
     return reply({success:true});
-  } catch {
-    console.error(JSON.stringify({event:'waitlist_email_failed'}));
+  } catch(error) {
+    console.error(JSON.stringify({event:'waitlist_email_failed',message:error instanceof Error?error.message.replace(/[^\s@]+@[^\s@]+/g,'[email]'):'Unknown error'}));
     return reply({error:'Your signup could not be sent. Please try again, or email hello@lysrosebabyspa.com.'},502);
   }
 }

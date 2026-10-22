@@ -12,3 +12,12 @@ test('rejects disallowed origins without sending',async()=>{const r=await handle
 test('limits submissions and rejects oversized payload',async()=>{assert.equal((await handleRequest(request(),{LIMITER:{limit:async()=>({success:false})}},async()=>assert.fail())).status,429);assert.equal((await handleRequest(request({...valid,parentName:'x'.repeat(9000)}),env,async()=>assert.fail())).status,413);});
 test('honeypot does not send',async()=>{assert.equal((await handleRequest(request({...valid,website:'spam'}),env,async()=>assert.fail())).status,200);});
 test('CORS preflight and methods',async()=>{assert.equal((await handleRequest(request(valid,undefined,'OPTIONS'),env,async()=>assert.fail())).status,204);assert.equal((await handleRequest(request(valid,undefined,'GET'),env,async()=>assert.fail())).status,405);});
+
+test('composes actual MIME email including Reply-To and Unicode fields',async()=>{
+  const {composeSignup}=await import('../worker/src/compose.ts');
+  const raw=composeSignup(validateSignup({...valid,parentName:'Élodie',babyAge:'0–3 months'}));
+  assert.match(raw,/Reply-To: <hello@lysrosebabyspa.com>/);
+  assert.match(raw,/Message-ID: <[a-f0-9-]+@forms.lysrosebabyspa.com>/);
+  assert.match(raw,/Content-Transfer-Encoding: base64/);
+  assert.ok(raw.includes(Buffer.from('parentName: Élodie\nemail: hello@lysrosebabyspa.com').toString('base64').slice(0,28)));
+});

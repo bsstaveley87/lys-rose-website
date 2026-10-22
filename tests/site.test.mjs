@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile,stat} from 'node:fs/promises';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
-import {validateFields, interestOptions} from '../assets/validation.js';
+import {validateFields, interestOptions, limits} from '../assets/validation.js';
 const approved = {
   '/': {
     title: 'Lys Rose Baby Spa · Fort Lauderdale',
@@ -93,6 +93,20 @@ test('form controls have explicit accessible labels and inline error association
 test('validation accepts real-world names, optional blanks, international phone and ZIP+4',()=>{
   for(const parentName of ['Élodie O’Neill','李','A','Anne-Marie','João'])assert.deepEqual(validateFields({parentName,email:'hello+waitlist@lysrosebabyspa.com',zip:'33301-1234',phone:'+1 (954) 555-0100'}),{});
   assert.deepEqual(validateFields({parentName:'Ben',email:'ben@example.com',zip:'',phone:'',interests:[]}),{});
+});
+test('preferred dates and preferred times are not collected',async()=>{
+  assert.equal(Object.hasOwn(limits,'preferredDates'),false);
+  assert.equal(Object.hasOwn(limits,'preferredTimes'),false);
+  const doc=await documentFor('index.html');
+  const html=doc.documentElement.outerHTML;
+  for (const phrase of ['preferredDates','preferredTimes','PREFERRED DATES','PREFERRED TIMES']) assert.equal(html.includes(phrase),false,phrase);
+  assert.equal(doc.querySelector('#waitlist-form [name=preferredDates]'),null);
+  assert.equal(doc.querySelector('#waitlist-form [name=preferredTimes]'),null);
+  const referral=doc.querySelector('#waitlist-form [name=referral]');
+  assert.equal(referral.tagName,'INPUT');
+  assert.equal(referral.getAttribute('type'),'text');
+  assert.deepEqual(validateFields({parentName:'Ben',email:'ben@example.com',preferredDates:'Saturday\n'+'x'.repeat(500)}),{});
+  assert.deepEqual(validateFields({parentName:'Ben',email:'ben@example.com',preferredDates:['Saturday']}),{});
 });
 test('validation rejects whitespace names, malformed emails, ZIP and phone, wrong types, oversized values',()=>{
   const good={parentName:'Ben',email:'ben@example.com',interests:[]};

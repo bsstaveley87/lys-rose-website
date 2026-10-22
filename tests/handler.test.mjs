@@ -21,3 +21,20 @@ test('composes actual MIME email including Reply-To and Unicode fields',async()=
   assert.match(raw,/Content-Transfer-Encoding: base64/);
   assert.ok(raw.includes(Buffer.from('parentName: Élodie\nemail: hello@lysrosebabyspa.com').toString('base64').slice(0,28)));
 });
+
+test('server reports field-specific optional detail errors',async()=>{
+  const r=await handleRequest(request({...valid,zip:'bad',phone:'123'}),env,async()=>assert.fail());
+  assert.equal(r.status,400);const body=await r.json();assert.ok(body.fields.zip);assert.ok(body.fields.phone);
+});
+test('server accepts native non-JavaScript form submission and returns an HTML confirmation',async()=>{
+  const r=await handleRequest(new Request('https://forms.lysrosebabyspa.com/waitlist',{method:'POST',headers:{Origin:'https://lysrosebabyspa.com','Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({parentName:'Ben',email:'hello@lysrosebabyspa.com'})}),env,async()=>{});
+  assert.equal(r.status,200);assert.match(r.headers.get('Content-Type'),/text\/html/);assert.match(await r.text(),/Thank you, you're on the list/);
+});
+test('rate limit advertises retry delay; unavailable limiter fails safely',async()=>{
+  const limited=await handleRequest(request(),{LIMITER:{limit:async()=>({success:false})}},async()=>assert.fail());
+  assert.equal(limited.headers.get('Retry-After'),'60');
+  const unavailable=await handleRequest(request(),{LIMITER:{limit:async()=>{throw Error('offline');}}},async()=>assert.fail());assert.equal(unavailable.status,503);
+});
+test('untrusted origins receive no CORS authorization',async()=>{
+  const r=await handleRequest(request(valid,'https://spam.example'),env,async()=>assert.fail());assert.equal(r.headers.get('Access-Control-Allow-Origin'),null);
+});

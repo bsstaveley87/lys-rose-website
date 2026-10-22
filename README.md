@@ -1,25 +1,46 @@
 # Lys Rose Baby Spa
 
-Static website hosted on GitHub Pages at https://lysrosebabyspa.com, with Cloudflare proxy HTTPS and a Cloudflare Worker for waitlist email delivery.
+Website: https://lysrosebabyspa.com. GitHub Pages serves the site; Cloudflare supplies public HTTPS, redirects and the waitlist endpoint.
 
-Cloudflare redirects HTTP to HTTPS and www to the apex domain. The root and www web DNS records are proxied; email records are separate. The existing Cloudflare Full TLS setting encrypts the origin connection. GitHub’s separate origin certificate can finish provisioning independently; public TLS is handled by Cloudflare.
+## Build and validate
 
-## Site
+Requires Node.js 24 or newer for the site checks. Run:
 
-Home, About, Services, FAQ and Contact share a stylesheet and progressive JavaScript. The homepage uses the supplied Option B layout and Oct 21 copy. Hero zoom, scroll parallax, staggered entrances, section reveals, animated menu and disclosure controls respect reduced motion preferences. Content and links remain available without animation.
+```
+npm ci
+npm run build
+npm test
+python3 -m http.server 4174 --directory _site
+```
 
-Run `npm run build` to create `_site/`. GitHub Actions publishes only that directory; worker source, tests and internal notes are not part of the deployed site. Edit HTML and assets directly. To preview, run `python3 -m http.server 4173 --directory _site` after building.
+GitHub Actions runs a clean install, build and tests before deploying `_site/`. Source pages contain body content; the homepage supplies the shared header, menu and footer for every page; `site.config.mjs` and `scripts/build.mjs` generate metadata, schema, sitemap, robots and versioned assets. `assets/reference.css` holds named components adapted from the supplied Option B HTML; `assets/site.css` owns responsive layouts and interaction states. Edit these source files, never `_site/`.
+
+## Browser audits
+
+`npm run audit:prepare` builds the site and installs local-only read-only audit harnesses into `_site/__audit__/`. Serve `_site` and open `/__audit__/` for five pages at five screen sizes, or `/__audit__/accessibility.html` for axe-core checks at mobile and desktop widths. A normal build excludes all audit tools. These checks run in the browser; they are not a Lighthouse score or a substitute for real-device and assistive-technology testing. See `AUDIT.md` for scope and findings.
 
 ## Waitlist
 
-The browser posts to https://forms.lysrosebabyspa.com/waitlist. The Cloudflare Worker validates every field, restricts browser origins, limits requests per IP, checks a honeypot, and sends to the verified hello@lysrosebabyspa.com destination. Replies go to the submitter. The success message appears only after Cloudflare accepts the email. Delivery to the final mailbox still depends on receiving mail servers.
+The browser and Worker share `assets/validation.js`. Required name/email and optional phone, ZIP, age and area are checked consistently. Invalid fields receive inline errors, an error summary and focus. Loading, rate limit, provider and network errors preserve entered values. JavaScript-free form POSTs receive an HTML confirmation or error page.
 
-Every email includes the submission timestamp and `smsConsent: false`. Per Ben's instruction for the initial launch, SMS consent and privacy policy links are omitted. No SMS is sent. No allergies are collected. There is no separate signup database: the hello inbox is the signup record. A future marketing platform must handle unsubscribe requests and bulk email.
+The Worker posts to the restricted, verified destination hello@lysrosebabyspa.com through Cloudflare Email Routing. Replies go to the submitter. It applies an origin allowlist, a honeypot, bounded input and a three-per-minute IP rate limiter. Success appears only after the email provider accepts the message. Delivery to the final inbox still depends on mail servers. The inbox is the signup record; there is no separate signup database or automated marketing system.
 
-Worker commands: `cd worker && npm ci && npm run check && cf deploy --dry-run && cf deploy`. The project uses `cloudflare.config.ts` and the cf CLI. Google Workspace MX and SPF records at the root domain are retained; Cloudflare Email Routing is enabled on the forms subdomain. Run `npm test` from the repository root for validation, failure, CORS, rate limit and honeypot checks.
+Every email records its server timestamp and `smsConsent: false`. SMS is disabled and allergies are not collected. A future newsletter platform must manage subscriptions and unsubscribe requests.
 
-## Images
+Worker changes require a separate deployment:
 
-All four photography assets are supplied AI concept images, replace with real photos when available. The current root-folder photos are used to match Claude’s supplied Option B HTML: `baby_spa_bath_hero_standalone.png`, `Cozy Baby Spa Feet and Rose Petals.png`, `baby_spa_product_pouch_standalone.png`, and `Cozy Baby Spa Retreat.png`. These replace the previously selected daylight variants, per Ben’s direction. Each has responsive WebP sizes up to its source resolution. The supplied desktop and phone reference governs image orientation, hero gradients, typography, spacing and the staggered detail row. Logo assets are supplied PNGs; replace with the designer's SVG files when available. No AI-generated portrait is presented as the founder's daughter; the optional About portrait is omitted.
+```
+cd worker
+npm ci
+npm run check
+cf deploy --dry-run
+cf deploy
+```
 
-The supplied creative references and business/legal documents remain outside this repository.
+The project uses `cloudflare.config.ts` and the cf CLI. Google Workspace root MX/SPF/DKIM records are retained. Cloudflare Email Routing uses the forms subdomain. The existing Full TLS setting encrypts the origin connection; GitHub must finish its origin certificate before switching to Full (strict). Cloudflare's public certificate is independent.
+
+## Visual assets and content
+
+The supplied root-folder AI concept photos are `baby_spa_bath_hero_standalone.png`, `Cozy Baby Spa Feet and Rose Petals.png`, `baby_spa_product_pouch_standalone.png` and `Cozy Baby Spa Retreat.png`. Responsive WebP versions preserve source proportions in the detail row. Mobile separates the full bath photo from text; desktop uses an image background with a high-contrast gradient. No generated portrait is presented as the founder's daughter. Replace concept photos with real photographs when available.
+
+The founder/session copy and footer disclaimer remain as supplied. Titles and descriptions are managed centrally. Structured data uses visible facts and FAQ answers; it adds no fabricated address, venue, price, rating or availability. The source creative and business/legal documents remain outside the repository.

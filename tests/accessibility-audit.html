@@ -1,0 +1,14 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Accessibility audit</title><h1>Accessibility audit</h1><div id="results"></div><script>
+for(const path of ['/','/about/','/services/','/faq/','/contact/'])for(const width of [390,1440]){
+ const article=document.createElement('article');const pre=document.createElement('pre');pre.textContent=`Loading ${path} at ${width}`;article.append(pre);
+ const frame=document.createElement('iframe');frame.src=path;frame.width=width;frame.height=844;frame.title=`${path} at ${width}`;frame.style.transform=`scale(${Math.min(1,330/width)})`;frame.style.transformOrigin='top left';article.append(frame);document.querySelector('#results').append(article);
+ frame.addEventListener('load',async()=>{
+  const d=frame.contentDocument;await d.fonts.ready;const script=d.createElement('script');script.src='/__audit__/axe.min.js';d.head.append(script);
+  script.onload=async()=>{
+   try{await Promise.all(d.getAnimations().filter(a=>a.effect?.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{})));const result=await frame.contentWindow.axe.run(d,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa','wcag22aa','best-practice']}});
+    pre.textContent=JSON.stringify({path,width,passes:result.passes.length,violations:result.violations.map(v=>({id:v.id,impact:v.impact,description:v.description,nodes:v.nodes.map(n=>({html:n.html,target:n.target,failure:n.failureSummary}))})),incomplete:result.incomplete.map(v=>v.id)},null,2);pre.dataset.done='true';
+   }catch(error){pre.textContent=JSON.stringify({path,width,error:error.message});pre.dataset.done='true';}
+  };
+ });
+}
+</script></html>

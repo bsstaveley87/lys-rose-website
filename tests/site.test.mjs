@@ -1,0 +1,96 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile,stat} from 'node:fs/promises';
+import {parseHTML} from 'linkedom';
+import {site,pages} from '../site.config.mjs';
+import {validateFields} from '../assets/validation.js';
+const root=new URL('../_site/',import.meta.url);
+const documentFor=async file=>parseHTML(await readFile(new URL(file,root),'utf8')).document;
+const titles=new Set();
+for(const page of pages) test(`${page.path}: indexable HTML, SEO, structured data, assets and links`,async()=>{
+  const doc=await documentFor(page.file);
+  assert.equal(doc.documentElement.lang,'en');
+  const title=doc.querySelector('title').textContent;
+  assert.ok(title.length>=20&&title.length<=70);assert.ok(!titles.has(title));titles.add(title);
+  assert.equal(doc.querySelectorAll('h1').length,1);
+  const description=doc.querySelector('meta[name=description]').content;
+  assert.ok(description.length>=80&&description.length<=190);
+  assert.equal(doc.querySelector('link[rel=canonical]').href,site.origin+page.path);
+  assert.match(doc.querySelector('meta[name=robots]').content,/index,follow/);
+  assert.equal(doc.querySelector('meta[property="og:title"]').content,title);
+  assert.equal(doc.querySelector('meta[name="twitter:title"]').content,title);
+  assert.equal(doc.querySelector('meta[property="og:image:width"]').content,'1200');
+  assert.equal(doc.querySelector('meta[property="og:image:height"]').content,'630');
+  const data=JSON.parse(doc.querySelector('script[type="application/ld+json"]').textContent);
+  assert.ok(data['@graph'].some(x=>x['@type']==='Organization'));
+  assert.ok(data['@graph'].some(x=>x['@type']==='WebSite'));
+  assert.ok(doc.querySelector('.header-waitlist[href="/#waitlist"]'));
+  assert.ok(doc.querySelector('noscript nav'));
+  const ids=[...doc.querySelectorAll('[id]')].map(el=>el.id);assert.equal(ids.length,new Set(ids).size);
+  for(const el of doc.querySelectorAll('a[href],img[src],link[href],script[src]')) {
+    const value=el.getAttribute('src')||el.getAttribute('href');
+    if(value.startsWith('mailto:')||value.includes('fonts.googleapis.com')||value.includes('fonts.gstatic.com')||value.startsWith('https://instagram.com'))continue;
+    const url=new URL(value,site.origin+page.path);
+    if(url.origin!==site.origin)continue;
+    let path=url.pathname.slice(1);if(!path||path.endsWith('/'))path+='index.html';
+    assert.ok((await stat(new URL(path,root))).isFile(),value);
+    if(url.hash) {
+      const target=await documentFor(path);
+      assert.ok(target.getElementById(url.hash.slice(1)),`Missing anchor ${value}`);
+    }
+  }
+  for(const img of doc.querySelectorAll('img')) {assert.ok(img.hasAttribute('alt'));assert.ok(+img.width>0&&+img.height>0);}
+});
+test('FAQ schema mirrors every visible answer exactly',async()=>{
+  const doc=await documentFor('faq/index.html');
+  const data=JSON.parse(doc.querySelector('script[type="application/ld+json"]').textContent);
+  const faq=data['@graph'].find(x=>x['@type']==='FAQPage');
+  const items=[...doc.querySelectorAll('.faq-item')];assert.equal(faq.mainEntity.length,items.length);assert.equal(items.length,15);
+  items.forEach((item,i)=>assert.equal(faq.mainEntity[i].acceptedAnswer.text,[...item.querySelectorAll('p')].map(p=>p.textContent.trim()).join('\n\n')));
+});
+test('form controls have explicit accessible labels and inline error associations',async()=>{
+  const doc=await documentFor('index.html');
+  for(const input of doc.querySelectorAll('#waitlist-form input:not([type=checkbox]):not([name=website]),#waitlist-form select')) {
+    assert.ok(doc.getElementById(input.getAttribute('aria-labelledby')));
+    assert.ok(doc.getElementById(input.getAttribute('aria-describedby')));
+    assert.ok(doc.querySelector(`label[for="${input.id}"]`));
+  }
+  assert.ok(doc.querySelector('[name=parentName][required]'));
+  assert.ok(doc.querySelector('[name=email][type=email][required]'));
+  assert.equal(doc.querySelector('[name=zip]').getAttribute('maxlength'),'10');
+});
+test('validation accepts real-world names, optional blanks, international phone and ZIP+4',()=>{
+  for(const parentName of ['Élodie O’Neill','李','A','Anne-Marie','João'])assert.deepEqual(validateFields({parentName,email:'hello+waitlist@lysrosebabyspa.com',zip:'33301-1234',phone:'+1 (954) 555-0100'}),{});
+  assert.deepEqual(validateFields({parentName:'Ben',email:'ben@example.com',zip:'',phone:'',interests:[]}),{});
+});
+test('validation rejects whitespace names, malformed emails, ZIP and phone, wrong types, oversized values',()=>{
+  const good={parentName:'Ben',email:'ben@example.com',interests:[]};
+  for(const [field,value] of [['parentName','   '],['parentName','1234'],['email','bad@'],['email','x..y@example.com'],['email','x@bad_domain.com'],['phone','call me'],['phone','1234'],['zip','abcde'],['zip','123456'],['email',['x@example.com']],['babyAge','6–12 months'],['area','invalid'],['referral','x'.repeat(201)]])assert.ok(validateFields({...good,[field]:value})[field],`${field}: ${value}`);
+});
+test('detail images preserve original aspect ratios rather than fixed-height crops',async()=>{
+  const doc=await documentFor('index.html');
+  assert.equal(doc.querySelectorAll('.detail-grid figure').length,3);
+  const css=await readFile(new URL('assets/site.css',root),'utf8');
+  assert.match(css,/\.detail-image\s*\{[^}]*height:auto/);
+  assert.match(css,/\.detail-grid figure\s*\{[^}]*aspect-ratio:auto/);
+  assert.ok(doc.querySelector('.hero-media .hero-photo'));
+});
+test('sitemap includes exactly the canonical pages and 404 is not indexed',async()=>{
+  const xml=await readFile(new URL('sitemap.xml',root),'utf8');
+  for(const page of pages)assert.ok(xml.includes(`<loc>${site.origin+page.path}</loc>`));
+  assert.equal((xml.match(/<url>/g)||[]).length,pages.length);
+  const doc=await documentFor('404.html');assert.equal(doc.querySelector('meta[name=robots]').content,'noindex,follow');
+});
+test('versioned assets are referenced consistently',async()=>{
+  const doc=await documentFor('index.html');
+  assert.match(doc.querySelector('script[type=module][src]').src,/site\.[a-f0-9]{12}\.js$/);
+  assert.ok([...doc.querySelectorAll('link[rel=stylesheet]')].some(x=>/site\.[a-f0-9]{12}\.css$/.test(x.href)));
+});
+
+test('brand text and hero overlay retain readable contrast',()=>{
+  const luminance=rgb=>rgb.map(x=>x/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4).reduce((sum,x,i)=>sum+x*[.2126,.7152,.0722][i],0);
+  const contrast=(a,b)=>(Math.max(luminance(a),luminance(b))+.05)/(Math.min(luminance(a),luminance(b))+.05);
+  const ink=[80,75,73];const cream=[255,251,250];const stone=[246,242,239];
+  assert.ok(contrast(ink,cream)>=4.5);assert.ok(contrast(ink,stone)>=4.5);
+  assert.ok(contrast(ink,cream.map(x=>x*.88))>=4.5);
+});

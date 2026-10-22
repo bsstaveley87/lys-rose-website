@@ -7,7 +7,9 @@ export class ValidationError extends Error {
 }
 export function validateSignup(raw: unknown): Signup {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new ValidationError({parentName:'Please enter your name.',email:'Please enter a valid email address.'});
-  const data = raw as Record<string,unknown>;
+  const data = {...(raw as Record<string,unknown>)};
+  // Cached pages can still post the removed preferred-dates field. Drop it so it is not validated, stored, or emailed.
+  delete data.preferredDates;
   const errors = validateFields(data);
   if (Object.keys(errors).length) throw new ValidationError(errors);
   const result: Signup = {};

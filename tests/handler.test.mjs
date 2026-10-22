@@ -13,6 +13,40 @@ test('limits submissions and rejects oversized payload',async()=>{assert.equal((
 test('honeypot does not send',async()=>{assert.equal((await handleRequest(request({...valid,website:'spam'}),env,async()=>assert.fail())).status,200);});
 test('CORS preflight and methods',async()=>{assert.equal((await handleRequest(request(valid,undefined,'OPTIONS'),env,async()=>assert.fail())).status,204);assert.equal((await handleRequest(request(valid,undefined,'GET'),env,async()=>assert.fail())).status,405);});
 
+test('silently ignores preferredDates from an old cached form',async()=>{
+  for(const preferredDates of ['Saturday mornings','x'.repeat(500)+'\nnext week',['Saturday'],12,{when:'Saturday'}]){
+    const signup=validateSignup({...valid,preferredDates});
+    assert.equal(Object.hasOwn(signup,'preferredDates'),false);
+  }
+  let sent;
+  const response=await handleRequest(request({...valid,preferredDates:'Saturday mornings\n'+'x'.repeat(400)}),env,async signup=>{sent=signup;});
+  assert.equal(response.status,200);
+  assert.equal(Object.hasOwn(sent,'preferredDates'),false);
+  assert.deepEqual(await response.json(),{success:true});
+  const form=await handleRequest(new Request('https://forms.lysrosebabyspa.com/waitlist',{method:'POST',headers:{Origin:'https://lysrosebabyspa.com','Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({parentName:'Ben',email:'hello@lysrosebabyspa.com',preferredDates:'next month'})}),env,async signup=>{assert.equal(Object.hasOwn(signup,'preferredDates'),false);});
+  assert.equal(form.status,200);
+  const {composeSignup}=await import('../worker/src/compose.ts');
+  const raw=composeSignup({...validateSignup(valid),preferredDates:'Saturday mornings'});
+  for(const part of raw.matchAll(/Content-Transfer-Encoding: base64\r?\n\r?\n([A-Za-z0-9+/=\r\n]+)/g)){
+    const text=Buffer.from(part[1].replace(/\s/g,''),'base64').toString('utf8');
+    assert.equal(text.includes('preferredDates'),false);
+    assert.equal(text.includes('Saturday mornings'),false);
+  }
+});
+test('accepts the new interests and lists them in the signup email',async()=>{
+  const interests=['Milk bath','Guided baby face care','The full new parent experience','Other'];
+  const signup=validateSignup({...valid,interests});
+  assert.deepEqual(signup.interests,interests);
+  let sent;
+  const response=await handleRequest(request({...valid,interests:['Guided baby face care']}),env,async value=>{sent=value;});
+  assert.equal(response.status,200);
+  assert.deepEqual(sent.interests,['Guided baby face care']);
+  const {composeSignup}=await import('../worker/src/compose.ts');
+  const raw=composeSignup(signup);
+  const text=[...raw.matchAll(/Content-Transfer-Encoding: base64\r?\n\r?\n([A-Za-z0-9+/=\r\n]+)/g)].map(part=>Buffer.from(part[1].replace(/\s/g,''),'base64').toString('utf8')).join('\n');
+  assert.ok(text.includes('interests: Milk bath, Guided baby face care, The full new parent experience, Other'));
+  assert.equal(text.toLowerCase().includes('facial'),false);
+});
 test('composes actual MIME email including Reply-To and Unicode fields',async()=>{
   const {composeSignup}=await import('../worker/src/compose.ts');
   const raw=composeSignup(validateSignup({...valid,parentName:'Élodie',babyAge:'0–3 months'}));

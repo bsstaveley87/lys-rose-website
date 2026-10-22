@@ -3,7 +3,29 @@ import assert from 'node:assert/strict';
 import {readFile,stat} from 'node:fs/promises';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
-import {validateFields} from '../assets/validation.js';
+import {validateFields, interestOptions, limits} from '../assets/validation.js';
+const approved = {
+  '/': {
+    title: 'Lys Rose Baby Spa · Fort Lauderdale',
+    description: "A guided session for parents and babies under 12 months: you'll learn infant massage, a warm floral milk bath and simple baby face care. Small group sessions in Fort Lauderdale. Join the waitlist.",
+  },
+  '/about/': {
+    title: 'About · Lys Rose Baby Spa',
+    description: "The story behind Lys Rose Baby Spa, named for founder Christy Zemour's daughter.",
+  },
+  '/services/': {
+    title: 'Services · Lys Rose Baby Spa',
+    description: "Small group baby spa sessions where you'll learn guided infant massage, a warm floral milk bath and guided baby face care with your own baby, plus light refreshments. Led by caring professionals from the world of babies and new parents. Fort Lauderdale.",
+  },
+  '/faq/': {
+    title: 'FAQ · Lys Rose Baby Spa',
+    description: 'Answers about Lys Rose sessions: who they are for, where they happen and how to join the waitlist.',
+  },
+  '/contact/': {
+    title: 'Contact · Lys Rose Baby Spa',
+    description: 'Say hello: hello@lysrosebabyspa.com · Instagram @lysrosebabyspa.',
+  },
+};
 const root=new URL('../_site/',import.meta.url);
 const documentFor=async file=>parseHTML(await readFile(new URL(file,root),'utf8')).document;
 const titles=new Set();
@@ -11,14 +33,23 @@ for(const page of pages) test(`${page.path}: indexable HTML, SEO, structured dat
   const doc=await documentFor(page.file);
   assert.equal(doc.documentElement.lang,'en');
   const title=doc.querySelector('title').textContent;
+  assert.equal(page.title, approved[page.path].title);
+  assert.equal(title, approved[page.path].title);
   assert.ok(title.length>=20&&title.length<=70);assert.ok(!titles.has(title));titles.add(title);
   assert.equal(doc.querySelectorAll('h1').length,1);
   const description=doc.querySelector('meta[name=description]').content;
-  assert.ok(description.length>=80&&description.length<=190);
+  assert.equal(page.description, approved[page.path].description);
+  assert.equal(description, approved[page.path].description);
   assert.equal(doc.querySelector('link[rel=canonical]').href,site.origin+page.path);
   assert.match(doc.querySelector('meta[name=robots]').content,/index,follow/);
   assert.equal(doc.querySelector('meta[property="og:title"]').content,title);
+  assert.equal(doc.querySelector('meta[property="og:description"]').content,description);
   assert.equal(doc.querySelector('meta[name="twitter:title"]').content,title);
+  assert.equal(doc.querySelector('meta[name="twitter:description"]').content,description);
+  assert.equal(doc.querySelector('.disclaimer').textContent, 'Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
+  assert.ok(doc.querySelector('#site-menu .menu-logo'));
+  assert.ok([...doc.querySelectorAll('#site-menu nav a')].some(link => link.textContent === 'Home' && link.getAttribute('href') === '/'));
+  assert.ok([...doc.querySelectorAll('noscript nav a')].some(link => link.textContent === 'Home'));
   assert.equal(doc.querySelector('meta[property="og:image:width"]').content,'1200');
   assert.equal(doc.querySelector('meta[property="og:image:height"]').content,'630');
   const data=JSON.parse(doc.querySelector('script[type="application/ld+json"]').textContent);
@@ -63,6 +94,20 @@ test('validation accepts real-world names, optional blanks, international phone 
   for(const parentName of ['Élodie O’Neill','李','A','Anne-Marie','João'])assert.deepEqual(validateFields({parentName,email:'hello+waitlist@lysrosebabyspa.com',zip:'33301-1234',phone:'+1 (954) 555-0100'}),{});
   assert.deepEqual(validateFields({parentName:'Ben',email:'ben@example.com',zip:'',phone:'',interests:[]}),{});
 });
+test('preferred dates and preferred times are not collected',async()=>{
+  assert.equal(Object.hasOwn(limits,'preferredDates'),false);
+  assert.equal(Object.hasOwn(limits,'preferredTimes'),false);
+  const doc=await documentFor('index.html');
+  const html=doc.documentElement.outerHTML;
+  for (const phrase of ['preferredDates','preferredTimes','PREFERRED DATES','PREFERRED TIMES']) assert.equal(html.includes(phrase),false,phrase);
+  assert.equal(doc.querySelector('#waitlist-form [name=preferredDates]'),null);
+  assert.equal(doc.querySelector('#waitlist-form [name=preferredTimes]'),null);
+  const referral=doc.querySelector('#waitlist-form [name=referral]');
+  assert.equal(referral.tagName,'INPUT');
+  assert.equal(referral.getAttribute('type'),'text');
+  assert.deepEqual(validateFields({parentName:'Ben',email:'ben@example.com',preferredDates:'Saturday\n'+'x'.repeat(500)}),{});
+  assert.deepEqual(validateFields({parentName:'Ben',email:'ben@example.com',preferredDates:['Saturday']}),{});
+});
 test('validation rejects whitespace names, malformed emails, ZIP and phone, wrong types, oversized values',()=>{
   const good={parentName:'Ben',email:'ben@example.com',interests:[]};
   for(const [field,value] of [['parentName','   '],['parentName','1234'],['email','bad@'],['email','x..y@example.com'],['email','x@bad_domain.com'],['phone','call me'],['phone','1234'],['zip','abcde'],['zip','123456'],['email',['x@example.com']],['babyAge','6–12 months'],['area','invalid'],['referral','x'.repeat(201)]])assert.ok(validateFields({...good,[field]:value})[field],`${field}: ${value}`);
@@ -87,6 +132,31 @@ test('versioned assets are referenced consistently',async()=>{
   assert.ok([...doc.querySelectorAll('link[rel=stylesheet]')].some(x=>/site\.[a-f0-9]{12}\.css$/.test(x.href)));
 });
 
+test('preview copy removes the flagged phrases and keeps the approved lines', async () => {
+  assert.deepEqual(interestOptions, ['Milk bath', 'Infant massage', 'Guided baby face care', 'The full new parent experience', 'Other']);
+  assert.deepEqual([...(await documentFor('index.html')).querySelectorAll('[name=interests]')].map(input => input.getAttribute('value')), interestOptions);
+  const read = file => readFile(new URL(file, root), 'utf8');
+  const home = await read('index.html');
+  const about = await read('about/index.html');
+  const services = await read('services/index.html');
+  const faq = await read('faq/index.html');
+  const all = home + about + services + faq;
+  for (const phrase of ['Mini photoshoot', 'À bientôt', 'experienced practitioner', 'Places in each small group are limited.', 'spots']) assert.equal(all.includes(phrase), false, phrase);
+  assert.ok(faq.includes('No. Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.'));
+  assert.ok(about.includes('See you soon'));
+  assert.ok(about.includes('White lilies and blush roses, for the lily in the Lys Rose name.'));
+  assert.ok(services.includes('Le Petit Rituel'));
+  assert.ok(services.includes('Slots are limited. Join the waitlist for early access to session reservations.'));
+  assert.ok(home.includes('FORT LAUDERDALE &amp; NEARBY'));
+  assert.ok(home.includes('Inspired by Lily Rose.<br>Shared with love.') || home.includes('Inspired by Lily Rose.<br/>Shared with love.'));
+  const css = await read('assets/site.css');
+  assert.match(css, /\.hero-location\s*\{[^}]*border-top:\s*1px solid #BFA695/);
+  assert.doesNotMatch(css, /#B77F1A/);
+  assert.doesNotMatch(css, /\.hero-lockup\s*\{[^}]*display:\s*none/);
+  const data = JSON.parse((await documentFor('faq/index.html')).querySelector('script[type="application/ld+json"]').textContent);
+  const answer = data['@graph'].find(node => node['@type'] === 'FAQPage').mainEntity.find(item => item.name === 'Is this a medical or therapy service?').acceptedAnswer.text;
+  assert.equal(answer, 'No. Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
+});
 test('brand text and hero overlay retain readable contrast',()=>{
   const luminance=rgb=>rgb.map(x=>x/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4).reduce((sum,x,i)=>sum+x*[.2126,.7152,.0722][i],0);
   const contrast=(a,b)=>(Math.max(luminance(a),luminance(b))+.05)/(Math.min(luminance(a),luminance(b))+.05);

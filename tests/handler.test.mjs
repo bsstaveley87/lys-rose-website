@@ -1,0 +1,14 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {handleRequest,validateSignup} from '../worker/src/handler.ts';
+const valid={parentName:'Test parent',email:'hello@lysrosebabyspa.com',interests:['Milk bath'],babyAge:'Expecting'};
+const env={LIMITER:{limit:async()=>({success:true})}};
+const request=(data=valid,origin='https://lysrosebabyspa.com',method='POST')=>new Request('https://forms.lysrosebabyspa.com/waitlist',{method,headers:{Origin:origin,'Content-Type':'application/json'},...(method==='POST'?{body:JSON.stringify(data)}:{})});
+test('accepts signup and records email-only consent and timestamp',()=>{const s=validateSignup(valid);assert.equal(s.smsConsent,false);assert.ok(Date.parse(s.submittedAt));assert.equal(s.babyAge,'Expecting');});
+test('rejects invalid email, header injection, selections and fields',()=>{for(const patch of [{email:'invalid'},{email:'x@y.com\r\nBcc: x@y.com'},{babyAge:'6–12 months'},{interests:['invalid']},{parentName:['name']}])assert.throws(()=>validateSignup({...valid,...patch}));});
+test('returns success only after email acceptance',async()=>{let sent=false;const response=await handleRequest(request(),env,async s=>{assert.equal(s.email,valid.email);sent=true;});assert.equal(response.status,200);assert.equal(sent,true);assert.deepEqual(await response.json(),{success:true});});
+test('does not report success when email fails',async()=>{const r=await handleRequest(request(),env,async()=>{throw Error('SMTP unavailable');});assert.equal(r.status,502);});
+test('rejects disallowed origins without sending',async()=>{const r=await handleRequest(request(valid,'https://spam.example'),env,async()=>assert.fail());assert.equal(r.status,403);});
+test('limits submissions and rejects oversized payload',async()=>{assert.equal((await handleRequest(request(),{LIMITER:{limit:async()=>({success:false})}},async()=>assert.fail())).status,429);assert.equal((await handleRequest(request({...valid,parentName:'x'.repeat(9000)}),env,async()=>assert.fail())).status,413);});
+test('honeypot does not send',async()=>{assert.equal((await handleRequest(request({...valid,website:'spam'}),env,async()=>assert.fail())).status,200);});
+test('CORS preflight and methods',async()=>{assert.equal((await handleRequest(request(valid,undefined,'OPTIONS'),env,async()=>assert.fail())).status,204);assert.equal((await handleRequest(request(valid,undefined,'GET'),env,async()=>assert.fail())).status,405);});

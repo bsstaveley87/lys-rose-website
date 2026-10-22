@@ -1,0 +1,1 @@
+{"name":"lys-rose-website","private":true,"type":"module","scripts":{"build":"node scripts/build.mjs","test":"node --test tests/handler.test.mjs","check:worker":"npm run check --prefix worker"}}

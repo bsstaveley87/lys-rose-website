@@ -1,6 +1,8 @@
 # Lys Rose Baby Spa
 
-Static website hosted on GitHub Pages at https://lysrosebabyspa.com, with a Cloudflare Worker for waitlist email delivery.
+Static website hosted on GitHub Pages at https://lysrosebabyspa.com, with Cloudflare proxy HTTPS and a Cloudflare Worker for waitlist email delivery.
+
+Cloudflare redirects HTTP to HTTPS and www to the apex domain. The root and www web DNS records are proxied; email records are separate. The existing Cloudflare Full TLS setting encrypts the origin connection. GitHub’s separate origin certificate can finish provisioning independently; public TLS is handled by Cloudflare.
 
 ## Site
 

@@ -25,7 +25,7 @@ a,button { transition:background-color .2s,color .2s,transform .2s; }
 .hero { min-height:620px; }
 .hero-media { position:absolute; inset:0; overflow:hidden; }
 .photo-frame { width:100%; height:100%; }
-.hero-photo { width:100%; height:100%; object-fit:cover; object-position:center; }
+.hero-photo { width:100%; height:100%; object-fit:cover; object-position:70% 60%; }
 .hero-inner { min-height:620px; padding-top:48px; padding-bottom:80px; }
 .hero-copy { gap:24px; }
 .hero-lockup { width:260px; }
@@ -119,7 +119,7 @@ body.menu-open { overflow:hidden; }
   .menu-toggle { width:44px; justify-content:center; padding:0; }
   .menu-toggle > span { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
   .hero { min-height:0; }
-  .hero-media { position:relative; inset:auto; aspect-ratio:16 / 9; }
+  .hero-media { position:relative; inset:auto; aspect-ratio:1536 / 1022; }
   .hero-parallax { inset:0; }
   .hero-photo { object-fit:contain; object-position:center; }
   .hero-scrim { display:none; }

@@ -4,7 +4,7 @@ export const site = {
   email:'hello@lysrosebabyspa.com',
   instagram:'https://www.instagram.com/lysrosebabyspa/',
   image:'/assets/images/lys-rose-share.jpg',
-  imageAlt:'Lys Rose Baby Spa: a milk bath bowl, hooded towel and white lily on cream linen. Join the waitlist.',
+  imageAlt:'A white baby bath with milk bath water and rose petals at Lys Rose Baby Spa.',
 };
 export const pages = [
   {path:'/',file:'index.html',name:'Home',title:'Lys Rose Baby Spa · Fort Lauderdale',description:"A guided session for parents and babies under 12 months: you'll learn infant massage, a warm floral milk bath and simple baby face care. Small group sessions in Fort Lauderdale. Join the waitlist."},

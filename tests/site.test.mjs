@@ -131,6 +131,7 @@ test('preview copy removes the flagged phrases and keeps the approved lines', as
   assert.ok(about.includes('See you soon'));
   assert.ok(about.includes('White lilies and blush roses, for the lily in the Lys Rose name.'));
   assert.ok(services.includes('Le Petit Rituel'));
+  assert.ok(services.includes('Slots are limited. Join the waitlist for early access to session reservations.'));
   assert.ok(home.includes('FORT LAUDERDALE &amp; NEARBY'));
   assert.ok(home.includes('Inspired by Lily Rose.<br>Shared with love.') || home.includes('Inspired by Lily Rose.<br/>Shared with love.'));
   const css = await read('assets/site.css');

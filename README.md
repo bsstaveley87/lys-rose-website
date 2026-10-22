@@ -20,6 +20,6 @@ Worker commands: `cd worker && npm ci && npm run check && cf deploy --dry-run &&
 
 ## Images
 
-All four photography assets are supplied AI concept images, replace with real photos when available. Daylight source variants avoid the visible candle flames and manufacturer logo in the reference's darker pictures. Each has responsive 480, 960 and 1536 pixel WebP versions. Logo assets are supplied PNGs; replace with the designer's SVG files when available. No AI-generated portrait is presented as the founder's daughter; the optional About portrait is omitted.
+All four photography assets are supplied AI concept images, replace with real photos when available. The current root-folder photos are used to match Claude’s supplied Option B HTML: `baby_spa_bath_hero_standalone.png`, `Cozy Baby Spa Feet and Rose Petals.png`, `baby_spa_product_pouch_standalone.png`, and `Cozy Baby Spa Retreat.png`. These replace the previously selected daylight variants, per Ben’s direction. Each has responsive WebP sizes up to its source resolution. The supplied desktop and phone reference governs image orientation, hero gradients, typography, spacing and the staggered detail row. Logo assets are supplied PNGs; replace with the designer's SVG files when available. No AI-generated portrait is presented as the founder's daughter; the optional About portrait is omitted.
 
 The supplied creative references and business/legal documents remain outside this repository.

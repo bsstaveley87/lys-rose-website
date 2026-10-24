@@ -39,7 +39,7 @@ a,button { transition:background-color .2s,color .2s,transform .2s; }
 .form-primary .field { display:grid; grid-template-rows:minmax(32px,auto) 54px auto; gap:6px; }
 .field-label { display:block; }
 .field-optional { font-weight:400; letter-spacing:.06em; font-size:11px; }
-.form-primary .submit-button { margin-top:38px; }
+#waitlist-form > .submit-button { width:100%; margin:0; }
 .input,.input-secondary,.select,.select-secondary { width:100%; min-width:0; color:var(--ink); border-radius:0; }
 .input:focus,.input-secondary:focus,.select:focus,.select-secondary:focus { outline:2px solid var(--ink); outline-offset:2px; }
 [aria-invalid=true] { border:2px solid var(--ink); background:var(--stone); }
@@ -151,7 +151,6 @@ body.menu-open { overflow:hidden; }
 @media (max-width:600px) {
   .form-primary,.form-grid,.form-extra { grid-template-columns:minmax(0,1fr); }
   .form-primary .field { grid-template-rows:auto 54px auto; }
-  .form-primary .submit-button { margin-top:0; }
   .form-details-toggle { gap:12px; font-size:11px; letter-spacing:.1em; }
   .detail-grid { grid-template-columns:minmax(0,1fr); gap:24px; }
   .detail-grid .detail-pouch,.detail-grid .detail-towel { width:100%; margin-top:0; grid-column:auto; }

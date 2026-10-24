@@ -27,7 +27,7 @@ The Worker posts to the restricted, verified destination hello@lysrosebabyspa.co
 
 Every email records its server timestamp and `smsConsent: false`. SMS is disabled and allergies are not collected. A future newsletter platform must manage subscriptions and unsubscribe requests.
 
-Worker changes require a separate deployment:
+Worker changes require a separate deployment. The careers form posts to `POST /apply` on the same Worker and is not live until this deploy succeeds. `cf auth whoami` must show a logged-in account for `b69bc99a43e009e66f5d9da71bcfbb5e` before you deploy:
 
 ```
 cd worker

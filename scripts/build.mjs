@@ -40,11 +40,13 @@ function structuredData(page,document) {
 }
 function head(page,document,noindex=false) {
   const title=escape(page.title); const description=escape(page.description); const url=site.origin+page.path;
+  const robots=page.robots || (noindex?'noindex,follow':'index,follow,max-image-preview:large');
+  const unlisted=robots.startsWith('noindex');
   return `<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title>
 <meta name="description" content="${description}">
-<meta name="robots" content="${noindex?'noindex,follow':'index,follow,max-image-preview:large'}">
+<meta name="robots" content="${robots}">
 <meta name="theme-color" content="#FFFBFA">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <link rel="canonical" href="${url}">
@@ -71,7 +73,7 @@ function head(page,document,noindex=false) {
 <meta name="twitter:description" content="${description}">
 <meta name="twitter:image" content="${site.origin+site.image}">
 <meta name="twitter:image:alt" content="${escape(site.imageAlt)}">
-${noindex?'':`<script type="application/ld+json">${structuredData(page,document)}</script>`}
+${unlisted?'':`<script type="application/ld+json">${structuredData(page,document)}</script>`}
 <script type="module" src="/assets/${scriptName}"></script>`;
 }
 // Use the homepage's header, menu, fallback navigation and footer as shared components.
@@ -95,7 +97,7 @@ for(const page of pages) {
   for(const link of document.querySelectorAll('nav a')) {
     if(new URL(link.getAttribute('href'),site.origin+page.path).pathname===page.path) link.setAttribute('aria-current','page');
   }
-  if(page.path!=='/') {
+  if(page.path!=='/' && !document.querySelector('.breadcrumbs')) {
     const crumb=document.createElement('nav'); crumb.className='breadcrumbs'; crumb.setAttribute('aria-label','Breadcrumb');
     crumb.innerHTML=`<a href="/">Home</a><span aria-hidden="true">/</span><span aria-current="page">${escape(page.name)}</span>`;
     document.querySelector('.page-heading .editorial-wrap').prepend(crumb);
@@ -107,5 +109,6 @@ const {document:notFound}=parseHTML(await readFile(new URL('404.html',root),'utf
 notFound.head.innerHTML=head({path:'/404.html',title:'Page Not Found | Lys Rose Baby Spa',description:'This page could not be found. Return to Lys Rose Baby Spa in Fort Lauderdale.'},notFound,true);
 await writeFile(new URL('404.html',output),'<!doctype html>\n'+notFound.documentElement.outerHTML+'\n');
 await writeFile(new URL('robots.txt',output),`User-agent: *\nAllow: /\nSitemap: ${site.origin}/sitemap.xml\n`);
-await writeFile(new URL('sitemap.xml',output),'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+pages.map(page=>`<url><loc>${site.origin+page.path}</loc></url>`).join('')+'</urlset>\n');
+const indexed=pages.filter(page=>!(page.robots||'').startsWith('noindex'));
+await writeFile(new URL('sitemap.xml',output),'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+indexed.map(page=>`<url><loc>${site.origin+page.path}</loc></url>`).join('')+'</urlset>\n');
 console.log(`Built ${pages.length} pages, page-specific metadata and structured data, and versioned assets.`);

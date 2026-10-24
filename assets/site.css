@@ -90,6 +90,14 @@ body.menu-open { overflow:hidden; }
 .faq-item summary span { font-size:26px; transition:transform .2s; }
 .faq-item[open] summary span { transform:rotate(45deg); }
 .faq-item p { max-width:760px; }
+.role-list { margin:0 0 8px; padding-left:1.2em; }
+.role-list li { margin:0 0 10px; }
+.role-list li:last-child { margin-bottom:0; }
+.apply-form { margin-top:8px; }
+.apply-form .form-primary { grid-template-columns:minmax(0,1fr); }
+.apply-form .form-primary .field { display:flex; }
+.apply-form .form-primary .submit-button { margin-top:8px; }
+.file-input { width:100%; min-height:52px; padding:12px 0; font-size:16px; }
 .footer-nav a { min-height:44px; }
 .footer-contact a { display:inline-flex; align-items:center; min-height:44px; }
 .site-footer img { max-width:100%; }

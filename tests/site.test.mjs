@@ -166,7 +166,9 @@ test('careers preview is unlisted and keeps the approved role copy', async () =>
   assert.equal(doc.querySelector('meta[name=robots]').content, 'noindex');
   assert.equal(doc.querySelector('script[type="application/ld+json"]'), null);
   assert.equal(doc.querySelector('h1').textContent, 'Production Assistant (Part-Time)');
-  assert.ok(text.includes('We host calm, guided rituals for parents and their babies (a floral milk bath, infant massage and guided baby face care), led by an expert instructor while each parent cares for their own baby.'));
+  assert.ok(text.includes('We host calm, guided rituals for parents and their babies (a floral milk bath, infant massage and guided baby face care), guided by a caring instructor while each parent cares for their own baby.'));
+  assert.ok(text.includes('Spa, hospitality or luxury guest-service experience.'));
+  assert.equal(text.includes('Spa, wellness'), false);
   assert.ok(text.includes('$20/hour, plus mileage reimbursement.'));
   assert.ok(text.includes('up to about 30 lb'));
   assert.ok(text.includes('food and beverage service'));

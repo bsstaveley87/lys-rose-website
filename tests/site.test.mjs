@@ -15,7 +15,7 @@ const approved = {
   },
   '/services/': {
     title: 'Services · Lys Rose Baby Spa',
-    description: "Small group baby spa sessions where you'll learn guided infant massage, a warm floral milk bath and guided baby face care with your own baby, plus light refreshments. Led by caring professionals from the world of babies and new parents. Fort Lauderdale.",
+    description: "Small group baby spa sessions where you'll learn guided infant massage, a warm floral milk bath and guided baby face care with your own baby, plus light refreshments. Guided by caring professionals from the world of babies and new parents. Fort Lauderdale.",
   },
   '/faq/': {
     title: 'FAQ · Lys Rose Baby Spa',
@@ -153,9 +153,36 @@ test('preview copy removes the flagged phrases and keeps the approved lines', as
   assert.match(css, /\.hero-location\s*\{[^}]*border-top:\s*1px solid #BFA695/);
   assert.doesNotMatch(css, /#B77F1A/);
   assert.doesNotMatch(css, /\.hero-lockup\s*\{[^}]*display:\s*none/);
+  const instructor = 'Every Lys Rose session is guided by a caring professional from the world of babies and new parents, whose backgrounds may include pediatric or pelvic floor physical therapy, doula work, midwifery or infant massage instruction. All are CPR certified and chosen for their calm, nurturing way with families. They guide each step, and you share it hand in hand with your baby.';
+  for (const page of [about, services, faq]) {
+    assert.ok(page.includes(instructor));
+    assert.equal(page.includes('led by'), false);
+    assert.equal(page.includes('They lead each step'), false);
+  }
+  assert.ok(services.includes("WHO LEADS IT"));
+  assert.ok(faq.includes('Who leads the session?'));
+  assert.ok(services.includes("With our instructor guiding you, you'll apply a fragrance-free baby face cream to your baby's face yourself. We show each step; the hands-on care is always yours."));
+  assert.equal(services.includes('gently moisturize'), false);
+  const robeAddOn = 'A fresh robe set to take home is available as an optional add-on.';
+  assert.ok(services.includes('Soft robes in 0–6M and 6–9M sizes, and hooded towels for babies 9 months and up, to wear during your session. ' + robeAddOn));
+  assert.ok(services.includes('A robe and hooded towels are provided to wear during your session.'));
+  assert.ok(faq.includes('A robe and hooded towels to wear during your session, and a soft baby brush (cleaned and sanitized after every use), are provided. ' + robeAddOn));
+  assert.ok(faq.includes('A robe (0–6M and 6–9M) and hooded towels (9M and up) are provided to wear during your session, and light refreshments are included.'));
+  const allergy = "When you book, please tell us about any allergies or sensitivities, anything in the products we use during your session you'd like us to avoid, and whether your baby has a skin condition such as a rash, eczema or broken skin. We'll set up your bath without that ingredient, and on the day we can always offer a plain warm-water bath. If you're unsure about anything, please check with your pediatrician before your session.";
+  assert.ok(faq.includes('What if my baby or I have an allergy or sensitive skin?'));
+  assert.ok(faq.includes(allergy));
+  assert.equal(faq.includes('48 hours'), false);
   const data = JSON.parse((await documentFor('faq/index.html')).querySelector('script[type="application/ld+json"]').textContent);
-  const answer = data['@graph'].find(node => node['@type'] === 'FAQPage').mainEntity.find(item => item.name === 'Is this a medical or therapy service?').acceptedAnswer.text;
+  const faqPage = data['@graph'].find(node => node['@type'] === 'FAQPage');
+  const answer = faqPage.mainEntity.find(item => item.name === 'Is this a medical or therapy service?').acceptedAnswer.text;
   assert.equal(answer, 'No. Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
+  const allergyAnswer = faqPage.mainEntity.find(item => item.name === 'What if my baby or I have an allergy or sensitive skin?').acceptedAnswer.text;
+  assert.equal(allergyAnswer, allergy);
+  const includedAnswer = faqPage.mainEntity.find(item => item.name === "What's included in a session?").acceptedAnswer.text;
+  assert.ok(includedAnswer.endsWith(robeAddOn));
+  const bringAnswer = faqPage.mainEntity.find(item => item.name === 'What should I bring?').acceptedAnswer.text;
+  assert.ok(bringAnswer.includes('to wear during your session'));
+  assert.equal(bringAnswer.includes(robeAddOn), false);
 });
 test('brand text and hero overlay retain readable contrast',()=>{
   const luminance=rgb=>rgb.map(x=>x/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4).reduce((sum,x,i)=>sum+x*[.2126,.7152,.0722][i],0);

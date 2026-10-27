@@ -1,4 +1,4 @@
-import { validateFields } from './validation.js';
+import { validateApplication, validateFields } from './validation.js';
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const mobile = window.matchMedia('(max-width:980px)');
 const menu = document.querySelector('#site-menu');
@@ -104,6 +104,87 @@ if (form) {
         : 'We could not connect. Please check your connection and try again, or email hello@lysrosebabyspa.com.');
     } finally {
       window.clearTimeout(timer); submitting = false; form.removeAttribute('aria-busy');
+      if (button.isConnected) { button.disabled = false; button.textContent = originalText; status.textContent = ''; }
+    }
+  });
+}
+const application = document.querySelector('#application-form');
+if (application) {
+  application.noValidate = true;
+  const button = application.querySelector('[type=submit]');
+  const errorSummary = application.querySelector('#form-error');
+  const errorMessage = application.querySelector('#form-error-message');
+  const errorList = application.querySelector('#form-error-list');
+  const status = application.querySelector('#form-status');
+  let submitting = false;
+  let attempted = false;
+  const fields = [...application.querySelectorAll('input:not([name=website])')];
+  const fileMeta = input => input.files?.[0] ? {name:input.files[0].name, type:input.files[0].type, size:input.files[0].size} : null;
+  const payload = () => {
+    const data = new FormData(application);
+    return {
+      values: {...Object.fromEntries([...data].filter(([,value]) => typeof value === 'string'))},
+      files: {resume:fileMeta(application.elements.namedItem('resume')), coverLetter:fileMeta(application.elements.namedItem('coverLetter'))},
+    };
+  };
+  const showFieldError = (field,message) => {
+    const error = document.getElementById(`${field.id}-error`);
+    if (!error) return;
+    field.setAttribute('aria-invalid', message ? 'true' : 'false');
+    error.textContent = message || ''; error.hidden = !message;
+  };
+  const showErrors = (errors, message = 'Please check the highlighted fields.') => {
+    fields.forEach(field => showFieldError(field, errors[field.name]));
+    errorList.replaceChildren();
+    for (const [name,text] of Object.entries(errors)) {
+      const field = application.elements.namedItem(name);
+      if (!(field instanceof HTMLElement)) continue;
+      const item = document.createElement('li'); const link = document.createElement('a');
+      link.href = `#${field.id}`; link.textContent = text;
+      link.addEventListener('click', event => { event.preventDefault(); field.focus(); });
+      item.append(link); errorList.append(item);
+    }
+    errorMessage.textContent = message; errorSummary.hidden = false;
+    const first = fields.find(field => errors[field.name]);
+    (first || errorSummary).focus();
+  };
+  const currentErrors = () => {
+    const {values, files} = payload();
+    return validateApplication(values, files);
+  };
+  fields.forEach(field => {
+    const eventName = field.type === 'file' ? 'change' : 'blur';
+    field.addEventListener(eventName, () => showFieldError(field, currentErrors()[field.name]));
+    field.addEventListener(field.type === 'file' ? 'change' : 'input', () => {
+      if (attempted || field.getAttribute('aria-invalid') === 'true') showFieldError(field, currentErrors()[field.name]);
+      errorSummary.hidden = true;
+    });
+  });
+  application.addEventListener('submit', async event => {
+    event.preventDefault(); if (submitting) return; attempted = true;
+    fields.forEach(field => { if (field.type !== 'file') field.value = field.value.trim(); });
+    const errors = currentErrors();
+    if (Object.keys(errors).length) { showErrors(errors); return; }
+    errorSummary.hidden = true;
+    submitting = true; button.disabled = true; application.setAttribute('aria-busy','true');
+    const originalText = button.textContent; button.textContent = 'SENDING…'; status.textContent = 'Sending your application…';
+    const controller = new AbortController(); const timer = window.setTimeout(() => controller.abort(), 60000);
+    try {
+      const response = await fetch(application.action, {method:'POST', headers:{Accept:'application/json'}, body:new FormData(application), signal:controller.signal});
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) {
+        showErrors(result.fields || {}, result.error || 'Your application could not be sent. Please try again, or email hello@lysrosebabyspa.com.');
+        return;
+      }
+      const success = document.createElement('div'); success.className = 'form-success'; success.tabIndex = -1; success.setAttribute('role','status');
+      const message = document.createElement('p'); message.textContent = 'Thank you. We have your application and will be in touch.';
+      success.append(message); application.replaceChildren(success); success.focus();
+    } catch (error) {
+      showErrors({}, error?.name === 'AbortError'
+        ? 'The request timed out and may have reached us. Please email hello@lysrosebabyspa.com before submitting again.'
+        : 'We could not connect. Please check your connection and try again, or email hello@lysrosebabyspa.com.');
+    } finally {
+      window.clearTimeout(timer); submitting = false; application.removeAttribute('aria-busy');
       if (button.isConnected) { button.disabled = false; button.textContent = originalText; status.textContent = ''; }
     }
   });

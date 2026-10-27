@@ -72,3 +72,68 @@ test('rate limit advertises retry delay; unavailable limiter fails safely',async
 test('untrusted origins receive no CORS authorization',async()=>{
   const r=await handleRequest(request(valid,'https://spam.example'),env,async()=>assert.fail());assert.equal(r.headers.get('Access-Control-Allow-Origin'),null);
 });
+const applicationForm=()=>{
+  const form=new FormData();
+  form.set('fullName','Ada Lopez');
+  form.set('email','ada@example.com');
+  form.set('phone','954-555-0100');
+  form.set('location','Victoria Park');
+  form.set('weekdayAvailability','Tuesday mornings');
+  form.set('weekendAvailability','Saturday afternoon');
+  form.set('resume',new File(['%PDF-1.4'],'resume.pdf',{type:'application/pdf'}));
+  return form;
+};
+const applicationRequest=(form,accept='application/json')=>new Request('https://forms.lysrosebabyspa.com/apply',{method:'POST',headers:{Origin:'https://lysrosebabyspa.com',Accept:accept},body:form});
+test('emails a production assistant application with the resume attached',async()=>{
+  let sent;
+  const response=await handleRequest(applicationRequest(applicationForm()),env,async()=>assert.fail(),async application=>{sent=application;});
+  assert.equal(response.status,200);
+  assert.deepEqual(await response.json(),{success:true});
+  assert.equal(sent.fullName,'Ada Lopez');
+  assert.equal(sent.resume.filename,'resume.pdf');
+  assert.equal(sent.resume.contentType,'application/pdf');
+  assert.equal(sent.coverLetter,null);
+  const {composeApplication}=await import('../worker/src/compose.ts');
+  const raw=composeApplication(sent);
+  const encoded=raw.match(/Subject: =\?utf-8\?B\?([^?]+)\?=/)[1];
+  assert.equal(Buffer.from(encoded,'base64').toString('utf8'),'New Production Assistant application: Ada Lopez');
+  assert.match(raw,/filename="resume.pdf"/);
+  assert.ok(raw.includes(Buffer.from('Name: Ada Lopez\nEmail: ada@example.com').toString('base64').slice(0,24)));
+  assert.equal(raw.includes('website:'),false);
+});
+test('attaches an optional cover letter and does not email a honeypot application',async()=>{
+  const form=applicationForm();
+  form.set('coverLetter',new File(['cover'],'letter.docx',{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}));
+  let sent;
+  const response=await handleRequest(applicationRequest(form),env,async()=>assert.fail(),async application=>{sent=application;});
+  assert.equal(response.status,200);
+  assert.equal(sent.coverLetter.filename,'letter.docx');
+  assert.equal(sent.coverLetter.contentType,'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  const spam=applicationForm();
+  spam.set('website','bot');
+  const quiet=await handleRequest(applicationRequest(spam),env,async()=>assert.fail(),async()=>assert.fail());
+  assert.equal(quiet.status,200);
+  const html=await handleRequest(applicationRequest(applicationForm(),'text/html'),env,async()=>{},async()=>{});
+  assert.match(html.headers.get('Content-Type'),/text\/html/);
+  assert.match(await html.text(),/Thank you for applying/);
+});
+test('rejects an application file that is missing, the wrong type, or larger than 5 MB',async()=>{
+  const missing=applicationForm();
+  missing.delete('resume');
+  const missingResponse=await handleRequest(applicationRequest(missing),env,async()=>assert.fail(),async()=>assert.fail());
+  assert.equal(missingResponse.status,400);
+  assert.ok((await missingResponse.json()).fields.resume);
+  const png=applicationForm();
+  png.set('resume',new File(['not a resume'],'photo.png',{type:'image/png'}));
+  const pngResponse=await handleRequest(applicationRequest(png),env,async()=>assert.fail(),async()=>assert.fail());
+  assert.equal(pngResponse.status,400);
+  const huge=applicationForm();
+  huge.set('resume',new File([new Uint8Array(5*1024*1024+1)],'resume.pdf',{type:'application/pdf'}));
+  const hugeResponse=await handleRequest(applicationRequest(huge),env,async()=>assert.fail(),async()=>assert.fail());
+  assert.equal(hugeResponse.status,400);
+  assert.match((await hugeResponse.json()).fields.resume,/5 MB/);
+  const injected=applicationForm();
+  injected.set('fullName','Ada\nBcc: spam@example.com');
+  const injectedResponse=await handleRequest(applicationRequest(injected),env,async()=>assert.fail(),async()=>assert.fail());
+  assert.equal(injectedResponse.status,400);
+});

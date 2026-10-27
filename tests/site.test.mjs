@@ -29,7 +29,8 @@ const approved = {
 const root=new URL('../_site/',import.meta.url);
 const documentFor=async file=>parseHTML(await readFile(new URL(file,root),'utf8')).document;
 const titles=new Set();
-for(const page of pages) test(`${page.path}: indexable HTML, SEO, structured data, assets and links`,async()=>{
+const indexed=pages.filter(page=>page.robots!=='noindex');
+for(const page of indexed) test(`${page.path}: indexable HTML, SEO, structured data, assets and links`,async()=>{
   const doc=await documentFor(page.file);
   assert.equal(doc.documentElement.lang,'en');
   const title=doc.querySelector('title').textContent;
@@ -122,8 +123,9 @@ test('detail images preserve original aspect ratios rather than fixed-height cro
 });
 test('sitemap includes exactly the canonical pages and 404 is not indexed',async()=>{
   const xml=await readFile(new URL('sitemap.xml',root),'utf8');
-  for(const page of pages)assert.ok(xml.includes(`<loc>${site.origin+page.path}</loc>`));
-  assert.equal((xml.match(/<url>/g)||[]).length,pages.length);
+  for(const page of indexed)assert.ok(xml.includes(`<loc>${site.origin+page.path}</loc>`));
+  assert.equal((xml.match(/<url>/g)||[]).length,indexed.length);
+  assert.equal(xml.includes(`${site.origin}/careers/`),false);
   const doc=await documentFor('404.html');assert.equal(doc.querySelector('meta[name=robots]').content,'noindex,follow');
 });
 test('versioned assets are referenced consistently',async()=>{
@@ -156,6 +158,39 @@ test('preview copy removes the flagged phrases and keeps the approved lines', as
   const data = JSON.parse((await documentFor('faq/index.html')).querySelector('script[type="application/ld+json"]').textContent);
   const answer = data['@graph'].find(node => node['@type'] === 'FAQPage').mainEntity.find(item => item.name === 'Is this a medical or therapy service?').acceptedAnswer.text;
   assert.equal(answer, 'No. Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
+});
+test('careers preview is unlisted and keeps the approved role copy', async () => {
+  const doc = await documentFor('careers/index.html');
+  const text = doc.body.textContent;
+  assert.equal(doc.querySelector('title').textContent, 'Production Assistant (Part-Time) · Fort Lauderdale');
+  assert.equal(doc.querySelector('meta[name=robots]').content, 'noindex');
+  assert.equal(doc.querySelector('script[type="application/ld+json"]'), null);
+  assert.equal(doc.querySelector('h1').textContent, 'Production Assistant (Part-Time)');
+  assert.ok(text.includes('We host calm, guided rituals for parents and their babies (a floral milk bath, infant massage and guided baby face care), guided by a caring instructor while each parent cares for their own baby.'));
+  assert.ok(text.includes('Spa, hospitality or luxury guest-service experience.'));
+  assert.equal(text.includes('Spa, wellness'), false);
+  assert.ok(text.includes('$20/hour, plus mileage reimbursement.'));
+  assert.ok(text.includes('up to about 30 lb'));
+  assert.ok(text.includes('food and beverage service'));
+  assert.ok(text.includes('Apply with the form below.'));
+  assert.equal(text.includes('small groups'), false);
+  assert.equal(text.includes('To apply'), false);
+  for (const word of ['facial','cleanse','soothing','calming','organic']) assert.equal(text.toLowerCase().includes(word), false, word);
+  assert.equal(doc.querySelector('.disclaimer').textContent, 'Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
+  assert.ok(text.includes('© Lys Rose LLC'));
+  assert.equal([...doc.querySelectorAll('#site-menu nav a')].some(link => /careers/i.test(link.textContent)), false);
+  assert.ok([...doc.querySelectorAll('footer .footer-nav a')].some(link => link.textContent === 'CAREERS' && link.getAttribute('href') === '/careers/'));
+  const home = await documentFor('index.html');
+  assert.equal([...home.querySelectorAll('#site-menu nav a')].some(link => /careers/i.test(link.textContent)), false);
+  assert.ok([...home.querySelectorAll('footer .footer-nav a')].some(link => link.textContent === 'CAREERS' && link.getAttribute('href') === '/careers/'));
+  const form = doc.querySelector('#application-form');
+  assert.equal(form.getAttribute('action'), 'https://forms.lysrosebabyspa.com/apply');
+  assert.equal(form.getAttribute('enctype'), 'multipart/form-data');
+  for (const name of ['fullName','email','phone','location','weekdayAvailability','weekendAvailability','resume']) assert.ok(form.querySelector(`[name="${name}"][required]`), name);
+  assert.equal(form.querySelector('[name="coverLetter"]').hasAttribute('required'), false);
+  assert.equal(form.querySelector('[name="coverLetter"]').type, 'file');
+  assert.ok(form.querySelector('[name="website"]'));
+  assert.ok(doc.querySelector('#application-location-label').textContent.includes('WHICH PART OF GREATER FORT LAUDERDALE ARE YOU BASED IN?'));
 });
 test('brand text and hero overlay retain readable contrast',()=>{
   const luminance=rgb=>rgb.map(x=>x/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4).reduce((sum,x,i)=>sum+x*[.2126,.7152,.0722][i],0);

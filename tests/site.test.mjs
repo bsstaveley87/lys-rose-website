@@ -187,10 +187,13 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.ok(html.includes('Premium Face Crème'));
   assert.ok(html.includes('Embroidered Keepsake Robe'));
   assert.ok(html.includes('A personalized embroidered robe for your baby.'));
-  assert.ok(html.includes('The "Spa à la Maison" Kit (Spa at home)'));
+  assert.ok(html.includes('The Lys Rose at Home Kit'));
+  assert.ok(html.includes('The at-home baby spa kit.'));
+  assert.equal(html.includes('The "Spa à la Maison" Kit (Spa at home)'), false);
   assert.equal(html.includes('At-home spa kit for your mini'), false);
-  assert.ok(html.includes("The Floral Bath Soak"));
-  assert.ok(html.includes("Take our floral bath soak home for your baby's bath."));
+  assert.ok(html.includes('The Lys Rose Floral Bath Bag'));
+  assert.ok(html.includes("A single bag of our floral bath soak to take home for your baby's bath."));
+  assert.equal(html.includes('The Floral Bath Soak'), false);
   const kit = book.querySelector('.kit-enhancement').textContent;
   assert.ok(kit.includes('Bath soak, baby massage oil, toiletry bag & mini face kit: brush, pads, roller.'));
   assert.ok(kit.includes('The Grand also includes the baby robe set, with the option to personalize it.'));

@@ -173,12 +173,22 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.ok(html.includes('Dates coming soon'));
   assert.ok(html.includes('Available'));
   assert.ok(html.includes('Fully booked'));
-  assert.ok(html.includes('$280 per mom'));
+  assert.equal(book.querySelector('.booking-price').textContent, '$280 per parent & baby');
+  assert.equal(html.includes('$280 per mom'), false);
   assert.ok(html.includes('This is the price before taxes and processing fees.'));
   assert.equal(html.includes('$TBD'), false);
   assert.equal(html.includes('Take-home robe set'), false);
   assert.equal(html.includes('gift bag'), false);
-  assert.equal((html.match(/available to add/g) || []).length, 3);
+  assert.equal((html.match(/available to add/g) || []).length, 2);
+  assert.ok(html.includes('Premium enhancements'));
+  assert.equal(html.includes('Optional add-ons'), false);
+  assert.equal(html.includes('Photography'), false);
+  assert.ok(html.includes('A personalized embroidered robe for your baby'));
+  assert.ok(html.includes('At-home spa kit for your mini'));
+  assert.ok(html.includes('Both sizes come with a toiletries bag filled with a face roller, a face brush and face pads, plus a bag of our bath soak (4–6 uses in a baby bath, or 1–2 uses in a shallow full-size bathtub). The Grand also includes the baby robe set, with the option to personalize it.'));
+  assert.equal(book.querySelectorAll('[name=kitSize][disabled]').length, 2);
+  assert.equal(html.toLowerCase().includes('sparkling toast'), false);
+  assert.equal(html.toLowerCase().includes('bubbly'), false);
   assert.ok(html.includes('Premium face care upgrade (optional, $5 or $10): Evereden Nourishing Baby Face Cream. Contains shea butter, coconut, soy and calendula. Full ingredient list below. Please tell us about any allergies at least 48 hours before your session.'));
   assert.ok(html.includes('$5 (a small amount)'));
   assert.ok(html.includes('$10 (full 5 g jar)'));
@@ -197,7 +207,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
     'Guided baby massage and guided baby face care, step by step',
     'A little jar of baby face cream for your baby to take home',
     'A soft baby robe set for your little one to wear after the bath, made for a sweet photo moment on your own phone',
-    'Refreshments and a non-alcoholic sparkling toast',
+    'Refreshments and light bites',
     'Fresh florals and finishing touches',
     "A small group of parents, so there's time and space for you",
     'Laundry and cleanup are on us. You just come and enjoy.',
@@ -215,6 +225,8 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.match(includedAnswer, /What's included/);
   assert.match(includedAnswer, /soft baby robe set to wear after the bath/);
   assert.ok(includedAnswer.includes('a little jar of baby face cream for your baby to take home'));
+  assert.ok(includedAnswer.includes('Refreshments and light bites'));
+  assert.equal(includedAnswer.toLowerCase().includes('sparkling'), false);
   assert.ok(html.includes('[Waiver wording pending attorney review]'));
   assert.ok(html.includes('Allergies, sensitivities or skin conditions (for example a rash, eczema or broken skin)'));
   assert.ok(book.querySelector('[name=allergies][value=None]'));

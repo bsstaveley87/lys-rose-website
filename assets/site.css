@@ -204,7 +204,9 @@ body.menu-open { overflow:hidden; }
 .price-note { margin:8px 0 0; font:500 16px/1.45 Jost,sans-serif; }
 #book-addons { margin-top:36px; }
 .addon-preview { list-style:none; margin:16px 0 0; padding:0; display:flex; flex-direction:column; gap:12px; }
-.addon-preview label { display:flex; align-items:flex-start; gap:12px; margin:0; padding:16px; border:1px solid var(--champagne); background:var(--cream); font-size:16px; letter-spacing:0; text-transform:none; }
+.addon-preview > li { padding:16px; border:1px solid var(--champagne); background:var(--cream); }
+.addon-preview label { display:flex; align-items:flex-start; gap:12px; margin:0; padding:0; border:0; background:transparent; font-size:16px; letter-spacing:0; text-transform:none; }
+.enhancement-title { font-weight:500; }
 .addon-preview input[type=checkbox],
 .face-ack input[type=checkbox] { appearance:none; -webkit-appearance:none; width:20px; height:20px; min-width:20px; margin-top:2px; border:1.5px solid #504B49; border-radius:2px; background:#FFFBFA; opacity:1; cursor:not-allowed; }
 .addon-preview .addon-copy { display:flex; flex-direction:column; gap:4px; }
@@ -216,8 +218,9 @@ body.menu-open { overflow:hidden; }
 .available-to-add { font:500 13px/1.4 Jost,sans-serif; letter-spacing:0; }
 .face-upgrade { display:flex; flex-direction:column; gap:14px; margin-top:16px; padding:16px; border:1px solid var(--champagne); background:var(--cream); }
 .face-upgrade p { margin:0; font-size:16px; line-height:1.5; }
-.face-choices { margin:0; padding:0; border:0; min-inline-size:0; display:flex; flex-direction:column; gap:8px; }
-.face-choices legend { margin:0; }
+.face-choices { margin:12px 0 0 32px; padding:0; border:0; min-inline-size:0; display:flex; flex-direction:column; gap:8px; }
+.face-choices legend { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.face-ack { margin-top:12px; }
 .face-choices input, .face-ack input { cursor:not-allowed; }
 .ingredient-list { border-top:1px solid var(--champagne); border-bottom:1px solid var(--champagne); }
 .ingredient-list summary { display:flex; align-items:center; min-height:44px; font:500 13px/1.4 Jost,sans-serif; letter-spacing:.08em; text-transform:uppercase; }

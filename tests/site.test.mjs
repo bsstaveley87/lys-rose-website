@@ -4,6 +4,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
 import {validateFields, interestOptions, limits} from '../assets/validation.js';
+import {MIN_AGE_WEEKS, SEATS_PER_SESSION, babyAgeMessage, previewTotal, sessionStatus} from '../assets/booking.js';
 const approved = {
   '/': {
     title: 'Lys Rose Baby Spa · Fort Lauderdale',
@@ -29,7 +30,8 @@ const approved = {
 const root=new URL('../_site/',import.meta.url);
 const documentFor=async file=>parseHTML(await readFile(new URL(file,root),'utf8')).document;
 const titles=new Set();
-for(const page of pages) test(`${page.path}: indexable HTML, SEO, structured data, assets and links`,async()=>{
+const indexed=pages.filter(page=>!(page.robots||'').startsWith('noindex'));
+for(const page of indexed) test(`${page.path}: indexable HTML, SEO, structured data, assets and links`,async()=>{
   const doc=await documentFor(page.file);
   assert.equal(doc.documentElement.lang,'en');
   const title=doc.querySelector('title').textContent;
@@ -122,8 +124,8 @@ test('detail images preserve original aspect ratios rather than fixed-height cro
 });
 test('sitemap includes exactly the canonical pages and 404 is not indexed',async()=>{
   const xml=await readFile(new URL('sitemap.xml',root),'utf8');
-  for(const page of pages)assert.ok(xml.includes(`<loc>${site.origin+page.path}</loc>`));
-  assert.equal((xml.match(/<url>/g)||[]).length,pages.length);
+  for(const page of indexed)assert.ok(xml.includes(`<loc>${site.origin+page.path}</loc>`));
+  assert.equal((xml.match(/<url>/g)||[]).length,indexed.length);
   const doc=await documentFor('404.html');assert.equal(doc.querySelector('meta[name=robots]').content,'noindex,follow');
 });
 test('versioned assets are referenced consistently',async()=>{
@@ -156,6 +158,58 @@ test('preview copy removes the flagged phrases and keeps the approved lines', as
   const data = JSON.parse((await documentFor('faq/index.html')).querySelector('script[type="application/ld+json"]').textContent);
   const answer = data['@graph'].find(node => node['@type'] === 'FAQPage').mainEntity.find(item => item.name === 'Is this a medical or therapy service?').acceptedAnswer.text;
   assert.equal(answer, 'No. Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
+});
+test('booking preview is unlisted, has no seat count, and prices stay off public pages', async () => {
+  const book = await documentFor('book/index.html');
+  const html = book.documentElement.outerHTML;
+  assert.equal(book.querySelector('meta[name=robots]').content, 'noindex,nofollow');
+  assert.equal(book.querySelector('script[type="application/ld+json"]'), null);
+  assert.equal(book.querySelector('.footer-tagline').textContent, 'Inspired by Lily Rose. Shared with love.');
+  assert.equal(book.querySelector('.disclaimer').textContent, 'Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
+  assert.equal(/\b12\s+spots\b/i.test(html), false);
+  assert.equal(html.toLowerCase().includes('spots remaining'), false);
+  assert.equal(html.toLowerCase().includes('group size'), false);
+  assert.equal(/venue/i.test(book.body.textContent), false);
+  assert.ok(html.includes('Dates coming soon'));
+  assert.ok(html.includes('Available'));
+  assert.ok(html.includes('Fully booked'));
+  assert.ok(html.includes('$280 per parent and baby'));
+  assert.ok(html.includes('Price shown is before taxes and processing fees.'));
+  assert.ok(html.includes('Take-home robe set'));
+  assert.ok(html.includes('$TBD'));
+  assert.ok(html.includes('add-on price to come'));
+  assert.ok(html.includes('[Waiver wording pending attorney review]'));
+  assert.ok(html.includes('Allergies, sensitivities or skin conditions (for example a rash, eczema or broken skin)'));
+  assert.ok(book.querySelector('[name=allergies][value=None]'));
+  assert.ok(book.querySelector('[name=waiver][required]'));
+  assert.equal(book.querySelector('[name=photoRelease]').hasAttribute('checked'), false);
+  assert.equal(book.querySelector('[name=photoRelease]').hasAttribute('required'), false);
+  assert.equal(book.querySelector('.booking-pay').hasAttribute('disabled'), true);
+  assert.equal(html.toLowerCase().includes('stripe'), false);
+  assert.equal(html.toLowerCase().includes('square'), false);
+  const robots = await readFile(new URL('robots.txt', root), 'utf8');
+  assert.match(robots, /Disallow: \/book\//);
+  const xml = await readFile(new URL('sitemap.xml', root), 'utf8');
+  assert.equal(xml.includes('/book/'), false);
+  for (const page of pages) {
+    const doc = await documentFor(page.file);
+    assert.equal([...doc.querySelectorAll('nav a, header a, footer a')].some(link => (link.getAttribute('href') || '').includes('/book')), false, page.path);
+  }
+  for (const page of pages.filter(item => item.path !== '/book/')) {
+    const text = await readFile(new URL(page.file, root), 'utf8');
+    assert.equal(text.includes('$'), false, page.path);
+  }
+  assert.equal(MIN_AGE_WEEKS, 8);
+  assert.equal(sessionStatus(0), 'Available');
+  assert.equal(sessionStatus(SEATS_PER_SESSION - 1), 'Available');
+  assert.equal(sessionStatus(SEATS_PER_SESSION), 'Fully booked');
+  assert.deepEqual(previewTotal(true), {cents:28000, label:'$280', addonPending:true});
+  assert.equal(previewTotal(false).addonPending, false);
+  const today = new Date(2026, 9, 29);
+  assert.equal(babyAgeMessage('2026-09-03', today), '');
+  assert.match(babyAgeMessage('2026-09-04', today), /8 weeks/);
+  assert.match(babyAgeMessage('2025-10-29', today), /under 12 months/);
+  assert.equal(babyAgeMessage('2025-10-30', today), '');
 });
 test('brand text and hero overlay retain readable contrast',()=>{
   const luminance=rgb=>rgb.map(x=>x/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4).reduce((sum,x,i)=>sum+x*[.2126,.7152,.0722][i],0);

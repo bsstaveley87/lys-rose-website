@@ -230,7 +230,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   const included = [
     'A 2-hour guided session for you and your baby',
     'A guide: a caring professional from the world of babies and new parents',
-    'Everything set up for you: your own baby bath, warm towels, mat and station',
+    'Everything set up for you: your own baby bath, soft towels, mat and station',
     'Our Floral Milk Soak for a gentle milk bath you give your baby yourself',
     'Guided baby massage and guided baby face care, step by step',
     'A little jar of baby face cream for your baby to take home',

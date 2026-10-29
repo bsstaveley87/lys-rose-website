@@ -233,7 +233,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
     'A floral milk bath with our Floral Milk Soak',
     'Baby massage and face care',
     'Petit cadeau: a little gift',
-    'A soft baby robe set for the sweetest photo moment',
+    'A spa photo op in a soft baby robe set',
     'Refreshments, light bites and fresh florals',
     'An intimate small group',
     'We handle the laundry and cleanup, so you can simply enjoy',
@@ -249,7 +249,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(bringAnswer, bring);
   const includedAnswer = faqEntities.find(item => item.name === "What's included in my session?").acceptedAnswer.text;
   assert.match(includedAnswer, /What's included/);
-  assert.ok(includedAnswer.includes('A 2-hour session for you and your baby, with a floral milk bath, baby massage and face care, a soft baby robe set, refreshments, light bites and fresh florals. We handle the laundry and cleanup, so you can simply enjoy. Petit cadeau: a little gift.'));
+  assert.ok(includedAnswer.includes('A 2-hour session for you and your baby, with a floral milk bath, baby massage and face care, a spa photo op in a soft baby robe set, refreshments, light bites and fresh florals. We handle the laundry and cleanup, so you can simply enjoy. Petit cadeau: a little gift.'));
   assert.equal(/\bjar\b|face cream/i.test(includedAnswer), false);
   assert.ok(includedAnswer.includes('We handle the laundry and cleanup, so you can simply enjoy.'));
   assert.equal(includedAnswer.toLowerCase().includes('sparkling'), false);

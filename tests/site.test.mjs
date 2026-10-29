@@ -192,7 +192,8 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(html.includes('The "Spa à la Maison" Kit (Spa at home)'), false);
   assert.equal(html.includes('At-home spa kit for your mini'), false);
   assert.ok(html.includes('The Lys Rose Floral Bath Bag'));
-  assert.ok(html.includes("A single bag of our floral bath soak to take home for your baby's bath."));
+  assert.ok(html.includes('Our floral bath soak to take home: 4–6 uses in a baby bath, or 1–2 in a shallow full-size tub.'));
+  assert.equal(html.includes("A single bag of our floral bath soak to take home for your baby's bath."), false);
   assert.equal(html.includes('The Floral Bath Soak'), false);
   const kit = book.querySelector('.kit-enhancement').textContent;
   assert.ok(kit.includes('Bath soak, baby massage oil, toiletry bag & mini face kit: brush, pads, roller.'));

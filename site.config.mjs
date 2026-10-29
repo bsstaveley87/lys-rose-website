@@ -12,4 +12,5 @@ export const pages = [
   {path:'/services/',file:'services/index.html',name:'Services',title:'Services · Lys Rose Baby Spa',description:"Small group baby spa sessions where you'll learn guided infant massage, a warm floral milk bath and guided baby face care with your own baby, plus light refreshments. Led by caring professionals from the world of babies and new parents. Fort Lauderdale."},
   {path:'/faq/',file:'faq/index.html',name:'FAQ',title:'FAQ · Lys Rose Baby Spa',description:'Answers about Lys Rose sessions: who they are for, where they happen and how to join the waitlist.'},
   {path:'/contact/',file:'contact/index.html',name:'Contact',title:'Contact · Lys Rose Baby Spa',description:'Say hello: hello@lysrosebabyspa.com · Instagram @lysrosebabyspa.'},
+  {path:'/book/',file:'book/index.html',name:'Reserve',title:'Reserve a session · Lys Rose Baby Spa',description:"A session for parents and their babies in Fort Lauderdale: infant massage, a warm floral milk bath and face care.",robots:'noindex,nofollow'},
 ];

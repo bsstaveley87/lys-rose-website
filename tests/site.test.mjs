@@ -4,6 +4,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
 import {validateFields, interestOptions, limits} from '../assets/validation.js';
+import {MIN_AGE_WEEKS, SEATS_PER_SESSION, babyAgeMessage, previewTotal, sessionStatus} from '../assets/booking.js';
 const approved = {
   '/': {
     title: 'Lys Rose Baby Spa · Fort Lauderdale',
@@ -29,7 +30,8 @@ const approved = {
 const root=new URL('../_site/',import.meta.url);
 const documentFor=async file=>parseHTML(await readFile(new URL(file,root),'utf8')).document;
 const titles=new Set();
-for(const page of pages) test(`${page.path}: indexable HTML, SEO, structured data, assets and links`,async()=>{
+const indexed=pages.filter(page=>!(page.robots||'').startsWith('noindex'));
+for(const page of indexed) test(`${page.path}: indexable HTML, SEO, structured data, assets and links`,async()=>{
   const doc=await documentFor(page.file);
   assert.equal(doc.documentElement.lang,'en');
   const title=doc.querySelector('title').textContent;
@@ -46,7 +48,7 @@ for(const page of pages) test(`${page.path}: indexable HTML, SEO, structured dat
   assert.equal(doc.querySelector('meta[property="og:description"]').content,description);
   assert.equal(doc.querySelector('meta[name="twitter:title"]').content,title);
   assert.equal(doc.querySelector('meta[name="twitter:description"]').content,description);
-  assert.equal(doc.querySelector('.disclaimer').textContent, 'Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
+  assert.equal(doc.querySelector('.disclaimer').textContent, 'Parents provide all hands-on care for their own baby while our instructor guides. Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
   assert.ok(doc.querySelector('#site-menu .menu-logo'));
   assert.ok([...doc.querySelectorAll('#site-menu nav a')].some(link => link.textContent === 'Home' && link.getAttribute('href') === '/'));
   assert.ok([...doc.querySelectorAll('noscript nav a')].some(link => link.textContent === 'Home'));
@@ -122,8 +124,8 @@ test('detail images preserve original aspect ratios rather than fixed-height cro
 });
 test('sitemap includes exactly the canonical pages and 404 is not indexed',async()=>{
   const xml=await readFile(new URL('sitemap.xml',root),'utf8');
-  for(const page of pages)assert.ok(xml.includes(`<loc>${site.origin+page.path}</loc>`));
-  assert.equal((xml.match(/<url>/g)||[]).length,pages.length);
+  for(const page of indexed)assert.ok(xml.includes(`<loc>${site.origin+page.path}</loc>`));
+  assert.equal((xml.match(/<url>/g)||[]).length,indexed.length);
   const doc=await documentFor('404.html');assert.equal(doc.querySelector('meta[name=robots]').content,'noindex,follow');
 });
 test('versioned assets are referenced consistently',async()=>{
@@ -156,6 +158,133 @@ test('preview copy removes the flagged phrases and keeps the approved lines', as
   const data = JSON.parse((await documentFor('faq/index.html')).querySelector('script[type="application/ld+json"]').textContent);
   const answer = data['@graph'].find(node => node['@type'] === 'FAQPage').mainEntity.find(item => item.name === 'Is this a medical or therapy service?').acceptedAnswer.text;
   assert.equal(answer, 'No. Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
+});
+test('booking preview is unlisted, has no seat count, and prices stay off public pages', async () => {
+  const book = await documentFor('book/index.html');
+  const html = book.documentElement.outerHTML;
+  assert.equal(book.querySelector('meta[name=robots]').content, 'noindex,nofollow');
+  assert.equal(book.querySelector('script[type="application/ld+json"]'), null);
+  assert.equal(book.querySelector('.footer-tagline').textContent, 'Inspired by Lily Rose. Shared with love.');
+  assert.equal(book.querySelector('.disclaimer').textContent, 'Parents provide all hands-on care for their own baby while our instructor guides. Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
+  assert.equal(/\b12\s+spots\b/i.test(html), false);
+  assert.equal(html.toLowerCase().includes('spots remaining'), false);
+  assert.equal(html.toLowerCase().includes('group size'), false);
+  assert.equal(/venue/i.test(book.body.textContent), false);
+  assert.ok(html.includes('Dates coming soon'));
+  assert.ok(html.includes('Available'));
+  assert.ok(html.includes('Fully booked'));
+  assert.equal(book.querySelector('.booking-price').textContent, '$280 per parent & baby');
+  assert.equal(html.includes('$280 per mom'), false);
+  assert.ok(html.includes('This is the price before taxes and processing fees.'));
+  assert.equal(html.includes('$TBD'), false);
+  assert.equal(html.includes('Take-home robe set'), false);
+  assert.equal(html.includes('gift bag'), false);
+  assert.equal((html.match(/available to add/g) || []).length, 4);
+  assert.ok(html.includes('Le Petit Plus (The Little Extras)'));
+  assert.equal(html.includes('Premium enhancements'), false);
+  assert.equal(html.includes('Optional add-ons'), false);
+  assert.equal(html.includes('Photography'), false);
+  assert.ok(html.includes('Premium Face Crème'));
+  assert.ok(html.includes('Embroidered Keepsake Robe'));
+  assert.ok(html.includes('A personalized embroidered robe for your baby.'));
+  assert.ok(html.includes('The Lys Rose at Home Kit'));
+  assert.ok(html.includes('The at-home baby spa kit.'));
+  assert.equal(html.includes('The "Spa à la Maison" Kit (Spa at home)'), false);
+  assert.equal(html.includes('At-home spa kit for your mini'), false);
+  assert.ok(html.includes('The Lys Rose Floral Milk Bath Bag'));
+  assert.equal(html.includes('The Lys Rose Floral Bath Bag'), false);
+  assert.ok(html.includes('Our floral milk bath to take home: 4–6 uses in a baby bath, or 1–2 in a shallow full-size tub.'));
+  assert.ok(html.includes('Ingredients: organic coconut milk powder, organic colloidal oatmeal, organic dried rose petals.'));
+  assert.equal((html.match(/organic/gi) || []).length, 3);
+  for (const file of ['index.html','about/index.html','services/index.html','faq/index.html','contact/index.html']) {
+    assert.equal((await readFile(new URL(file, root), 'utf8')).toLowerCase().includes('organic'), false, file);
+  }
+  assert.equal(html.includes("A single bag of our floral bath soak to take home for your baby's bath."), false);
+  assert.equal(html.includes('The Floral Bath Soak'), false);
+  const kit = book.querySelector('.kit-enhancement').textContent;
+  assert.ok(kit.includes('Bath soak, toiletry bag & mini face kit: brush, pads, roller.'));
+  assert.equal(kit.toLowerCase().includes('massage oil'), false);
+  assert.ok(kit.includes('The Grand also includes the baby robe set, with the option to personalize it.'));
+  assert.equal(kit.includes('4–6'), false);
+  assert.equal(kit.includes('1–2'), false);
+  assert.equal(book.querySelectorAll('[name=kitSize][disabled]').length, 2);
+  assert.equal(html.toLowerCase().includes('sparkling toast'), false);
+  assert.equal(html.toLowerCase().includes('bubbly'), false);
+  assert.ok(html.includes('Evereden Nourishing Baby Face Cream. Contains shea butter, coconut, soy and calendula. Please tell us about any allergies at least 48 hours before your session.'));
+  assert.equal(html.includes('Full ingredient list below.'), false);
+  assert.equal(html.includes('Optional, $10:'), false);
+  assert.equal(book.querySelector('.ingredient-list').hasAttribute('open'), false);
+  assert.ok(book.querySelector('.ingredient-list summary').textContent.includes('Ingredients:'));
+  assert.equal(html.includes('5 g'), false);
+  assert.equal(html.toLowerCase().includes('full jar'), false);
+  assert.equal(html.includes('$5 or $10'), false);
+  assert.equal(html.includes('$5 (a small amount)'), false);
+  assert.equal(book.querySelector('[name=faceCareUpgrade]'), null);
+  assert.equal(book.querySelector('.jar-option').textContent, '$10');
+  assert.ok(html.includes('Water (Aqua), Glycerin, Simmondsia Chinensis (Jojoba) Seed Oil'));
+  assert.ok(html.includes("I've read the ingredients and will share any allergies with Lys Rose. [Allergy acknowledgment wording pending review]"));
+  assert.equal(book.querySelector('[name=ingredientAck]').hasAttribute('disabled'), true);
+  assert.equal(book.querySelector('[name=ingredientAck]').hasAttribute('required'), true);
+  assert.equal(book.querySelector('#booking-total').textContent, '$280');
+  for (const word of ['hypoallergenic', 'facial', 'soothing']) assert.equal(html.toLowerCase().includes(word), false, word);
+  const included = [
+    'A 2-hour session for you and your baby, led by a caring expert in babies and new parents',
+    'Your own baby bath, soft towels and a cozy station, all set up for you',
+    'A floral milk bath with our Floral Milk Soak',
+    'Baby massage and face care',
+    'Petit cadeau: a little gift',
+    'A spa photo op in a soft baby robe set',
+    'Refreshments, light bites and fresh florals',
+    'An intimate small group',
+    'We handle the laundry and cleanup, so you can simply enjoy',
+  ];
+  for (const line of included) assert.ok(html.includes(line), line);
+  const home = await readFile(new URL('index.html', root), 'utf8');
+  for (const line of included) assert.ok(home.includes(line), line);
+  const bring = "Just your baby, a couple of diapers, a change of clothes and anything you need for feeding (bottle, formula or a nursing cover). We take care of the rest: towels, wipes and everything used during the session.";
+  const faqDoc = await documentFor('faq/index.html');
+  const faqData = JSON.parse(faqDoc.querySelector('script[type="application/ld+json"]').textContent);
+  const faqEntities = faqData['@graph'].find(node => node['@type'] === 'FAQPage').mainEntity;
+  const bringAnswer = faqEntities.find(item => item.name === 'What should I bring?').acceptedAnswer.text;
+  assert.equal(bringAnswer, bring);
+  const includedAnswer = faqEntities.find(item => item.name === "What's included in my session?").acceptedAnswer.text;
+  assert.match(includedAnswer, /What's included/);
+  assert.ok(includedAnswer.includes('A 2-hour session for you and your baby, with a floral milk bath, baby massage and face care, a spa photo op in a soft baby robe set, refreshments, light bites and fresh florals. We handle the laundry and cleanup, so you can simply enjoy. Petit cadeau: a little gift.'));
+  assert.equal(/\bjar\b|face cream/i.test(includedAnswer), false);
+  assert.ok(includedAnswer.includes('We handle the laundry and cleanup, so you can simply enjoy.'));
+  assert.equal(includedAnswer.toLowerCase().includes('sparkling'), false);
+  assert.ok(html.includes('[Waiver wording pending attorney review]'));
+  assert.ok(html.includes('Allergies, sensitivities or skin conditions (for example a rash, eczema or broken skin)'));
+  assert.ok(book.querySelector('[name=allergies][value=None]'));
+  assert.ok(book.querySelector('[name=waiver][required]'));
+  assert.equal(book.querySelector('[name=photoRelease]').hasAttribute('checked'), false);
+  assert.equal(book.querySelector('[name=photoRelease]').hasAttribute('required'), false);
+  assert.equal(book.querySelector('.booking-pay').hasAttribute('disabled'), true);
+  assert.equal(html.toLowerCase().includes('stripe'), false);
+  assert.equal(html.toLowerCase().includes('square'), false);
+  const robots = await readFile(new URL('robots.txt', root), 'utf8');
+  assert.match(robots, /Disallow: \/book\//);
+  const xml = await readFile(new URL('sitemap.xml', root), 'utf8');
+  assert.equal(xml.includes('/book/'), false);
+  for (const page of pages) {
+    const doc = await documentFor(page.file);
+    assert.equal([...doc.querySelectorAll('nav a, header a, footer a')].some(link => (link.getAttribute('href') || '').includes('/book')), false, page.path);
+  }
+  for (const page of pages.filter(item => item.path !== '/book/')) {
+    const text = await readFile(new URL(page.file, root), 'utf8');
+    assert.equal(text.includes('$'), false, page.path);
+  }
+  assert.equal(MIN_AGE_WEEKS, 8);
+  assert.equal(sessionStatus(0), 'Available');
+  assert.equal(sessionStatus(SEATS_PER_SESSION - 1), 'Available');
+  assert.equal(sessionStatus(SEATS_PER_SESSION), 'Fully booked');
+  assert.deepEqual(previewTotal(true), {cents:28000, label:'$280', addonPending:true});
+  assert.equal(previewTotal(false).addonPending, false);
+  const today = new Date(2026, 9, 29);
+  assert.equal(babyAgeMessage('2026-09-03', today), '');
+  assert.match(babyAgeMessage('2026-09-04', today), /8 weeks/);
+  assert.match(babyAgeMessage('2025-10-29', today), /under 12 months/);
+  assert.equal(babyAgeMessage('2025-10-30', today), '');
 });
 test('brand text and hero overlay retain readable contrast',()=>{
   const luminance=rgb=>rgb.map(x=>x/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4).reduce((sum,x,i)=>sum+x*[.2126,.7152,.0722][i],0);

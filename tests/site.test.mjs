@@ -185,7 +185,11 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(html.includes('Photography'), false);
   assert.ok(html.includes('A personalized embroidered robe for your baby'));
   assert.ok(html.includes('At-home spa kit for your mini'));
-  assert.ok(html.includes('Both sizes come with a toiletries bag filled with a face roller, a face brush and face pads, plus a bag of our bath soak (4–6 uses in a baby bath, or 1–2 uses in a shallow full-size bathtub). The Grand also includes the baby robe set, with the option to personalize it.'));
+  const kit = book.querySelector('.kit-enhancement').textContent;
+  assert.ok(kit.includes('Bath soak, baby massage oil, toiletry bag & mini face kit: brush, pads, roller.'));
+  assert.ok(kit.includes('The Grand also includes the baby robe set, with the option to personalize it.'));
+  assert.equal(kit.includes('4–6'), false);
+  assert.equal(kit.includes('1–2'), false);
   assert.equal(book.querySelectorAll('[name=kitSize][disabled]').length, 2);
   assert.equal(html.toLowerCase().includes('sparkling toast'), false);
   assert.equal(html.toLowerCase().includes('bubbly'), false);

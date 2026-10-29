@@ -194,7 +194,11 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.ok(html.includes('The Lys Rose Floral Milk Bath Bag'));
   assert.equal(html.includes('The Lys Rose Floral Bath Bag'), false);
   assert.ok(html.includes('Our floral milk bath to take home: 4–6 uses in a baby bath, or 1–2 in a shallow full-size tub.'));
-  assert.ok(html.includes('Ingredients: coconut milk powder, colloidal oatmeal, dried rose petals.'));
+  assert.ok(html.includes('Ingredients: organic coconut milk powder, organic colloidal oatmeal, organic dried rose petals.'));
+  assert.equal((html.match(/organic/gi) || []).length, 3);
+  for (const file of ['index.html','about/index.html','services/index.html','faq/index.html','contact/index.html']) {
+    assert.equal((await readFile(new URL(file, root), 'utf8')).toLowerCase().includes('organic'), false, file);
+  }
   assert.equal(html.includes("A single bag of our floral bath soak to take home for your baby's bath."), false);
   assert.equal(html.includes('The Floral Bath Soak'), false);
   const kit = book.querySelector('.kit-enhancement').textContent;

@@ -160,8 +160,7 @@ body.menu-open { overflow:hidden; }
 }
 .booking-tagline { margin:0 0 8px; font:400 clamp(28px,5vw,40px)/1.2 'Cormorant Garamond',Georgia,serif; }
 .booking-intro { max-width:40rem; margin:0; }
-.booking-photo { margin:28px 0 0; }
-.booking-photo img { display:block; width:100%; height:auto; border:1px solid var(--champagne); background:var(--stone); }
+.photo-placeholder { display:grid; place-items:center; min-height:180px; margin:28px 0 0; border:1px solid var(--champagne); background:var(--stone); color:var(--ink); font:500 14px/1.4 Jost,sans-serif; letter-spacing:.08em; }
 .date-list { display:grid; gap:16px; margin:0; padding:0; list-style:none; }
 .date-card { display:flex; flex-direction:column; gap:14px; min-height:132px; margin:0; padding:22px 20px; background:var(--cream); border:1px solid var(--champagne); }
 .date-card h3 { margin:0; font:400 32px/1.15 'Cormorant Garamond',Georgia,serif; }
@@ -194,6 +193,22 @@ body.menu-open { overflow:hidden; }
 .card-mock span { display:flex; align-items:center; min-height:54px; padding:0 12px; background:var(--cream); border:1px solid var(--input-border); color:var(--champagne); font-size:14px; letter-spacing:.04em; }
 .booking-pay { width:100%; }
 .booking-pay:disabled { opacity:.55; cursor:not-allowed; }
+.included-section { padding:clamp(48px,8vw,96px) clamp(16px,4vw,56px); background:var(--cream); scroll-margin-top:88px; }
+.included-section + .waitlist-section .waitlist-panel { margin-top:0; }
+.included-wrap { max-width:920px; margin:0 auto; }
+.included-list { list-style:none; margin:28px 0 0; padding:0; display:grid; gap:18px; }
+.included-list li { display:grid; grid-template-columns:40px minmax(0,1fr); gap:14px; align-items:center; min-height:44px; }
+.included-icon { width:40px; height:40px; display:grid; place-items:center; color:#504B49; border:1px solid #BFA695; border-radius:50%; background:#F6F2EF; }
+.included-icon svg { display:block; }
+.booking-price { margin:36px 0 0; font:400 clamp(36px,6vw,56px)/1.05 'Cormorant Garamond',Georgia,serif; }
+.price-note { margin:8px 0 0; font:500 16px/1.45 Jost,sans-serif; }
+#book-addons { margin-top:36px; }
+.addon-preview { list-style:none; margin:16px 0 0; padding:0; display:flex; flex-direction:column; gap:12px; }
+.addon-preview label { display:flex; align-items:flex-start; gap:12px; margin:0; padding:16px; border:1px solid var(--champagne); background:var(--cream); font-size:16px; letter-spacing:0; text-transform:none; }
+.addon-preview input { width:20px; height:20px; margin-top:2px; accent-color:var(--ink); cursor:not-allowed; }
+.addon-preview .addon-copy { display:flex; flex-direction:column; gap:4px; }
+.available-to-add { font:500 13px/1.4 Jost,sans-serif; letter-spacing:0; }
+@media (min-width:900px) { .included-list { grid-template-columns:1fr 1fr; column-gap:36px; } }
 @media (min-width:700px) { .date-list { grid-template-columns:1fr 1fr; } }
 @media (prefers-reduced-motion:reduce) {
   html { scroll-behavior:auto; }

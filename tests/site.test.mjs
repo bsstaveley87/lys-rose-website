@@ -173,11 +173,36 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.ok(html.includes('Dates coming soon'));
   assert.ok(html.includes('Available'));
   assert.ok(html.includes('Fully booked'));
-  assert.ok(html.includes('$280 per parent and baby'));
-  assert.ok(html.includes('Price shown is before taxes and processing fees.'));
-  assert.ok(html.includes('Take-home robe set'));
-  assert.ok(html.includes('$TBD'));
-  assert.ok(html.includes('add-on price to come'));
+  assert.ok(html.includes('$280 per mom'));
+  assert.ok(html.includes('This is the price before taxes and processing fees.'));
+  assert.equal(html.includes('$TBD'), false);
+  assert.equal(html.includes('Take-home robe set'), false);
+  assert.equal(html.includes('gift bag'), false);
+  assert.equal((html.match(/available to add/g) || []).length, 3);
+  const included = [
+    'A 2-hour guided session for you and your baby',
+    'A guide: a caring professional from the world of babies and new parents',
+    'Everything set up for you: your own baby bath, warm towels, mat and station',
+    'Our Floral Milk Soak for a gentle milk bath you give your baby yourself',
+    'Guided baby massage and guided baby face care, step by step',
+    'A soft baby robe set for your little one to wear after the bath, made for a sweet photo moment on your own phone',
+    'Refreshments and a non-alcoholic sparkling toast',
+    'Fresh florals and finishing touches',
+    "A small group of parents, so there's time and space for you",
+    'Laundry and cleanup are on us. You just come and enjoy.',
+  ];
+  for (const line of included) assert.ok(html.includes(line), line);
+  const home = await readFile(new URL('index.html', root), 'utf8');
+  for (const line of included) assert.ok(home.includes(line), line);
+  const bring = "Just your baby, a couple of diapers, a change of clothes and anything you need for feeding (bottle, formula or a nursing cover). We take care of the rest: towels, wipes and everything used during the session.";
+  const faqDoc = await documentFor('faq/index.html');
+  const faqData = JSON.parse(faqDoc.querySelector('script[type="application/ld+json"]').textContent);
+  const faqEntities = faqData['@graph'].find(node => node['@type'] === 'FAQPage').mainEntity;
+  const bringAnswer = faqEntities.find(item => item.name === 'What should I bring?').acceptedAnswer.text;
+  assert.equal(bringAnswer, bring);
+  const includedAnswer = faqEntities.find(item => item.name === "What's included in my session?").acceptedAnswer.text;
+  assert.match(includedAnswer, /What's included/);
+  assert.match(includedAnswer, /soft baby robe set to wear after the bath/);
   assert.ok(html.includes('[Waiver wording pending attorney review]'));
   assert.ok(html.includes('Allergies, sensitivities or skin conditions (for example a rash, eczema or broken skin)'));
   assert.ok(book.querySelector('[name=allergies][value=None]'));

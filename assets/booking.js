@@ -76,12 +76,10 @@ function syncAllergies(form) {
   }
 }
 
-function syncTotal(form) {
-  const total = previewTotal(form.querySelector('#robe-set')?.checked);
+function syncTotal() {
+  const total = previewTotal(false);
   const amount = document.getElementById('booking-total');
-  const note = document.getElementById('addon-note');
   if (amount) amount.textContent = total.label;
-  if (note) note.hidden = !total.addonPending;
 }
 
 export function initBooking(documentRef = document) {
@@ -106,11 +104,10 @@ export function initBooking(documentRef = document) {
   }
   form.addEventListener('change', event => {
     if (event.target?.name === 'allergies') syncAllergies(form);
-    if (event.target?.id === 'robe-set') syncTotal(form);
   });
   form.addEventListener('submit', event => event.preventDefault());
   syncAllergies(form);
-  syncTotal(form);
+  syncTotal();
 }
 
 if (typeof document !== 'undefined') initBooking(document);

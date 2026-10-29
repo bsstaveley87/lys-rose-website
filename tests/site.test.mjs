@@ -185,6 +185,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
     'Everything set up for you: your own baby bath, warm towels, mat and station',
     'Our Floral Milk Soak for a gentle milk bath you give your baby yourself',
     'Guided baby massage and guided baby face care, step by step',
+    'A little jar of baby face cream for your baby to take home',
     'A soft baby robe set for your little one to wear after the bath, made for a sweet photo moment on your own phone',
     'Refreshments and a non-alcoholic sparkling toast',
     'Fresh florals and finishing touches',
@@ -203,6 +204,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   const includedAnswer = faqEntities.find(item => item.name === "What's included in my session?").acceptedAnswer.text;
   assert.match(includedAnswer, /What's included/);
   assert.match(includedAnswer, /soft baby robe set to wear after the bath/);
+  assert.ok(includedAnswer.includes('a little jar of baby face cream for your baby to take home'));
   assert.ok(html.includes('[Waiver wording pending attorney review]'));
   assert.ok(html.includes('Allergies, sensitivities or skin conditions (for example a rash, eczema or broken skin)'));
   assert.ok(book.querySelector('[name=allergies][value=None]'));

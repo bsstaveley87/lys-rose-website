@@ -191,6 +191,7 @@ body.menu-open { overflow:hidden; }
 .checkout-label { margin:0; font:500 15px/1.45 Jost,sans-serif; letter-spacing:.04em; }
 .card-mock { display:grid; grid-template-columns:1.4fr .8fr .6fr; gap:8px; }
 .card-mock span { display:flex; align-items:center; min-height:54px; padding:0 12px; background:var(--cream); border:1px solid var(--input-border); color:var(--champagne); font-size:14px; letter-spacing:.04em; }
+.disclaimer { font-size:14px; line-height:1.5; }
 .booking-pay { width:100%; }
 .booking-pay:disabled { opacity:.55; cursor:not-allowed; }
 .included-section { padding:clamp(48px,8vw,96px) clamp(16px,4vw,56px); background:var(--cream); scroll-margin-top:88px; }

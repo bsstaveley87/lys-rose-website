@@ -48,7 +48,7 @@ for(const page of indexed) test(`${page.path}: indexable HTML, SEO, structured d
   assert.equal(doc.querySelector('meta[property="og:description"]').content,description);
   assert.equal(doc.querySelector('meta[name="twitter:title"]').content,title);
   assert.equal(doc.querySelector('meta[name="twitter:description"]').content,description);
-  assert.equal(doc.querySelector('.disclaimer').textContent, 'Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
+  assert.equal(doc.querySelector('.disclaimer').textContent, 'Parents provide all hands-on care for their own baby while our instructor guides. Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
   assert.ok(doc.querySelector('#site-menu .menu-logo'));
   assert.ok([...doc.querySelectorAll('#site-menu nav a')].some(link => link.textContent === 'Home' && link.getAttribute('href') === '/'));
   assert.ok([...doc.querySelectorAll('noscript nav a')].some(link => link.textContent === 'Home'));
@@ -165,7 +165,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('meta[name=robots]').content, 'noindex,nofollow');
   assert.equal(book.querySelector('script[type="application/ld+json"]'), null);
   assert.equal(book.querySelector('.footer-tagline').textContent, 'Inspired by Lily Rose. Shared with love.');
-  assert.equal(book.querySelector('.disclaimer').textContent, 'Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
+  assert.equal(book.querySelector('.disclaimer').textContent, 'Parents provide all hands-on care for their own baby while our instructor guides. Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
   assert.equal(/\b12\s+spots\b/i.test(html), false);
   assert.equal(html.toLowerCase().includes('spots remaining'), false);
   assert.equal(html.toLowerCase().includes('group size'), false);
@@ -228,17 +228,15 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('#booking-total').textContent, '$280');
   for (const word of ['hypoallergenic', 'facial', 'soothing']) assert.equal(html.toLowerCase().includes(word), false, word);
   const included = [
-    'A 2-hour guided session for you and your baby',
-    'A guide: a caring professional from the world of babies and new parents',
-    'Everything set up for you: your own baby bath, soft towels, mat and station',
-    'Our Floral Milk Soak for a gentle milk bath you give your baby yourself',
-    'Guided baby massage and guided baby face care, step by step',
-    'A little jar of baby face cream for your baby to take home',
-    'A soft baby robe set for your little one to wear after the bath, made for a sweet photo moment on your own phone',
-    'Refreshments and light bites',
-    'Fresh florals and finishing touches',
-    "A small group of parents, so there's time and space for you",
-    'Laundry and cleanup are on us. You just come and enjoy.',
+    'A 2-hour session for you and your baby, led by a caring expert in babies and new parents',
+    'Your own baby bath, soft towels and a cozy station, all set up for you',
+    'A floral milk bath with our Floral Milk Soak',
+    'Baby massage and face care',
+    'A few thoughtful treats to take home',
+    'A soft baby robe set for the sweetest photo moment',
+    'Refreshments, light bites and fresh florals',
+    'An intimate small group',
+    'We handle the laundry and cleanup, so you can simply enjoy',
   ];
   for (const line of included) assert.ok(html.includes(line), line);
   const home = await readFile(new URL('index.html', root), 'utf8');
@@ -251,9 +249,9 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(bringAnswer, bring);
   const includedAnswer = faqEntities.find(item => item.name === "What's included in my session?").acceptedAnswer.text;
   assert.match(includedAnswer, /What's included/);
-  assert.match(includedAnswer, /soft baby robe set to wear after the bath/);
-  assert.ok(includedAnswer.includes('a little jar of baby face cream for your baby to take home'));
-  assert.ok(includedAnswer.includes('Refreshments and light bites'));
+  assert.ok(includedAnswer.includes('A 2-hour session for you and your baby, with a floral milk bath, baby massage and face care, a few thoughtful treats to take home, a soft baby robe set, refreshments, light bites and fresh florals.'));
+  assert.equal(/\bjar\b|face cream/i.test(includedAnswer), false);
+  assert.ok(includedAnswer.includes('We handle the laundry and cleanup, so you can simply enjoy.'));
   assert.equal(includedAnswer.toLowerCase().includes('sparkling'), false);
   assert.ok(html.includes('[Waiver wording pending attorney review]'));
   assert.ok(html.includes('Allergies, sensitivities or skin conditions (for example a rash, eczema or broken skin)'));

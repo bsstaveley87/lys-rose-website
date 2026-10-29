@@ -179,6 +179,16 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(html.includes('Take-home robe set'), false);
   assert.equal(html.includes('gift bag'), false);
   assert.equal((html.match(/available to add/g) || []).length, 3);
+  assert.ok(html.includes('Premium face care upgrade (optional, $5 or $10): Evereden Nourishing Baby Face Cream. Contains shea butter, coconut, soy and calendula. Full ingredient list below. Please tell us about any allergies at least 48 hours before your session.'));
+  assert.ok(html.includes('$5 (a small amount)'));
+  assert.ok(html.includes('$10 (full 5 g jar)'));
+  assert.ok(html.includes('Water (Aqua), Glycerin, Simmondsia Chinensis (Jojoba) Seed Oil'));
+  assert.ok(html.includes("I've read the ingredients and will share any allergies with Lys Rose. [Allergy acknowledgment wording pending review]"));
+  assert.equal(book.querySelectorAll('[name=faceCareUpgrade][disabled]').length, 2);
+  assert.equal(book.querySelector('[name=ingredientAck]').hasAttribute('disabled'), true);
+  assert.equal(book.querySelector('[name=ingredientAck]').hasAttribute('required'), true);
+  assert.equal(book.querySelector('#booking-total').textContent, '$280');
+  for (const word of ['hypoallergenic', 'facial', 'soothing']) assert.equal(html.toLowerCase().includes(word), false, word);
   const included = [
     'A 2-hour guided session for you and your baby',
     'A guide: a caring professional from the world of babies and new parents',

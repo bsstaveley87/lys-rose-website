@@ -208,6 +208,14 @@ body.menu-open { overflow:hidden; }
 .addon-preview input { width:20px; height:20px; margin-top:2px; accent-color:var(--ink); cursor:not-allowed; }
 .addon-preview .addon-copy { display:flex; flex-direction:column; gap:4px; }
 .available-to-add { font:500 13px/1.4 Jost,sans-serif; letter-spacing:0; }
+.face-upgrade { display:flex; flex-direction:column; gap:14px; margin-top:16px; padding:16px; border:1px solid var(--champagne); background:var(--cream); }
+.face-upgrade p { margin:0; font-size:16px; line-height:1.5; }
+.face-choices { margin:0; padding:0; border:0; min-inline-size:0; display:flex; flex-direction:column; gap:8px; }
+.face-choices legend { margin:0; }
+.face-choices input, .face-ack input { cursor:not-allowed; }
+.ingredient-list { border-top:1px solid var(--champagne); border-bottom:1px solid var(--champagne); }
+.ingredient-list summary { display:flex; align-items:center; min-height:44px; font:500 13px/1.4 Jost,sans-serif; letter-spacing:.08em; text-transform:uppercase; }
+.ingredient-list p { padding:0 0 16px; font-size:14px; line-height:1.55; }
 @media (min-width:900px) { .included-list { grid-template-columns:1fr 1fr; column-gap:36px; } }
 @media (min-width:700px) { .date-list { grid-template-columns:1fr 1fr; } }
 @media (prefers-reduced-motion:reduce) {

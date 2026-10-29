@@ -210,7 +210,11 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelectorAll('[name=kitSize][disabled]').length, 2);
   assert.equal(html.toLowerCase().includes('sparkling toast'), false);
   assert.equal(html.toLowerCase().includes('bubbly'), false);
-  assert.ok(html.includes('Optional, $10: Evereden Nourishing Baby Face Cream. Contains shea butter, coconut, soy and calendula. Full ingredient list below. Please tell us about any allergies at least 48 hours before your session.'));
+  assert.ok(html.includes('Evereden Nourishing Baby Face Cream. Contains shea butter, coconut, soy and calendula. Please tell us about any allergies at least 48 hours before your session.'));
+  assert.equal(html.includes('Full ingredient list below.'), false);
+  assert.equal(html.includes('Optional, $10:'), false);
+  assert.equal(book.querySelector('.ingredient-list').hasAttribute('open'), false);
+  assert.ok(book.querySelector('.ingredient-list summary').textContent.includes('Ingredients:'));
   assert.equal(html.includes('5 g'), false);
   assert.equal(html.toLowerCase().includes('full jar'), false);
   assert.equal(html.includes('$5 or $10'), false);

@@ -221,7 +221,9 @@ body.menu-open { overflow:hidden; }
 .face-ack { margin-top:12px; }
 .face-ack input { cursor:not-allowed; }
 .ingredient-list { border-top:1px solid var(--champagne); border-bottom:1px solid var(--champagne); }
-.ingredient-list summary { display:flex; align-items:center; min-height:44px; font:500 13px/1.4 Jost,sans-serif; letter-spacing:.08em; text-transform:uppercase; }
+.ingredient-list summary { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:44px; font:500 16px/1.4 Jost,sans-serif; letter-spacing:0; text-transform:none; }
+.ingredient-chevron { width:8px; height:8px; border-right:1.5px solid #504B49; border-bottom:1.5px solid #504B49; transform:rotate(45deg); flex:0 0 auto; }
+.ingredient-list[open] .ingredient-chevron { transform:rotate(-135deg); margin-top:4px; }
 .ingredient-list p { padding:0 0 16px; font-size:14px; line-height:1.55; }
 @media (min-width:900px) { .included-list { grid-template-columns:1fr 1fr; column-gap:36px; } }
 @media (min-width:700px) { .date-list { grid-template-columns:1fr 1fr; } }

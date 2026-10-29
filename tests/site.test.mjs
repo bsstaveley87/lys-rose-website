@@ -180,7 +180,8 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(html.includes('Take-home robe set'), false);
   assert.equal(html.includes('gift bag'), false);
   assert.equal((html.match(/available to add/g) || []).length, 2);
-  assert.ok(html.includes('Premium enhancements'));
+  assert.ok(html.includes('Le Petit Plus (The Little Extras)'));
+  assert.equal(html.includes('Premium enhancements'), false);
   assert.equal(html.includes('Optional add-ons'), false);
   assert.equal(html.includes('Photography'), false);
   assert.ok(html.includes('A personalized embroidered robe for your baby'));

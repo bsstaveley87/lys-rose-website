@@ -157,6 +157,58 @@ test('preview copy removes the flagged phrases and keeps the approved lines', as
   const answer = data['@graph'].find(node => node['@type'] === 'FAQPage').mainEntity.find(item => item.name === 'Is this a medical or therapy service?').acceptedAnswer.text;
   assert.equal(answer, 'No. Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
 });
+test('published home and FAQ copy stays on the waitlist and off the booking page', async () => {
+  const disclaimer = 'Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.';
+  const included = [
+    'A 2-hour session for you and your baby, led by a caring expert in babies and new parents',
+    'Your own baby bath, soft towels and a cozy station, all set up for you',
+    'A floral milk bath with our Floral Milk Soak',
+    'Baby massage and face care',
+    'Petit cadeau: a little gift',
+    'A spa photo op in a soft baby robe set',
+    'Refreshments, light bites and fresh florals',
+    'An intimate small group',
+    'We handle the laundry and cleanup, so you can simply enjoy',
+  ];
+  const home = await documentFor('index.html');
+  const lines = [...home.querySelectorAll('#whats-included .included-list li')].map(item => item.textContent.trim());
+  assert.deepEqual(lines, included);
+  assert.equal(home.querySelector('.hero-tagline').textContent, 'Inspired by Lily Rose.Shared with love.');
+  assert.equal(home.querySelector('.hero-intro').textContent, 'A session for you and your baby: infant massage, a warm floral milk bath and face care.');
+  assert.equal(home.querySelector('.footer-tagline').textContent, 'Inspired by Lily Rose. Shared with love.');
+  const session = [...home.querySelectorAll('.session-item-copy')].map(item => item.textContent.replace(/\s+/g, ' ').trim());
+  assert.deepEqual(session, [
+    'Guided infant massage Infant massage, with a caring expert in babies and new parents.',
+    'A warm floral milk bath A warm floral milk bath, then a soft baby robe set for a photo moment.',
+    'An intimate small group A small group of parents. In Fort Lauderdale, or at home on request.',
+  ]);
+  assert.equal(home.querySelector('a.primary-button').getAttribute('href'), '#waitlist');
+  assert.equal(home.querySelector('.header-waitlist').getAttribute('href'), '/#waitlist');
+  const faq = await documentFor('faq/index.html');
+  const data = JSON.parse(faq.querySelector('script[type="application/ld+json"]').textContent);
+  const entities = data['@graph'].find(node => node['@type'] === 'FAQPage').mainEntity;
+  const includedAnswer = entities.find(item => item.name === "What's included in my session?").acceptedAnswer.text;
+  assert.equal(includedAnswer, 'A 2-hour session for you and your baby, with a floral milk bath, baby massage and face care, a spa photo op in a soft baby robe set, refreshments, light bites and fresh florals. We handle the laundry and cleanup, so you can simply enjoy. Petit cadeau: a little gift.\n\nSee the full list in What\'s included.');
+  assert.equal(faq.querySelector('a[href="/#whats-included"]').textContent, "What's included");
+  const bring = entities.find(item => item.name === 'What should I bring?').acceptedAnswer.text;
+  assert.equal(bring, "Just your baby, a couple of diapers, a change of clothes and anything you need for feeding (bottle, formula or a nursing cover). We take care of the rest: towels, wipes and everything used during the session.");
+  assert.equal(entities.find(item => item.name === 'Where do sessions take place?').acceptedAnswer.text, "In Fort Lauderdale. While a session is open for booking, you'll find the address on our Services page.");
+  const xml = await readFile(new URL('sitemap.xml', root), 'utf8');
+  const robots = await readFile(new URL('robots.txt', root), 'utf8');
+  assert.equal(xml.includes('/book'), false);
+  assert.equal(robots.includes('/book'), false);
+  for (const page of pages) {
+    const doc = await documentFor(page.file);
+    const html = doc.documentElement.outerHTML;
+    assert.equal(doc.querySelector('.disclaimer').textContent, disclaimer, page.path);
+    assert.equal(html.includes('/book'), false, page.path);
+    assert.equal(html.includes('Le Petit Plus'), false, page.path);
+    assert.equal(html.includes('$'), false, page.path);
+    assert.equal(html.toLowerCase().includes('facial'), false, page.path);
+    assert.equal([...doc.querySelectorAll('a[href]')].some(link => (link.getAttribute('href') || '').includes('/book')), false, page.path);
+    assert.equal(JSON.parse(doc.querySelector('script[type="application/ld+json"]').textContent)['@graph'].some(node => JSON.stringify(node).includes('/book')), false, page.path);
+  }
+});
 test('brand text and hero overlay retain readable contrast',()=>{
   const luminance=rgb=>rgb.map(x=>x/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4).reduce((sum,x,i)=>sum+x*[.2126,.7152,.0722][i],0);
   const contrast=(a,b)=>(Math.max(luminance(a),luminance(b))+.05)/(Math.min(luminance(a),luminance(b))+.05);

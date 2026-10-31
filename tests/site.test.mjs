@@ -280,21 +280,21 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('#baby-dob-hint').textContent, 'For babies at least 4 weeks old and under 12 months.');
   assert.equal(html.includes('8 weeks'), false);
   assert.equal(html.includes('8-week'), false);
-  assert.equal(book.querySelector('#age-confirmation').hasAttribute('required'), true);
-  assert.equal(book.querySelector('#age-confirmation').closest('label').textContent, "My baby is at least 4 weeks old and their umbilical cord stump has fallen off and fully healed. If I'm unsure, I'll get my pediatrician's clearance before the session.");
-  const products = book.querySelector('#session-products').textContent;
-  assert.ok(products.includes('Floral Milk Soak'));
-  assert.ok(products.includes('Coconut milk powder, colloidal oatmeal and dried rose petals.'));
-  assert.ok(products.includes('Grapeseed massage oil'));
-  assert.ok(products.includes('Baby face cream'));
-  assert.ok(products.includes('For face care.'));
-  assert.equal(products.includes('Fragrance-free'), false);
-  assert.ok(products.includes('Rose petals'));
-  assert.ok(products.includes("Prefer to skip the topical products? Just let us know and we'll leave them out. The session price stays the same."));
-  assert.equal(book.querySelector('#skip-products legend').textContent, 'Skip any of these for your baby (optional)');
-  assert.deepEqual([...book.querySelectorAll('[name=skipProducts]')].map(input => input.getAttribute('value')), ['Floral milk bath soak', 'Massage oil', 'Face cream', 'Rose petals']);
-  for (const input of book.querySelectorAll('[name=skipProducts]')) assert.equal(input.hasAttribute('required'), false);
-  assert.equal(book.querySelector('#skip-products-note').textContent, "Opting out doesn't change the price: no refund or discount.");
+  assert.equal(book.querySelector('#session-products'), null);
+  assert.equal(book.querySelector('#skip-products'), null);
+  assert.equal(book.querySelector('#age-confirmation'), null);
+  assert.equal(html.includes('In your session'), false);
+  assert.equal(html.includes('Prefer to skip'), false);
+  assert.equal(html.includes('Skip any of these'), false);
+  assert.equal(book.querySelector('#booking-confirm-heading').textContent, 'Before you book, please confirm:');
+  const confirmations = [
+    "My baby is at least 4 weeks old, and their umbilical cord stump has fallen off and fully healed.",
+    "I've talked with my pediatrician about the products and activities used in the session, and I know I can skip any part at any time.",
+    "I understand that skipping any part of the session doesn't change the price. There are no discounts or refunds for it.",
+  ];
+  const confirmBoxes = [...book.querySelectorAll('[name=confirmReady]')];
+  assert.deepEqual(confirmBoxes.map(input => input.closest('label').textContent), confirmations);
+  for (const input of confirmBoxes) assert.equal(input.hasAttribute('required'), true);
   assert.equal(MIN_AGE_WEEKS, 4);
   assert.equal(sessionStatus(0), 'Available');
   assert.equal(sessionStatus(SEATS_PER_SESSION - 1), 'Available');

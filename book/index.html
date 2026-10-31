@@ -85,16 +85,6 @@
 </section>
 <section class="editorial-section" id="booking-details">
 <div class="editorial-wrap">
-<div id="session-products">
-<h2>In your session</h2>
-<ul class="product-list">
-<li><p class="product-name">Floral Milk Soak</p><p class="product-detail">Coconut milk powder, colloidal oatmeal and dried rose petals.</p></li>
-<li><p class="product-name">Grapeseed massage oil</p><p class="product-detail">For baby massage.</p></li>
-<li><p class="product-name">Baby face cream</p><p class="product-detail">For face care.</p></li>
-<li><p class="product-name">Rose petals</p><p class="product-detail">Dried rose petals.</p></li>
-</ul>
-<p class="product-note">Prefer to skip the topical products? Just let us know and we'll leave them out. The session price stays the same.</p>
-</div>
 <h2>Your details</h2>
 <form class="booking-form" id="booking-form" method="post" action="#" novalidate>
 <div id="booking-fields">
@@ -103,16 +93,13 @@
 <label class="field" for="parent-phone"><span class="field-label" id="parent-phone-label">Phone</span><input class="input" id="parent-phone" name="phone" type="tel" autocomplete="tel" required maxlength="30" aria-labelledby="parent-phone-label"/></label>
 <label class="field" for="baby-name"><span class="field-label" id="baby-name-label">Baby's name</span><input class="input" id="baby-name" name="babyName" type="text" required maxlength="100" aria-labelledby="baby-name-label"/></label>
 <label class="field" for="baby-dob"><span class="field-label" id="baby-dob-label">Baby's date of birth</span><input class="input" id="baby-dob" name="babyDob" type="date" required aria-labelledby="baby-dob-label" aria-describedby="baby-dob-hint baby-dob-error"/><span class="field-hint" id="baby-dob-hint">For babies at least 4 weeks old and under 12 months.</span><span class="field-error" id="baby-dob-error" hidden></span></label>
-<label class="choice-row"><input type="checkbox" id="age-confirmation" name="ageConfirmation" value="yes" required aria-describedby="age-confirmation-error"/><span>My baby is at least 4 weeks old and their umbilical cord stump has fallen off and fully healed. If I'm unsure, I'll get my pediatrician's clearance before the session.</span></label>
-<span class="field-error" id="age-confirmation-error" hidden></span>
-<fieldset class="booking-choice" id="skip-products">
-<legend>Skip any of these for your baby (optional)</legend>
-<label class="choice-row"><input type="checkbox" name="skipProducts" value="Floral milk bath soak"/><span>Floral milk bath soak</span></label>
-<label class="choice-row"><input type="checkbox" name="skipProducts" value="Massage oil"/><span>Massage oil</span></label>
-<label class="choice-row"><input type="checkbox" name="skipProducts" value="Face cream"/><span>Face cream</span></label>
-<label class="choice-row"><input type="checkbox" name="skipProducts" value="Rose petals"/><span>Rose petals</span></label>
-<p class="field-hint" id="skip-products-note">Opting out doesn't change the price: no refund or discount.</p>
-</fieldset>
+<div class="booking-confirm" id="booking-confirm" role="group" aria-labelledby="booking-confirm-heading">
+<h3 id="booking-confirm-heading">Before you book, please confirm:</h3>
+<label class="choice-row"><input type="checkbox" name="confirmReady" value="age" required aria-describedby="booking-confirm-error"/><span>My baby is at least 4 weeks old, and their umbilical cord stump has fallen off and fully healed.</span></label>
+<label class="choice-row"><input type="checkbox" name="confirmReady" value="pediatrician" required aria-describedby="booking-confirm-error"/><span>I've talked with my pediatrician about the products and activities used in the session, and I know I can skip any part at any time.</span></label>
+<label class="choice-row"><input type="checkbox" name="confirmReady" value="price" required aria-describedby="booking-confirm-error"/><span>I understand that skipping any part of the session doesn't change the price. There are no discounts or refunds for it.</span></label>
+<span class="field-error" id="booking-confirm-error" hidden></span>
+</div>
 <fieldset class="booking-choice">
 <legend>Allergies, sensitivities or skin conditions (for example a rash, eczema or broken skin)</legend>
 <label class="choice-row"><input type="radio" name="allergies" value="None" required/> None</label>

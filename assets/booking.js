@@ -1,6 +1,6 @@
 // Preview-only booking rules. Seat count stays in this module and is never written into the page.
 export const SEATS_PER_SESSION = 12;
-// Christy's rule: babies are at least 4 weeks old. The form also asks the parent to confirm the cord stump.
+// Christy's rule: babies are at least 4 weeks old. The form also requires three confirmations before booking.
 export const MIN_AGE_WEEKS = 4;
 export const SESSION_PRICE_CENTS = 28000;
 
@@ -64,14 +64,22 @@ function showAge(input) {
   error.hidden = !message;
 }
 
-function showAgeConfirmation(form) {
-  const box = form.querySelector('#age-confirmation');
-  const error = form.querySelector('#age-confirmation-error');
-  if (!box || !error) return;
-  const message = box.checked ? '' : 'Please confirm this before reserving.';
-  box.setAttribute('aria-invalid', message ? 'true' : 'false');
-  error.textContent = message;
-  error.hidden = !message;
+function missingConfirmations(form) {
+  return [...form.querySelectorAll('[name=confirmReady]')].filter(box => !box.checked);
+}
+
+function showConfirmations(form) {
+  const missing = missingConfirmations(form);
+  const error = form.querySelector('#booking-confirm-error');
+  const message = missing.length ? 'Please confirm each item before reserving.' : '';
+  for (const box of form.querySelectorAll('[name=confirmReady]')) {
+    box.setAttribute('aria-invalid', message && !box.checked ? 'true' : 'false');
+  }
+  if (error) {
+    error.textContent = message;
+    error.hidden = !message;
+  }
+  return missing;
 }
 
 function syncAllergies(form) {
@@ -112,18 +120,22 @@ export function initBooking(documentRef = document) {
     dob.addEventListener('change', () => showAge(dob));
     dob.addEventListener('blur', () => showAge(dob));
   }
-  const ageConfirmation = form.querySelector('#age-confirmation');
-  if (ageConfirmation) {
-    ageConfirmation.addEventListener('change', () => showAgeConfirmation(form));
-    ageConfirmation.addEventListener('blur', () => showAgeConfirmation(form));
-  }
   form.addEventListener('change', event => {
     if (event.target?.name === 'allergies') syncAllergies(form);
+    if (event.target?.name === 'confirmReady' && missingConfirmations(form).length === 0) showConfirmations(form);
+  });
+  form.addEventListener('focusout', event => {
+    if (event.target?.name === 'confirmReady' && !event.target.checked) showConfirmations(form);
   });
   form.addEventListener('submit', event => {
     event.preventDefault();
+    const ageMessage = dob ? babyAgeMessage(dob.value) : '';
     if (dob) showAge(dob);
-    showAgeConfirmation(form);
+    const missing = showConfirmations(form);
+    if (ageMessage || missing.length) {
+      (ageMessage && dob ? dob : missing[0])?.focus();
+      return;
+    }
   });
   syncAllergies(form);
   syncTotal();

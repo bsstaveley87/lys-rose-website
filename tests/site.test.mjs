@@ -179,12 +179,25 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(html.includes('$TBD'), false);
   assert.equal(html.includes('Take-home robe set'), false);
   assert.equal(html.includes('gift bag'), false);
-  assert.equal((html.match(/available to add/g) || []).length, 4);
+  assert.equal((html.match(/available to add/g) || []).length, 3);
   assert.ok(html.includes('Le Petit Plus (The Little Extras)'));
   assert.equal(html.includes('Premium enhancements'), false);
   assert.equal(html.includes('Optional add-ons'), false);
   assert.equal(html.includes('Photography'), false);
-  assert.ok(html.includes('Premium Face Crème'));
+  assert.equal(html.includes('Premium Face Crème'), false);
+  assert.equal(html.toLowerCase().includes('evereden'), false);
+  assert.equal(html.toLowerCase().includes('mustela'), false);
+  const faceCream = book.querySelector('.face-cream');
+  assert.equal(faceCream.querySelector('legend').textContent, 'Face cream');
+  assert.deepEqual([...faceCream.querySelectorAll('[name=faceCream]')].map(input => ({
+    value: input.value,
+    checked: input.hasAttribute('checked'),
+    label: input.closest('label').textContent,
+  })), [
+    {value: 'signature', checked: true, label: 'Signature face creamIncluded'},
+    {value: 'sensitive', checked: false, label: 'Sensitive face cream+$5'},
+    {value: 'premium', checked: false, label: 'Premium face cream+$10'},
+  ]);
   assert.ok(html.includes('Embroidered Keepsake Robe'));
   assert.ok(html.includes('A personalized embroidered robe for your baby.'));
   assert.ok(html.includes('The Lys Rose at Home Kit'));
@@ -210,22 +223,23 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelectorAll('[name=kitSize][disabled]').length, 2);
   assert.equal(html.toLowerCase().includes('sparkling toast'), false);
   assert.equal(html.toLowerCase().includes('bubbly'), false);
-  assert.ok(html.includes('Evereden Nourishing Baby Face Cream. Contains shea butter, coconut, soy and calendula. Please tell us about any allergies at least 48 hours before your session.'));
   assert.equal(html.includes('Full ingredient list below.'), false);
   assert.equal(html.includes('Optional, $10:'), false);
-  assert.equal(book.querySelector('.ingredient-list').hasAttribute('open'), false);
-  assert.ok(book.querySelector('.ingredient-list summary').textContent.includes('Ingredients:'));
+  assert.equal(book.querySelector('.ingredient-list'), null);
+  assert.equal(book.querySelector('[name=ingredientAck]'), null);
   assert.equal(html.includes('5 g'), false);
   assert.equal(html.toLowerCase().includes('full jar'), false);
   assert.equal(html.includes('$5 or $10'), false);
   assert.equal(html.includes('$5 (a small amount)'), false);
   assert.equal(book.querySelector('[name=faceCareUpgrade]'), null);
-  assert.equal(book.querySelector('.jar-option').textContent, '$10');
-  assert.ok(html.includes('Water (Aqua), Glycerin, Simmondsia Chinensis (Jojoba) Seed Oil'));
-  assert.ok(html.includes("I've read the ingredients and will share any allergies with Lys Rose. [Allergy acknowledgment wording pending review]"));
-  assert.equal(book.querySelector('[name=ingredientAck]').hasAttribute('disabled'), true);
-  assert.equal(book.querySelector('[name=ingredientAck]').hasAttribute('required'), true);
+  assert.equal(book.querySelector('.jar-option'), null);
+  assert.equal(html.includes('Water (Aqua), Glycerin, Simmondsia Chinensis (Jojoba) Seed Oil'), false);
+  assert.equal(html.includes("I've read the ingredients and will share any allergies with Lys Rose. [Allergy acknowledgment wording pending review]"), false);
   assert.equal(book.querySelector('#booking-total').textContent, '$280');
+  assert.equal(book.querySelector('#face-cream-charge').hasAttribute('hidden'), true);
+  assert.deepEqual(previewTotal(false, 'signature'), {cents:28000, label:'$280', addonPending:false});
+  assert.deepEqual(previewTotal(false, 'sensitive'), {cents:28500, label:'$285', addonPending:false});
+  assert.deepEqual(previewTotal(false, 'premium'), {cents:29000, label:'$290', addonPending:false});
   for (const word of ['hypoallergenic', 'facial', 'soothing']) assert.equal(html.toLowerCase().includes(word), false, word);
   const included = [
     'A 2-hour session for you and your baby, led by a caring expert in babies and new parents',

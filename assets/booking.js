@@ -3,6 +3,7 @@ export const SEATS_PER_SESSION = 12;
 // Christy's rule: babies are at least 4 weeks old. The form also requires three confirmations before booking.
 export const MIN_AGE_WEEKS = 4;
 export const SESSION_PRICE_CENTS = 28000;
+export const FACE_CREAM_CENTS = {signature: 0, sensitive: 500, premium: 1000};
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -10,10 +11,12 @@ export function sessionStatus(reserved) {
   return Number(reserved) < SEATS_PER_SESSION ? 'Available' : 'Fully booked';
 }
 
-export function previewTotal(addonSelected) {
+export function previewTotal(addonSelected, faceCream = 'signature') {
+  const extra = FACE_CREAM_CENTS[faceCream] || 0;
+  const cents = SESSION_PRICE_CENTS + extra;
   return {
-    cents: SESSION_PRICE_CENTS,
-    label: `$${SESSION_PRICE_CENTS / 100}`,
+    cents,
+    label: `$${cents / 100}`,
     addonPending: Boolean(addonSelected),
   };
 }
@@ -94,10 +97,20 @@ function syncAllergies(form) {
   }
 }
 
-function syncTotal() {
-  const total = previewTotal(false);
-  const amount = document.getElementById('booking-total');
+function syncTotal(documentRef = document) {
+  const choice = documentRef.querySelector('[name=faceCream]:checked')?.value || 'signature';
+  const total = previewTotal(false, choice);
+  const amount = documentRef.getElementById('booking-total');
   if (amount) amount.textContent = total.label;
+  const line = documentRef.getElementById('face-cream-charge');
+  const extra = FACE_CREAM_CENTS[choice] || 0;
+  if (!line) return;
+  line.hidden = extra === 0;
+  const name = documentRef.getElementById('face-cream-charge-label');
+  const price = documentRef.getElementById('face-cream-charge-amount');
+  const option = documentRef.querySelector(`[name=faceCream][value="${choice}"]`);
+  if (name) name.textContent = option?.closest('label')?.querySelector('span')?.textContent || '';
+  if (price) price.textContent = extra ? `+$${extra / 100}` : '';
 }
 
 export function initBooking(documentRef = document) {
@@ -120,6 +133,9 @@ export function initBooking(documentRef = document) {
     dob.addEventListener('change', () => showAge(dob));
     dob.addEventListener('blur', () => showAge(dob));
   }
+  documentRef.addEventListener('change', event => {
+    if (event.target?.name === 'faceCream') syncTotal(documentRef);
+  });
   form.addEventListener('change', event => {
     if (event.target?.name === 'allergies') syncAllergies(form);
     if (event.target?.name === 'confirmReady' && missingConfirmations(form).length === 0) showConfirmations(form);
@@ -138,7 +154,7 @@ export function initBooking(documentRef = document) {
     }
   });
   syncAllergies(form);
-  syncTotal();
+  syncTotal(documentRef);
 }
 
 if (typeof document !== 'undefined') initBooking(document);

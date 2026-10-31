@@ -76,7 +76,14 @@ test('FAQ schema mirrors every visible answer exactly',async()=>{
   const doc=await documentFor('faq/index.html');
   const data=JSON.parse(doc.querySelector('script[type="application/ld+json"]').textContent);
   const faq=data['@graph'].find(x=>x['@type']==='FAQPage');
-  const items=[...doc.querySelectorAll('.faq-item')];assert.equal(faq.mainEntity.length,items.length);assert.equal(items.length,15);
+  const items=[...doc.querySelectorAll('.faq-item')];assert.equal(faq.mainEntity.length,items.length);assert.equal(items.length,19);
+  const products=faq.mainEntity.find(item=>item.name==='What products are used during your session?');
+  assert.equal(products.acceptedAnswer.text.split('\n\n')[0],"Each product is chosen with care, and you're welcome to skip any part of the session.");
+  assert.ok(products.acceptedAnswer.text.includes('organic colloidal oatmeal, organic coconut milk powder, organic dried red rose petals and buds.'));
+  assert.ok(products.acceptedAnswer.text.includes('Face cream: see our face cream ingredients below.'));
+  assert.equal(doc.querySelector('#face-cream-ingredients h2').textContent,'Face cream ingredients');
+  assert.equal(doc.querySelector('a[href="#face-cream-ingredients"]').textContent,'face cream ingredients');
+  assert.equal(faq.mainEntity.find(item=>item.name==='Organic hydrating cream with olive oil and aloe').acceptedAnswer.text,'Aloe Barbadensis Leaf Juice*, Water, Glycerin, Caprylyl/Capryl Glucoside, Sodium Benzoate, Potassium Sorbate, Citric Acid, Olea Europaea (Olive) Fruit Oil*.');
   items.forEach((item,i)=>assert.equal(faq.mainEntity[i].acceptedAnswer.text,[...item.querySelectorAll('p')].map(p=>p.textContent.trim()).join('\n\n')));
 });
 test('form controls have explicit accessible labels and inline error associations',async()=>{

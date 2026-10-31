@@ -287,6 +287,8 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.ok(products.includes('Coconut milk powder, colloidal oatmeal and dried rose petals.'));
   assert.ok(products.includes('Grapeseed massage oil'));
   assert.ok(products.includes('Baby face cream'));
+  assert.ok(products.includes('For face care.'));
+  assert.equal(products.includes('Fragrance-free'), false);
   assert.ok(products.includes('Rose petals'));
   assert.ok(products.includes("Prefer to skip the topical products? Just let us know and we'll leave them out. The session price stays the same."));
   assert.equal(book.querySelector('#skip-products legend').textContent, 'Skip any of these for your baby (optional)');

@@ -84,7 +84,7 @@ test('FAQ schema mirrors every visible answer exactly',async()=>{
   assert.equal(doc.querySelector('#face-cream-ingredients h2').textContent,'Face cream ingredients');
   assert.equal(doc.querySelector('a[href="#face-cream-ingredients"]').textContent,'face cream ingredients');
   assert.equal(doc.querySelector('#face-cream-ingredients .ingredient-note').textContent,'Formulas can change; see product packaging for the current ingredient list.');
-  assert.deepEqual([...doc.querySelectorAll('#face-cream-ingredients .faq-item summary')].map(node=>node.textContent.replace(/\+\s*$/,'').trim()),['Signature face cream (included)','Sensitive face cream (small extra charge)','Premium face cream ($10 upgrade)']);
+  assert.deepEqual([...doc.querySelectorAll('#face-cream-ingredients .faq-item summary')].map(node=>node.textContent.replace(/\+\s*$/,'').trim()),['Signature face cream (included)','Sensitive face cream ($5 upgrade)','Premium face cream ($10 upgrade)']);
   assert.equal(faq.mainEntity.find(item=>item.name==='Signature face cream (included)').acceptedAnswer.text,'Aloe Barbadensis Leaf Juice*, Water, Glycerin, Caprylyl/Capryl Glucoside, Sodium Benzoate, Potassium Sorbate, Citric Acid, Olea Europaea (Olive) Fruit Oil*.');
   const faqHtml=doc.documentElement.outerHTML.toLowerCase();
   for (const word of ['mustela','evereden','ever-eden','soothing','facial']) assert.equal(faqHtml.includes(word),false,word);
@@ -215,7 +215,7 @@ test('published home and FAQ copy stays on the waitlist and off the booking page
     assert.equal(doc.querySelector('.disclaimer').textContent, disclaimer, page.path);
     assert.equal(html.includes('/book'), false, page.path);
     assert.equal(html.includes('Le Petit Plus'), false, page.path);
-    assert.equal(html.replaceAll('Premium face cream ($10 upgrade)','').includes('$'), false, page.path);
+    assert.equal(html.replaceAll('Sensitive face cream ($5 upgrade)','').replaceAll('Premium face cream ($10 upgrade)','').includes('$'), false, page.path);
     assert.equal(html.toLowerCase().includes('facial'), false, page.path);
     assert.equal([...doc.querySelectorAll('a[href]')].some(link => (link.getAttribute('href') || '').includes('/book')), false, page.path);
     assert.equal(JSON.parse(doc.querySelector('script[type="application/ld+json"]').textContent)['@graph'].some(node => JSON.stringify(node).includes('/book')), false, page.path);

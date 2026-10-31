@@ -1,7 +1,7 @@
 // Preview-only booking rules. Seat count stays in this module and is never written into the page.
 export const SEATS_PER_SESSION = 12;
-// TODO pending Christy: confirm the minimum age before any real booking opens.
-export const MIN_AGE_WEEKS = 8;
+// Christy's rule: babies are at least 4 weeks old. The form also asks the parent to confirm the cord stump.
+export const MIN_AGE_WEEKS = 4;
 export const SESSION_PRICE_CENTS = 28000;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -48,7 +48,7 @@ export function babyAgeMessage(iso, today = new Date()) {
   if (dob > now) return 'Please enter a date of birth in the past.';
   const youngest = now - MIN_AGE_WEEKS * 7 * DAY_MS;
   const oldest = shiftMonths(now, -12);
-  if (dob > youngest) return 'Please enter a date of birth at least 8 weeks ago. This minimum is a placeholder pending confirmation.';
+  if (dob > youngest) return 'Please enter a date of birth at least 4 weeks ago.';
   if (dob <= oldest) return 'Sessions are for babies under 12 months.';
   return '';
 }
@@ -60,6 +60,16 @@ function showAge(input) {
   const error = document.getElementById('baby-dob-error');
   input.setAttribute('aria-invalid', message ? 'true' : 'false');
   if (!error) return;
+  error.textContent = message;
+  error.hidden = !message;
+}
+
+function showAgeConfirmation(form) {
+  const box = form.querySelector('#age-confirmation');
+  const error = form.querySelector('#age-confirmation-error');
+  if (!box || !error) return;
+  const message = box.checked ? '' : 'Please confirm this before reserving.';
+  box.setAttribute('aria-invalid', message ? 'true' : 'false');
   error.textContent = message;
   error.hidden = !message;
 }
@@ -102,10 +112,19 @@ export function initBooking(documentRef = document) {
     dob.addEventListener('change', () => showAge(dob));
     dob.addEventListener('blur', () => showAge(dob));
   }
+  const ageConfirmation = form.querySelector('#age-confirmation');
+  if (ageConfirmation) {
+    ageConfirmation.addEventListener('change', () => showAgeConfirmation(form));
+    ageConfirmation.addEventListener('blur', () => showAgeConfirmation(form));
+  }
   form.addEventListener('change', event => {
     if (event.target?.name === 'allergies') syncAllergies(form);
   });
-  form.addEventListener('submit', event => event.preventDefault());
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    if (dob) showAge(dob);
+    showAgeConfirmation(form);
+  });
   syncAllergies(form);
   syncTotal();
 }

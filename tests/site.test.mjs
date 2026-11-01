@@ -79,17 +79,17 @@ test('FAQ schema mirrors every visible answer exactly',async()=>{
   const items=[...doc.querySelectorAll('.faq-item')];assert.equal(faq.mainEntity.length,items.length);assert.equal(items.length,19);
   const products=faq.mainEntity.find(item=>item.name==='What products are used during your session?');
   assert.equal(products.acceptedAnswer.text.split('\n\n')[0],"Each product is chosen with care, and you're welcome to skip any part of the session.");
-  assert.ok(products.acceptedAnswer.text.includes('organic colloidal oatmeal, organic coconut milk powder, organic dried red rose petals and buds.'));
-  assert.ok(products.acceptedAnswer.text.includes('Face crème: our Signature crème is included, with Sensitive and Premium options. See our face crème ingredients below.'));
+  assert.ok(products.acceptedAnswer.text.includes('colloidal oatmeal, coconut milk powder, dried red rose petals and buds.'));
+  assert.ok(products.acceptedAnswer.text.includes('Face crème: our Signature crème is included, with Gentle and Premium options. See our face crème ingredients below.'));
   assert.equal(doc.querySelector('#face-cream-ingredients h2').textContent,'Face crème ingredients');
   assert.equal(doc.querySelector('a[href="#face-cream-ingredients"]').textContent,'face crème ingredients');
   assert.equal(doc.querySelector('#face-cream-ingredients .ingredient-note').textContent,'Formulas can change; see product packaging for the current ingredient list.');
-  assert.deepEqual([...doc.querySelectorAll('#face-cream-ingredients .faq-item summary')].map(node=>node.textContent.replace(/\+\s*$/,'').trim()),['Signature face crème','Sensitive face crème','Premium face crème']);
-  assert.deepEqual([...faq.mainEntity.map(item=>item.name)].filter(name=>name.endsWith('face crème')),['Signature face crème','Sensitive face crème','Premium face crème']);
+  assert.deepEqual([...doc.querySelectorAll('#face-cream-ingredients .faq-item summary')].map(node=>node.textContent.replace(/\+\s*$/,'').trim()),['Signature face crème','Gentle face crème','Premium face crème']);
+  assert.deepEqual([...faq.mainEntity.map(item=>item.name)].filter(name=>name.endsWith('face crème')),['Signature face crème','Gentle face crème','Premium face crème']);
   assert.equal(faq.mainEntity.find(item=>item.name==='Signature face crème').acceptedAnswer.text,'Aloe Barbadensis Leaf Juice*, Water, Glycerin, Caprylyl/Capryl Glucoside, Sodium Benzoate, Potassium Sorbate, Citric Acid, Olea Europaea (Olive) Fruit Oil*.');
   const faqHtml=doc.documentElement.outerHTML.toLowerCase();
   for (const word of ['mustela','evereden','ever-eden','soothing','facial']) assert.equal(faqHtml.includes(word),false,word);
-  assert.equal(faqHtml.replaceAll('organic colloidal oatmeal, organic coconut milk powder, organic dried red rose petals and buds.','').includes('organic'),false);
+  assert.equal(faqHtml.includes('organic'),false);
   items.forEach((item,i)=>assert.equal(faq.mainEntity[i].acceptedAnswer.text,[...item.querySelectorAll('p')].map(p=>p.textContent.trim()).join('\n\n')));
 });
 test('form controls have explicit accessible labels and inline error associations',async()=>{

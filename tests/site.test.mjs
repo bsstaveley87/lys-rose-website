@@ -321,7 +321,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(html.includes('Skip any of these'), false);
   assert.equal(book.querySelector('#booking-confirm-heading').textContent, 'Before you book, please confirm:');
   const confirmations = [
-    "My baby is at least 4 weeks old, and their umbilical cord stump has fallen off and fully healed.",
+    "My baby is at least 4 weeks old, the umbilical cord stump has fallen off and healed, and any circumcision site is fully healed.",
     "I've talked with my pediatrician about the products and activities used in the session, and I know I can skip any part at any time.",
     "I understand there's no refund or discount for skipping any part of the session.",
   ];

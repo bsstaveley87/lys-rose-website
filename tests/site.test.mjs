@@ -323,7 +323,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   const confirmations = [
     "My baby is at least 4 weeks old, and their umbilical cord stump has fallen off and fully healed.",
     "I've talked with my pediatrician about the products and activities used in the session, and I know I can skip any part at any time.",
-    "I understand that skipping any part of the session doesn't change the price. There are no discounts or refunds for it.",
+    "I understand there's no refund or discount for skipping any part of the session.",
   ];
   const confirmBoxes = [...book.querySelectorAll('[name=confirmReady]')];
   assert.deepEqual(confirmBoxes.map(input => input.closest('label').textContent), confirmations);

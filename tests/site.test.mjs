@@ -188,15 +188,16 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(html.toLowerCase().includes('evereden'), false);
   assert.equal(html.toLowerCase().includes('mustela'), false);
   const faceCream = book.querySelector('.face-cream');
-  assert.equal(faceCream.querySelector('legend').textContent, 'Face cream');
+  assert.equal(faceCream.querySelector('legend').textContent, 'Face crème');
+  assert.equal(/\bcream\b/i.test(book.body.textContent), false);
   assert.deepEqual([...faceCream.querySelectorAll('[name=faceCream]')].map(input => ({
     value: input.value,
     checked: input.hasAttribute('checked'),
     label: input.closest('label').textContent,
   })), [
-    {value: 'signature', checked: true, label: 'Signature face creamIncluded'},
-    {value: 'sensitive', checked: false, label: 'Sensitive face cream+$5'},
-    {value: 'premium', checked: false, label: 'Premium face cream+$10'},
+    {value: 'signature', checked: true, label: 'Signature face crèmeIncluded'},
+    {value: 'sensitive', checked: false, label: 'Sensitive face crème+$5'},
+    {value: 'premium', checked: false, label: 'Premium face crème+$10'},
   ]);
   assert.ok(html.includes('Embroidered Keepsake Robe'));
   assert.ok(html.includes('A personalized embroidered robe for your baby.'));

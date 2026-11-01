@@ -3,7 +3,7 @@ export const SEATS_PER_SESSION = 12;
 // Christy's rule: babies are at least 4 weeks old. The form also requires three confirmations before booking.
 export const MIN_AGE_WEEKS = 4;
 export const SESSION_PRICE_CENTS = 28000;
-export const FACE_CREAM_CENTS = {signature: 0, sensitive: 500, premium: 1000};
+export const FACE_CREAM_CENTS = {signature: 0, gentle: 500, premium: 1000};
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

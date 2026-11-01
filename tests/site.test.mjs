@@ -214,7 +214,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
     label: input.closest('label').textContent,
   })), [
     {value: 'signature', checked: true, label: 'Signature face crèmeIncluded'},
-    {value: 'sensitive', checked: false, label: 'Sensitive face crème+$5'},
+    {value: 'gentle', checked: false, label: 'Gentle face crème+$5'},
     {value: 'premium', checked: false, label: 'Premium face crème+$10'},
   ]);
   assert.ok(html.includes('Embroidered Keepsake Robe'));
@@ -226,8 +226,8 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.ok(html.includes('The Lys Rose Floral Milk Bath Bag'));
   assert.equal(html.includes('The Lys Rose Floral Bath Bag'), false);
   assert.ok(html.includes('Our floral milk bath to take home: 4–6 uses in a baby bath, or 1–2 in a shallow full-size tub.'));
-  assert.ok(html.includes('Ingredients: organic coconut milk powder, organic colloidal oatmeal, organic dried rose petals.'));
-  assert.equal((html.match(/organic/gi) || []).length, 3);
+  assert.ok(html.includes('Ingredients: coconut milk powder, colloidal oatmeal, dried rose petals.'));
+  assert.equal((html.match(/organic/gi) || []).length, 0);
   for (const file of ['index.html','about/index.html','services/index.html','faq/index.html','contact/index.html']) {
     assert.equal((await readFile(new URL(file, root), 'utf8')).toLowerCase().includes('organic'), false, file);
   }
@@ -257,7 +257,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('#booking-total').textContent, '$280');
   assert.equal(book.querySelector('#face-cream-charge').hasAttribute('hidden'), true);
   assert.deepEqual(previewTotal(false, 'signature'), {cents:28000, label:'$280', addonPending:false});
-  assert.deepEqual(previewTotal(false, 'sensitive'), {cents:28500, label:'$285', addonPending:false});
+  assert.deepEqual(previewTotal(false, 'gentle'), {cents:28500, label:'$285', addonPending:false});
   assert.deepEqual(previewTotal(false, 'premium'), {cents:29000, label:'$290', addonPending:false});
   for (const word of ['hypoallergenic', 'facial', 'soothing']) assert.equal(html.toLowerCase().includes(word), false, word);
   const included = [
@@ -287,7 +287,8 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.ok(includedAnswer.includes('We handle the laundry and cleanup, so you can simply enjoy.'));
   assert.equal(includedAnswer.toLowerCase().includes('sparkling'), false);
   assert.ok(html.includes('[Waiver wording pending attorney review]'));
-  assert.ok(html.includes('Allergies, sensitivities or skin conditions (for example a rash, eczema or broken skin)'));
+  assert.ok(html.includes('Allergies or sensitivities we should know about'));
+  assert.equal(html.includes('Allergies, sensitivities or skin conditions (for example a rash, eczema or broken skin)'), false);
   assert.ok(book.querySelector('[name=allergies][value=None]'));
   assert.ok(book.querySelector('[name=waiver][required]'));
   assert.equal(book.querySelector('[name=photoRelease]').hasAttribute('checked'), false);

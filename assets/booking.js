@@ -4,6 +4,8 @@ export const SEATS_PER_SESSION = 12;
 export const MIN_AGE_WEEKS = 4;
 export const SESSION_PRICE_CENTS = 28000;
 export const FACE_CREAM_CENTS = {signature: 0, gentle: 500, premium: 1000};
+export const ROBE_LEAD_DAYS = 14;
+const ROBE_TIME_ZONE = 'America/New_York';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -19,6 +21,90 @@ export function previewTotal(addonSelected, faceCream = 'signature') {
     label: `$${cents / 100}`,
     addonPending: Boolean(addonSelected),
   };
+}
+
+function shiftDays(iso, days) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!match) return '';
+  const shifted = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + days));
+  const month = String(shifted.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(shifted.getUTCDate()).padStart(2, '0');
+  return `${shifted.getUTCFullYear()}-${month}-${day}`;
+}
+
+function formatMonthDay(iso) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!match) return '';
+  const stamp = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  const month = new Intl.DateTimeFormat('en-US', {month: 'long', timeZone: 'UTC'}).format(stamp);
+  return `${month} ${stamp.getUTCDate()}`;
+}
+
+function zoneOffsetMs(instant, timeZone) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(new Date(instant)).filter(part => part.type !== 'literal').map(part => [part.type, part.value]));
+  let hour = Number(parts.hour);
+  let day = Number(parts.day);
+  if (hour === 24) {
+    hour = 0;
+    day += 1;
+  }
+  const wall = Date.UTC(Number(parts.year), Number(parts.month) - 1, day, hour, Number(parts.minute), Number(parts.second));
+  return wall - instant;
+}
+
+function wallTimeToUtc(year, monthIndex, day, hour, minute, second, ms, timeZone) {
+  const desired = Date.UTC(year, monthIndex, day, hour, minute, second, ms);
+  let utc = desired;
+  for (let pass = 0; pass < 3; pass += 1) utc = desired - zoneOffsetMs(utc, timeZone);
+  return utc;
+}
+
+export function robeCutoffIso(sessionIso) {
+  return shiftDays(sessionIso, -ROBE_LEAD_DAYS);
+}
+
+/** First instant the robe option is closed: midnight Eastern on the day after the 14-day cutoff. */
+export function robeClosesAt(sessionIso) {
+  const cutoff = robeCutoffIso(sessionIso);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(cutoff);
+  if (!match) return NaN;
+  const next = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + 1));
+  return wallTimeToUtc(next.getUTCFullYear(), next.getUTCMonth(), next.getUTCDate(), 0, 0, 0, 0, ROBE_TIME_ZONE);
+}
+
+export function robeIsClosed(sessionIso, now = new Date()) {
+  return now.getTime() >= robeClosesAt(sessionIso);
+}
+
+export function robeNote(sessionIso) {
+  const cutoff = robeCutoffIso(sessionIso);
+  return `Personalized robes are embroidered to order, so this option closes 14 days before your session (${formatMonthDay(cutoff)} for ${formatMonthDay(sessionIso)}).`;
+}
+
+function applyRobeCutoff(documentRef, now = new Date()) {
+  const sessionIso = documentRef.querySelector('#session-card')?.dataset.sessionDate;
+  const robe = documentRef.querySelector('[data-robe-addon]');
+  if (!sessionIso || !robe) return;
+  const note = robe.querySelector('#robe-note');
+  if (note) note.textContent = robeNote(sessionIso);
+  if (!robeIsClosed(sessionIso, now)) return;
+  robe.classList.add('is-closed');
+  const input = robe.querySelector('input');
+  if (input) {
+    input.disabled = true;
+    input.checked = false;
+  }
+  const available = robe.querySelector('.available-to-add');
+  if (available) available.hidden = true;
 }
 
 function utcDay(year, monthIndex, day) {
@@ -155,6 +241,7 @@ export function initBooking(documentRef = document) {
   });
   syncAllergies(form);
   syncTotal(documentRef);
+  applyRobeCutoff(documentRef);
 }
 
 if (typeof document !== 'undefined') initBooking(document);

@@ -4,7 +4,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
 import {validateFields, interestOptions, limits} from '../assets/validation.js';
-import {MIN_AGE_WEEKS, SEATS_PER_SESSION, babyAgeMessage, previewTotal, sessionStatus} from '../assets/booking.js';
+import {MIN_AGE_WEEKS, SEATS_PER_SESSION, babyAgeMessage, previewTotal, robeIsClosed, robeNote, sessionStatus} from '../assets/booking.js';
 const approved = {
   '/': {
     title: 'Lys Rose Baby Spa · Fort Lauderdale',
@@ -219,6 +219,12 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   ]);
   assert.ok(html.includes('Embroidered Keepsake Robe'));
   assert.ok(html.includes('A personalized embroidered robe for your baby.'));
+  const robeLine = 'Personalized robes are embroidered to order, so this option closes 14 days before your session (November 22 for December 6).';
+  assert.equal(book.querySelector('#robe-note').textContent, robeLine);
+  assert.equal(robeNote('2026-12-06'), robeLine);
+  assert.equal(robeIsClosed('2026-12-06', new Date('2026-11-22T23:59:59-05:00')), false);
+  assert.equal(robeIsClosed('2026-12-06', new Date('2026-11-23T05:00:00Z')), true);
+  assert.equal(robeNote('2027-01-10'), 'Personalized robes are embroidered to order, so this option closes 14 days before your session (December 27 for January 10).');
   assert.ok(html.includes('The Lys Rose at Home Kit'));
   assert.ok(html.includes('The at-home baby spa kit.'));
   assert.equal(html.includes('The "Spa à la Maison" Kit (Spa at home)'), false);

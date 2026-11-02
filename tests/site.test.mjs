@@ -147,7 +147,8 @@ test('preview copy removes the flagged phrases and keeps the approved lines', as
   assert.ok(faq.includes('No. Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.'));
   assert.ok(about.includes('See you soon'));
   assert.ok(about.includes('White lilies and blush roses, for the lily in the Lys Rose name.'));
-  assert.ok(services.includes('Le Petit Rituel'));
+  assert.equal(services.includes('Le Petit Rituel'), false);
+  assert.equal(services.includes('take-home kit'), false);
   assert.ok(services.includes('Slots are limited. Join the waitlist for early access to session reservations.'));
   assert.ok(home.includes('FORT LAUDERDALE &amp; NEARBY'));
   assert.ok(home.includes('Inspired by Lily Rose.<br>Shared with love.') || home.includes('Inspired by Lily Rose.<br/>Shared with love.'));
@@ -197,7 +198,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(html.includes('$TBD'), false);
   assert.equal(html.includes('Take-home robe set'), false);
   assert.equal(html.includes('gift bag'), false);
-  assert.equal((html.match(/available to add/g) || []).length, 3);
+  assert.equal((html.match(/available to add/g) || []).length, 2);
   assert.ok(html.includes('Le Petit Plus (The Little Extras)'));
   assert.equal(html.includes('Premium enhancements'), false);
   assert.equal(html.includes('Optional add-ons'), false);
@@ -225,8 +226,12 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(robeIsClosed('2026-12-06', new Date('2026-11-22T23:59:59-05:00')), false);
   assert.equal(robeIsClosed('2026-12-06', new Date('2026-11-23T05:00:00Z')), true);
   assert.equal(robeNote('2027-01-10'), 'Personalized robes are embroidered to order, so this option closes 14 days before your session (December 27 for January 10).');
-  assert.ok(html.includes('The Lys Rose at Home Kit'));
-  assert.ok(html.includes('The at-home baby spa kit.'));
+  assert.equal(html.includes('The Lys Rose at Home Kit'), false);
+  assert.equal(html.includes('The at-home baby spa kit.'), false);
+  assert.equal(html.includes('toiletry bag'), false);
+  assert.equal(html.includes('mini face kit'), false);
+  assert.equal(book.querySelector('.kit-enhancement'), null);
+  assert.equal(book.querySelector('[name=kitSize]'), null);
   assert.equal(html.includes('The "Spa à la Maison" Kit (Spa at home)'), false);
   assert.equal(html.includes('At-home spa kit for your mini'), false);
   assert.ok(html.includes('The Lys Rose Floral Milk Bath Bag'));
@@ -239,13 +244,6 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   }
   assert.equal(html.includes("A single bag of our floral bath soak to take home for your baby's bath."), false);
   assert.equal(html.includes('The Floral Bath Soak'), false);
-  const kit = book.querySelector('.kit-enhancement').textContent;
-  assert.ok(kit.includes('Bath soak, toiletry bag & mini face kit: brush and pads.'));
-  assert.equal(kit.toLowerCase().includes('massage oil'), false);
-  assert.ok(kit.includes('The Grand also includes the baby robe set, with the option to personalize it.'));
-  assert.equal(kit.includes('4–6'), false);
-  assert.equal(kit.includes('1–2'), false);
-  assert.equal(book.querySelectorAll('[name=kitSize][disabled]').length, 2);
   assert.equal(html.toLowerCase().includes('sparkling toast'), false);
   assert.equal(html.toLowerCase().includes('bubbly'), false);
   assert.equal(html.includes('Full ingredient list below.'), false);

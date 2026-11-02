@@ -240,7 +240,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(html.includes("A single bag of our floral bath soak to take home for your baby's bath."), false);
   assert.equal(html.includes('The Floral Bath Soak'), false);
   const kit = book.querySelector('.kit-enhancement').textContent;
-  assert.ok(kit.includes('Bath soak, toiletry bag & mini face kit: brush, pads, roller.'));
+  assert.ok(kit.includes('Bath soak, toiletry bag & mini face kit: brush and pads.'));
   assert.equal(kit.toLowerCase().includes('massage oil'), false);
   assert.ok(kit.includes('The Grand also includes the baby robe set, with the option to personalize it.'));
   assert.equal(kit.includes('4–6'), false);

@@ -25,6 +25,10 @@ const approved = {
     title: 'Contact · Lys Rose Baby Spa',
     description: 'Say hello: hello@lysrosebabyspa.com · Instagram @lysrosebabyspa.',
   },
+  '/privacy/': {
+    title: 'Privacy · Lys Rose Baby Spa',
+    description: 'How Lys Rose Baby Spa collects, uses and protects waitlist and contact information, and the choices you have.',
+  },
 };
 const root=new URL('../_site/',import.meta.url);
 const documentFor=async file=>parseHTML(await readFile(new URL(file,root),'utf8')).document;
@@ -220,6 +224,30 @@ test('published home and FAQ copy stays on the waitlist and off the booking page
     assert.equal(html.toLowerCase().includes('facial'), false, page.path);
     assert.equal([...doc.querySelectorAll('a[href]')].some(link => (link.getAttribute('href') || '').includes('/book')), false, page.path);
     assert.equal(JSON.parse(doc.querySelector('script[type="application/ld+json"]').textContent)['@graph'].some(node => JSON.stringify(node).includes('/book')), false, page.path);
+  }
+});
+test('privacy policy is linked, indexable and free of internal notes', async () => {
+  const doc = await documentFor('privacy/index.html');
+  const html = doc.documentElement.outerHTML;
+  assert.equal(doc.querySelector('h1').textContent, 'Privacy');
+  assert.equal(doc.querySelector('link[rel=canonical]').href, site.origin + '/privacy/');
+  assert.equal(doc.querySelector('meta[name=description]').content, approved['/privacy/'].description);
+  assert.equal(doc.querySelector('.disclaimer').textContent, 'Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
+  assert.equal(doc.querySelector('.footer-tagline').textContent, 'Inspired by Lily Rose. Shared with love.');
+  assert.ok(html.includes('Effective [date].'));
+  assert.ok(html.includes('up to [24] months'));
+  assert.ok(html.includes('within [30] days'));
+  assert.ok(html.includes('[mailing address]'));
+  assert.equal(html.toLowerCase().includes('face cream'), false);
+  assert.equal(html.toLowerCase().includes('facial'), false);
+  assert.equal(html.toLowerCase().includes('spots'), false);
+  assert.equal(html.includes('/book'), false);
+  for (const phrase of ['CFO', 'TODO', 'attorney', 'HIPAA', 'COPPA', 'Decided Oct']) assert.equal(html.includes(phrase), false, phrase);
+  const xml = await readFile(new URL('sitemap.xml', root), 'utf8');
+  assert.ok(xml.includes(`${site.origin}/privacy/`));
+  for (const page of pages) {
+    const footer = await documentFor(page.file);
+    assert.ok([...footer.querySelectorAll('footer a')].some(link => link.getAttribute('href') === '/privacy/' && link.textContent.trim() === 'PRIVACY'), page.path);
   }
 });
 test('brand text and hero overlay retain readable contrast',()=>{

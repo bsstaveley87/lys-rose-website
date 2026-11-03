@@ -204,6 +204,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(html.includes('gift bag'), false);
   assert.equal((html.match(/available to add/g) || []).length, 2);
   assert.ok(html.includes('Le Petit Plus (The Little Extras)'));
+  assert.equal(book.querySelector('.extras-when').textContent, "All extras are chosen when you book and can't be added later.");
   assert.equal(html.includes('Premium enhancements'), false);
   assert.equal(html.includes('Optional add-ons'), false);
   assert.equal(html.includes('Photography'), false);
@@ -248,6 +249,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('#byob-details').hasAttribute('hidden'), true);
   assert.equal(book.querySelector('#byob-note').textContent, "Bring your breastmilk cold or frozen. We can warm it for you on site. You'll add it to your baby's bath yourself.");
   assert.equal(book.querySelector('[name=rosePetals]').closest('label').textContent.trim(), 'Add complimentary rose petals');
+  assert.equal(book.querySelector('#rose-petals-note').textContent, "Choose now if you'd like them; petals can't be added later.");
   assert.equal(book.querySelector('[name=rosePetals]').hasAttribute('required'), false);
   assert.equal(html.includes('The Lys Rose at Home Kit'), false);
   assert.equal(html.includes('The at-home baby spa kit.'), false);

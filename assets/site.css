@@ -226,6 +226,7 @@ body.menu-open { overflow:hidden; }
 .face-cream-option input { width:20px; height:20px; min-width:20px; margin:0; accent-color:var(--ink); }
 .face-cream-price { flex:0 0 auto; font:500 15px/1.3 Jost,sans-serif; }
 .enhancement-note { font-size:15px; line-height:1.5; }
+.extras-when { margin:0 0 4px; }
 [data-robe-addon].is-closed .available-to-add { display:none; }
 [data-robe-addon].is-closed { opacity:.72; }
 .available-to-add { font:500 13px/1.4 Jost,sans-serif; letter-spacing:0; }

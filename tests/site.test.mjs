@@ -8,7 +8,7 @@ import {BOOKING_LEAD_HOURS, MIN_AGE_WEEKS, SEATS_PER_SESSION, SESSION, babyAgeMe
 const approved = {
   '/': {
     title: 'Lys Rose Baby Spa · Fort Lauderdale',
-    description: "A guided session for parents and babies under 12 months: you'll learn infant massage, a warm floral milk bath and parent-led baby facial. Small group sessions in Fort Lauderdale. Join the waitlist.",
+    description: "A guided session for parents and babies under 12 months: you'll learn infant massage, a warm floral milk bath and a parent-led baby facial. Small group sessions in Fort Lauderdale. Join the waitlist.",
   },
   '/about/': {
     title: 'About · Lys Rose Baby Spa',
@@ -16,7 +16,7 @@ const approved = {
   },
   '/services/': {
     title: 'Services · Lys Rose Baby Spa',
-    description: "Small group baby spa sessions where you'll learn guided infant massage, a warm floral milk bath and parent-led baby facial with your own baby, plus light refreshments. Led by caring professionals from the world of babies and new parents. Fort Lauderdale.",
+    description: "Small group baby spa sessions where you'll learn guided infant massage, a warm floral milk bath and a parent-led baby facial with your own baby, plus light refreshments. Led by caring professionals from the world of babies and new parents. Fort Lauderdale.",
   },
   '/faq/': {
     title: 'FAQ · Lys Rose Baby Spa',
@@ -294,7 +294,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
     'A 2-hour session for you and your baby, led by a caring expert in babies and new parents',
     'Your own baby bath, soft towels and a cozy station, all set up for you',
     'A floral milk bath with our Floral Milk Soak',
-    'Baby massage and parent-led baby facial',
+    'Baby massage and a parent-led baby facial',
     'Petit cadeau: a little gift',
     'A spa photo op in a soft baby robe set',
     'Refreshments, light bites and fresh florals',
@@ -312,7 +312,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(bringAnswer, bring);
   const includedAnswer = faqEntities.find(item => item.name === "What's included in my session?").acceptedAnswer.text;
   assert.match(includedAnswer, /What's included/);
-  assert.ok(includedAnswer.includes('A 2-hour session for you and your baby, with a floral milk bath, baby massage and parent-led baby facial, a spa photo op in a soft baby robe set, refreshments, light bites and fresh florals. We handle the laundry and cleanup, so you can simply enjoy. Petit cadeau: a little gift.'));
+  assert.ok(includedAnswer.includes('A 2-hour session for you and your baby, with a floral milk bath, baby massage and a parent-led baby facial, a spa photo op in a soft baby robe set, refreshments, light bites and fresh florals. We handle the laundry and cleanup, so you can simply enjoy. Petit cadeau: a little gift.'));
   assert.equal(/\bjar\b|face cream/i.test(includedAnswer), false);
   assert.ok(includedAnswer.includes('We handle the laundry and cleanup, so you can simply enjoy.'));
   assert.equal(includedAnswer.toLowerCase().includes('sparkling'), false);

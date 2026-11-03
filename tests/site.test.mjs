@@ -48,7 +48,7 @@ for(const page of indexed) test(`${page.path}: indexable HTML, SEO, structured d
   assert.equal(doc.querySelector('meta[property="og:description"]').content,description);
   assert.equal(doc.querySelector('meta[name="twitter:title"]').content,title);
   assert.equal(doc.querySelector('meta[name="twitter:description"]').content,description);
-  assert.equal(doc.querySelector('.disclaimer').textContent, 'Parents provide all hands-on care for their own baby while our instructor guides. Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
+  assert.equal(doc.querySelector('.disclaimer').textContent, "Parents provide all hands-on care while our instructor guides. Lys Rose doesn't offer facials, medical treatments, physical therapy or massage therapy. Our sessions are educational.");
   assert.ok(doc.querySelector('#site-menu .menu-logo'));
   assert.ok([...doc.querySelectorAll('#site-menu nav a')].some(link => link.textContent === 'Home' && link.getAttribute('href') === '/'));
   assert.ok([...doc.querySelectorAll('noscript nav a')].some(link => link.textContent === 'Home'));
@@ -144,7 +144,7 @@ test('preview copy removes the flagged phrases and keeps the approved lines', as
   const faq = await read('faq/index.html');
   const all = home + about + services + faq;
   for (const phrase of ['Mini photoshoot', 'À bientôt', 'experienced practitioner', 'Places in each small group are limited.', 'spots']) assert.equal(all.includes(phrase), false, phrase);
-  assert.ok(faq.includes('No. Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.'));
+  assert.ok(faq.includes("No. Parents provide all hands-on care while our instructor guides. Lys Rose doesn't offer facials, medical treatments, physical therapy or massage therapy. Our sessions are educational."));
   assert.ok(about.includes('See you soon'));
   assert.ok(about.includes('White lilies and blush roses, for the lily in the Lys Rose name.'));
   assert.equal(services.includes('Le Petit Rituel'), false);
@@ -158,7 +158,7 @@ test('preview copy removes the flagged phrases and keeps the approved lines', as
   assert.doesNotMatch(css, /\.hero-lockup\s*\{[^}]*display:\s*none/);
   const data = JSON.parse((await documentFor('faq/index.html')).querySelector('script[type="application/ld+json"]').textContent);
   const answer = data['@graph'].find(node => node['@type'] === 'FAQPage').mainEntity.find(item => item.name === 'Is this a medical or therapy service?').acceptedAnswer.text;
-  assert.equal(answer, 'No. Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
+  assert.equal(answer, "No. Parents provide all hands-on care while our instructor guides. Lys Rose doesn't offer facials, medical treatments, physical therapy or massage therapy. Our sessions are educational.");
 });
 test('booking preview is unlisted, has no seat count, and prices stay off public pages', async () => {
   const book = await documentFor('book/index.html');
@@ -178,7 +178,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(Object.hasOwn(event, 'remainingAttendeeCapacity'), false);
   assert.equal(Object.hasOwn(event.offers, 'eligibleQuantity'), false);
   assert.equal(book.querySelector('.footer-tagline').textContent, 'Inspired by Lily Rose. Shared with love.');
-  assert.equal(book.querySelector('.disclaimer').textContent, 'Parents provide all hands-on care for their own baby while our instructor guides. Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
+  assert.equal(book.querySelector('.disclaimer').textContent, "Parents provide all hands-on care while our instructor guides. Lys Rose doesn't offer facials, medical treatments, physical therapy or massage therapy. Our sessions are educational.");
   assert.equal(/\b12\s+spots\b/i.test(html), false);
   assert.equal(html.toLowerCase().includes('spots remaining'), false);
   assert.equal(html.toLowerCase().includes('group size'), false);
@@ -288,7 +288,8 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.deepEqual(previewTotal(false, 'signature'), {cents:28000, label:'$280', addonPending:false});
   assert.deepEqual(previewTotal(false, 'gentle'), {cents:28500, label:'$285', addonPending:false});
   assert.deepEqual(previewTotal(false, 'premium'), {cents:29000, label:'$290', addonPending:false});
-  for (const word of ['hypoallergenic', 'facial', 'soothing']) assert.equal(html.toLowerCase().includes(word), false, word);
+  for (const word of ['hypoallergenic', 'soothing']) assert.equal(html.toLowerCase().includes(word), false, word);
+  assert.equal(/\bfacial\b/i.test(html), false);
   const included = [
     'A 2-hour session for you and your baby, led by a caring expert in babies and new parents',
     'Your own baby bath, soft towels and a cozy station, all set up for you',

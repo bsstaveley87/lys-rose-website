@@ -50,7 +50,7 @@ for(const page of pages) test(`${page.path}: indexable HTML, SEO, structured dat
   assert.equal(doc.querySelector('meta[property="og:description"]').content,description);
   assert.equal(doc.querySelector('meta[name="twitter:title"]').content,title);
   assert.equal(doc.querySelector('meta[name="twitter:description"]').content,description);
-  assert.equal(doc.querySelector('.disclaimer').textContent, 'Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
+  assert.equal(doc.querySelector('.disclaimer').textContent, "Parents provide all hands-on care while our instructor guides. Lys Rose doesn't offer facials, medical treatments, physical therapy or massage therapy. Our sessions are educational.");
   assert.ok(doc.querySelector('#site-menu .menu-logo'));
   assert.ok([...doc.querySelectorAll('#site-menu nav a')].some(link => link.textContent === 'Home' && link.getAttribute('href') === '/'));
   assert.ok([...doc.querySelectorAll('noscript nav a')].some(link => link.textContent === 'Home'));
@@ -92,7 +92,8 @@ test('FAQ schema mirrors every visible answer exactly',async()=>{
   assert.deepEqual([...faq.mainEntity.map(item=>item.name)].filter(name=>name.endsWith('face crème')),['Signature face crème','Gentle face crème','Premium face crème']);
   assert.equal(faq.mainEntity.find(item=>item.name==='Signature face crème').acceptedAnswer.text,'Aloe Barbadensis Leaf Juice*, Water, Glycerin, Caprylyl/Capryl Glucoside, Sodium Benzoate, Potassium Sorbate, Citric Acid, Olea Europaea (Olive) Fruit Oil*.');
   const faqHtml=doc.documentElement.outerHTML.toLowerCase();
-  for (const word of ['mustela','evereden','ever-eden','soothing','facial']) assert.equal(faqHtml.includes(word),false,word);
+  for (const word of ['mustela','evereden','ever-eden','soothing']) assert.equal(faqHtml.includes(word),false,word);
+  assert.equal(faqHtml.replaceAll('facials','').includes('facial'),false);
   assert.equal(faqHtml.replaceAll('organic colloidal oatmeal, organic coconut milk powder, organic dried red rose petals and buds.','').includes('organic'),false);
   items.forEach((item,i)=>assert.equal(faq.mainEntity[i].acceptedAnswer.text,[...item.querySelectorAll('p')].map(p=>p.textContent.trim()).join('\n\n')));
 });
@@ -175,7 +176,7 @@ test('preview copy removes the flagged phrases and keeps the approved lines', as
   assert.equal(answer, 'No. Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
 });
 test('published home and FAQ copy stays on the waitlist and off the booking page', async () => {
-  const disclaimer = 'Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.';
+  const disclaimer = "Parents provide all hands-on care while our instructor guides. Lys Rose doesn't offer facials, medical treatments, physical therapy or massage therapy. Our sessions are educational.";
   const included = [
     'A 2-hour session for you and your baby, led by a caring expert in babies and new parents',
     'Your own baby bath, soft towels and a cozy station, all set up for you',
@@ -221,7 +222,7 @@ test('published home and FAQ copy stays on the waitlist and off the booking page
     assert.equal(html.includes('/book'), false, page.path);
     assert.equal(html.includes('Le Petit Plus'), false, page.path);
     assert.equal(html.includes('$'), false, page.path);
-    assert.equal(html.toLowerCase().includes('facial'), false, page.path);
+    assert.equal(html.toLowerCase().replaceAll('facials','').includes('facial'), false, page.path);
     assert.equal([...doc.querySelectorAll('a[href]')].some(link => (link.getAttribute('href') || '').includes('/book')), false, page.path);
     assert.equal(JSON.parse(doc.querySelector('script[type="application/ld+json"]').textContent)['@graph'].some(node => JSON.stringify(node).includes('/book')), false, page.path);
   }
@@ -232,14 +233,14 @@ test('privacy policy is linked, indexable and free of internal notes', async () 
   assert.equal(doc.querySelector('h1').textContent, 'Privacy');
   assert.equal(doc.querySelector('link[rel=canonical]').href, site.origin + '/privacy/');
   assert.equal(doc.querySelector('meta[name=description]').content, approved['/privacy/'].description);
-  assert.equal(doc.querySelector('.disclaimer').textContent, 'Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
+  assert.equal(doc.querySelector('.disclaimer').textContent, "Parents provide all hands-on care while our instructor guides. Lys Rose doesn't offer facials, medical treatments, physical therapy or massage therapy. Our sessions are educational.");
   assert.equal(doc.querySelector('.footer-tagline').textContent, 'Inspired by Lily Rose. Shared with love.');
   assert.ok(html.includes('Effective [date].'));
   assert.ok(html.includes('up to [24] months'));
   assert.ok(html.includes('within [30] days'));
   assert.ok(html.includes('[mailing address]'));
   assert.equal(html.toLowerCase().includes('face cream'), false);
-  assert.equal(html.toLowerCase().includes('facial'), false);
+  assert.equal(html.toLowerCase().replaceAll('facials','').includes('facial'), false);
   assert.equal(html.toLowerCase().includes('spots'), false);
   assert.equal(html.includes('/book'), false);
   for (const phrase of ['CFO', 'TODO', 'attorney', 'HIPAA', 'COPPA', 'Decided Oct']) assert.equal(html.includes(phrase), false, phrase);

@@ -49,15 +49,17 @@
 <div class="editorial-wrap">
 <h2>The session</h2>
 <ul class="date-list">
-<li><article class="date-card" id="session-card" data-session-date="2026-12-06">
-<h3>Sunday, December 6, 2026</h3>
-<p class="session-when">10:30 AM to 12:30 PM</p>
+<li><article class="date-card" id="session-card">
+<h3 id="session-date">Date to be announced</h3>
+<p class="session-when" id="session-time">Time to be announced</p>
 <p class="session-where">Fort Lauderdale</p>
+<p class="session-cutoff">Booking closes about 48 hours before each session.</p>
+<p class="session-closed" id="booking-window" hidden tabindex="-1">Booking for this session has closed.</p>
 </article></li>
 </ul>
 <p class="booking-price">$280 per parent &amp; baby</p>
 <p class="price-note">This is the price before taxes and processing fees.</p>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Event","name":"Lys Rose session","startDate":"2026-12-06T10:30:00-05:00","endDate":"2026-12-06T12:30:00-05:00","eventAttendanceMode":"https://schema.org/OfflineEventAttendanceMode","eventStatus":"https://schema.org/EventScheduled","location":{"@type":"Place","address":{"@type":"PostalAddress","addressLocality":"Fort Lauderdale","addressRegion":"FL","addressCountry":"US"}},"offers":{"@type":"Offer","price":"280.00","priceCurrency":"USD","url":"https://lysrosebabyspa.com/book/"},"organizer":{"@type":"Organization","name":"Lys Rose Baby Spa","url":"https://lysrosebabyspa.com/"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Event","name":"Lys Rose session","eventAttendanceMode":"https://schema.org/OfflineEventAttendanceMode","eventStatus":"https://schema.org/EventScheduled","location":{"@type":"Place","address":{"@type":"PostalAddress","addressLocality":"Fort Lauderdale","addressRegion":"FL","addressCountry":"US"}},"offers":{"@type":"Offer","price":"280.00","priceCurrency":"USD","url":"https://lysrosebabyspa.com/book/"},"organizer":{"@type":"Organization","name":"Lys Rose Baby Spa","url":"https://lysrosebabyspa.com/"}}</script>
 </div>
 </section>
 <section class="editorial-section" id="book-offer">
@@ -70,7 +72,7 @@
 <h2>Le Petit Plus (The Little Extras)</h2>
 <ul class="addon-preview">
 <li class="face-cream-choice"><fieldset class="face-cream"><legend class="enhancement-title">Face crème</legend><label class="face-cream-option"><input type="radio" name="faceCream" value="signature" form="booking-form" checked required/><span>Signature face crème</span><span class="face-cream-price">Included</span></label><label class="face-cream-option"><input type="radio" name="faceCream" value="gentle" form="booking-form"/><span>Gentle face crème</span><span class="face-cream-price">+$5</span></label><label class="face-cream-option"><input type="radio" name="faceCream" value="premium" form="booking-form"/><span>Premium face crème</span><span class="face-cream-price">+$10</span></label></fieldset></li>
-<li id="robe-addon" data-robe-addon><label><input type="checkbox" id="robe-option" disabled=""/><span class="addon-copy"><span class="enhancement-title">Embroidered Keepsake Robe</span><span class="enhancement-note">A personalized embroidered robe for your baby.</span><span class="enhancement-note robe-note" id="robe-note">Personalized robes are embroidered to order, so this option closes 14 days before your session (November 22 for December 6).</span><span class="available-to-add">available to add</span></span></label></li>
+<li id="robe-addon" data-robe-addon><label><input type="checkbox" id="robe-option" disabled=""/><span class="addon-copy"><span class="enhancement-title">Embroidered Keepsake Robe</span><span class="enhancement-note">A personalized embroidered robe for your baby.</span><span class="enhancement-note robe-note" id="robe-note">Personalized robes are embroidered to order, so this option closes 14 days before your session.</span><span class="available-to-add">available to add</span></span></label></li>
 <li><label><input type="checkbox" disabled=""/><span class="addon-copy"><span class="enhancement-title">The Lys Rose Floral Milk Bath Bag</span><span class="enhancement-note">Our floral milk bath to take home: 4–6 uses in a baby bath, or 1–2 in a shallow full-size tub.</span><span class="enhancement-note">Ingredients: organic coconut milk powder, organic colloidal oatmeal, organic dried rose petals.</span><span class="available-to-add">available to add</span></span></label></li>
 </ul>
 </div>
@@ -86,6 +88,16 @@
 <label class="field" for="parent-phone"><span class="field-label" id="parent-phone-label">Phone</span><input class="input" id="parent-phone" name="phone" type="tel" autocomplete="tel" required maxlength="30" aria-labelledby="parent-phone-label"/></label>
 <label class="field" for="baby-name"><span class="field-label" id="baby-name-label">Baby's name</span><input class="input" id="baby-name" name="babyName" type="text" required maxlength="100" aria-labelledby="baby-name-label"/></label>
 <label class="field" for="baby-dob"><span class="field-label" id="baby-dob-label">Baby's date of birth</span><input class="input" id="baby-dob" name="babyDob" type="date" required aria-labelledby="baby-dob-label" aria-describedby="baby-dob-hint baby-dob-error"/><span class="field-hint" id="baby-dob-hint">For babies at least 4 weeks old and under 12 months.</span><span class="field-error" id="baby-dob-error" hidden></span></label>
+<fieldset class="booking-choice" id="bath-choice">
+<legend>Choose your bath</legend>
+<label class="choice-row"><input type="radio" name="bath" value="floral" required/> Floral Milk Soak</label>
+<label class="choice-row"><input type="radio" name="bath" value="byob" required/> BYOB (Bring your own breastmilk)</label>
+<div id="byob-details" hidden>
+<p class="field-hint" id="byob-note">Bring your breastmilk cold or frozen. We can warm it for you on site. You'll add it to your baby's bath yourself.</p>
+<label class="choice-row"><input type="checkbox" name="rosePetals" value="yes"/><span>Add complimentary rose petals</span></label>
+</div>
+<span class="field-error" id="bath-error" hidden></span>
+</fieldset>
 <div class="booking-confirm" id="booking-confirm" role="group" aria-labelledby="booking-confirm-heading">
 <h3 id="booking-confirm-heading">Before you book, please confirm:</h3>
 <label class="choice-row"><input type="checkbox" name="confirmReady" value="age" required aria-describedby="booking-confirm-error"/><span>My baby is at least 4 weeks old, has no breaks in the skin, the umbilical cord stump has fallen off and healed, and any circumcision site is fully healed.</span></label>

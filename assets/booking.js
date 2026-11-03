@@ -5,7 +5,15 @@ export const MIN_AGE_WEEKS = 4;
 export const SESSION_PRICE_CENTS = 28000;
 export const FACE_CREAM_CENTS = {signature: 0, gentle: 500, premium: 1000};
 export const ROBE_LEAD_DAYS = 14;
+export const BOOKING_LEAD_HOURS = 48;
 const ROBE_TIME_ZONE = 'America/New_York';
+/**
+ * The only session date and time. Set this when the session is confirmed;
+ * null keeps the date and time unannounced and turns both cutoffs off.
+ * Times are America/New_York, 24-hour "HH:MM".
+ * Example: {date:'2026-12-06', start:'10:30', end:'12:30'}
+ */
+export const SESSION = null;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -86,17 +94,105 @@ export function robeIsClosed(sessionIso, now = new Date()) {
 }
 
 export function robeNote(sessionIso) {
+  if (!sessionIso) return 'Personalized robes are embroidered to order, so this option closes 14 days before your session.';
   const cutoff = robeCutoffIso(sessionIso);
+  if (!cutoff) return 'Personalized robes are embroidered to order, so this option closes 14 days before your session.';
   return `Personalized robes are embroidered to order, so this option closes 14 days before your session (${formatMonthDay(cutoff)} for ${formatMonthDay(sessionIso)}).`;
 }
 
+function sessionClockMs(session, clock) {
+  if (!session?.date || !clock) return NaN;
+  const date = /^(\d{4})-(\d{2})-(\d{2})$/.exec(session.date);
+  const time = /^(\d{2}):(\d{2})$/.exec(clock);
+  if (!date || !time) return NaN;
+  return wallTimeToUtc(Number(date[1]), Number(date[2]) - 1, Number(date[3]), Number(time[1]), Number(time[2]), 0, 0, ROBE_TIME_ZONE);
+}
+
+export function sessionStartMs(session) {
+  return sessionClockMs(session, session?.start);
+}
+
+export function bookingClosesAt(session, leadHours = BOOKING_LEAD_HOURS) {
+  const start = sessionStartMs(session);
+  if (Number.isNaN(start)) return NaN;
+  return start - leadHours * 60 * 60 * 1000;
+}
+
+export function bookingIsClosed(session, now = new Date(), leadHours = BOOKING_LEAD_HOURS) {
+  const closes = bookingClosesAt(session, leadHours);
+  if (Number.isNaN(closes)) return false;
+  return now.getTime() >= closes;
+}
+
+function formatClock(value) {
+  const match = /^(\d{2}):(\d{2})$/.exec(value || '');
+  if (!match) return '';
+  const hour24 = Number(match[1]);
+  const minute = Number(match[2]);
+  const suffix = hour24 >= 12 ? 'PM' : 'AM';
+  const hour = hour24 % 12 || 12;
+  return minute ? `${hour}:${String(minute).padStart(2, '0')} ${suffix}` : `${hour} ${suffix}`;
+}
+
+export function sessionDateLabel(session) {
+  if (!session?.date) return 'Date to be announced';
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(session.date);
+  if (!match) return 'Date to be announced';
+  const stamp = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  return new Intl.DateTimeFormat('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric', timeZone:'UTC'}).format(stamp);
+}
+
+export function sessionTimeLabel(session) {
+  if (!session?.start || !session?.end) return 'Time to be announced';
+  const start = formatClock(session.start);
+  const end = formatClock(session.end);
+  if (!start || !end) return 'Time to be announced';
+  return `${start} to ${end}`;
+}
+
+function applySession(documentRef, now = new Date()) {
+  const dateEl = documentRef.querySelector('#session-date');
+  const timeEl = documentRef.querySelector('#session-time');
+  if (dateEl) dateEl.textContent = sessionDateLabel(SESSION);
+  if (timeEl) timeEl.textContent = sessionTimeLabel(SESSION);
+  const card = documentRef.querySelector('#session-card');
+  if (card) {
+    if (SESSION?.date) card.dataset.sessionDate = SESSION.date;
+    else delete card.dataset.sessionDate;
+  }
+  const script = documentRef.querySelector('script[type="application/ld+json"]');
+  if (script) {
+    try {
+      const data = JSON.parse(script.textContent);
+      const start = sessionStartMs(SESSION);
+      const end = sessionClockMs(SESSION, SESSION?.end);
+      if (!Number.isNaN(start) && !Number.isNaN(end)) {
+        data.startDate = new Date(start).toISOString();
+        data.endDate = new Date(end).toISOString();
+      } else {
+        delete data.startDate;
+        delete data.endDate;
+      }
+      script.textContent = JSON.stringify(data);
+    } catch { /* leave the static preview schema */ }
+  }
+  const closed = bookingIsClosed(SESSION, now);
+  const notice = documentRef.querySelector('#booking-window');
+  if (notice) notice.hidden = !closed;
+  const form = documentRef.querySelector('#booking-form');
+  if (form) form.dataset.bookingClosed = closed ? 'true' : 'false';
+}
+
 function applyRobeCutoff(documentRef, now = new Date()) {
-  const sessionIso = documentRef.querySelector('#session-card')?.dataset.sessionDate;
   const robe = documentRef.querySelector('[data-robe-addon]');
-  if (!sessionIso || !robe) return;
+  if (!robe) return;
+  const sessionIso = SESSION?.date || '';
   const note = robe.querySelector('#robe-note');
   if (note) note.textContent = robeNote(sessionIso);
-  if (!robeIsClosed(sessionIso, now)) return;
+  if (!sessionIso || !robeIsClosed(sessionIso, now)) {
+    robe.classList.remove('is-closed');
+    return;
+  }
   robe.classList.add('is-closed');
   const input = robe.querySelector('input');
   if (input) {
@@ -171,6 +267,29 @@ function showConfirmations(form) {
   return missing;
 }
 
+function syncBath(form) {
+  const byob = Boolean(form.querySelector('[name=bath][value=byob]')?.checked);
+  const details = form.querySelector('#byob-details');
+  if (details) details.hidden = !byob;
+  const petals = form.querySelector('[name=rosePetals]');
+  if (petals && !byob) petals.checked = false;
+  const error = form.querySelector('#bath-error');
+  const chosen = Boolean(form.querySelector('[name=bath]:checked'));
+  if (error && chosen) {
+    error.textContent = '';
+    error.hidden = true;
+  }
+}
+
+function showBath(form) {
+  const chosen = Boolean(form.querySelector('[name=bath]:checked'));
+  const error = form.querySelector('#bath-error');
+  if (!error) return chosen;
+  error.textContent = chosen ? '' : 'Please choose a bath.';
+  error.hidden = chosen;
+  return chosen;
+}
+
 function syncAllergies(form) {
   const share = form.querySelector('[name=allergies][value=share]');
   const details = form.querySelector('#allergy-details-field');
@@ -221,6 +340,7 @@ export function initBooking(documentRef = document) {
   }
   documentRef.addEventListener('change', event => {
     if (event.target?.name === 'faceCream') syncTotal(documentRef);
+    if (event.target?.name === 'bath') syncBath(form);
   });
   form.addEventListener('change', event => {
     if (event.target?.name === 'allergies') syncAllergies(form);
@@ -231,16 +351,28 @@ export function initBooking(documentRef = document) {
   });
   form.addEventListener('submit', event => {
     event.preventDefault();
+    if (bookingIsClosed(SESSION)) {
+      const notice = documentRef.querySelector('#booking-window');
+      if (notice) {
+        notice.hidden = false;
+        notice.focus();
+      }
+      return;
+    }
     const ageMessage = dob ? babyAgeMessage(dob.value) : '';
     if (dob) showAge(dob);
+    const bathOk = showBath(form);
     const missing = showConfirmations(form);
-    if (ageMessage || missing.length) {
-      (ageMessage && dob ? dob : missing[0])?.focus();
-      return;
+    if (ageMessage || !bathOk || missing.length) {
+      if (ageMessage && dob) dob.focus();
+      else if (!bathOk) form.querySelector('[name=bath]')?.focus();
+      else missing[0]?.focus();
     }
   });
   syncAllergies(form);
+  syncBath(form);
   syncTotal(documentRef);
+  applySession(documentRef);
   applyRobeCutoff(documentRef);
 }
 

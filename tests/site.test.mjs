@@ -333,7 +333,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   for (const line of included) assert.ok(html.includes(line), line);
   const home = await readFile(new URL('index.html', root), 'utf8');
   for (const line of included) assert.ok(home.includes(line), line);
-  const bring = "Just your baby, a couple of diapers, a change of clothes and anything you need for feeding (bottle, formula or a nursing cover). We take care of the rest: towels, wipes and everything used during the session.";
+  const bring = "Bring your baby, anything you need for feeding, and your diaper bag. There is limited space for strollers, so we kindly ask you to bring only your car seat. We take care of the rest.";
   const faqDoc = await documentFor('faq/index.html');
   const faqData = JSON.parse(faqDoc.querySelector('script[type="application/ld+json"]').textContent);
   const faqEntities = faqData['@graph'].find(node => node['@type'] === 'FAQPage').mainEntity;

@@ -315,7 +315,12 @@ test('catalog plan prices the session variations together and skips null extras'
   assert.equal(objects.some(item => item.item_data.name === 'Embroidered keepsake robe'), false);
   assert.equal(objects.some(item => item.item_data.name === 'Floral Milk Bath Bag'), false);
   assert.equal(objects.some(item => item.item_data.name === 'Second adult'), false);
-  assert.equal(objects.find(item => item.id === '#lys-rose-session').item_data.variations[0].item_variation_data.price_money.amount, 28000);
+  const sessionObject = objects.find(item => item.id === '#lys-rose-session');
+  assert.equal(sessionObject.item_data.is_taxable, false);
+  assert.equal(sessionObject.item_data.variations[0].item_variation_data.price_money.amount, 28000);
+  assert.equal(objects.find(item => item.item_data.name === 'Gentle face crème').item_data.is_taxable, true);
+  assert.equal(objects.find(item => item.item_data.name === 'Signature face crème').item_data.is_taxable, false);
+  assert.equal(objects.find(item => item.item_data.name === 'Premium face crème').item_data.is_taxable, true);
   assert.equal(squareApiHost('production'), 'https://connect.squareup.com');
   assert.equal(squareApiHost('sandbox'), 'https://connect.squareupsandbox.com');
   assert.equal(squareApiHost(undefined), 'https://connect.squareupsandbox.com');
@@ -349,7 +354,61 @@ test('catalog script stays a dry run unless credentials are present', async () =
   assert.equal(flags['Second adult'], false);
   assert.deepEqual(printed.items[0].variations.map(item => item.taxable), [false, false]);
   assert.match(dry.stdout, /No Square request was sent/);
-  const apply = spawnSync(process.execPath, ['scripts/square-catalog.mjs', '--apply'], {encoding: 'utf8', env: {...process.env, SQUARE_ACCESS_TOKEN: '', SQUARE_LOCATION_ID: '', SQUARE_ENV: 'sandbox'}});
+  const apply = spawnSync(process.execPath, ['scripts/square-catalog.mjs', '--apply'], {encoding: 'utf8', env: {...process.env, SQUARE_ACCESS_TOKEN: '', SQUARE_LOCATION_ID: '', SQUARE_ENV: 'sandbox', CONFIRM_PRODUCTION: ''}});
   assert.notEqual(apply.status, 0);
   assert.match(apply.stderr, /No Square request was sent/);
+  const production = spawnSync(process.execPath, ['scripts/square-catalog.mjs', '--apply'], {encoding: 'utf8', env: {...process.env, SQUARE_ENV: 'production', SQUARE_ACCESS_TOKEN: 'not-a-real-token', SQUARE_LOCATION_ID: 'LOC', CONFIRM_PRODUCTION: ''}});
+  assert.equal(production.status, 1);
+  assert.match(production.stderr, /Refusing to write to production without CONFIRM_PRODUCTION=yes\. No Square request was sent\./);
+});
+
+test('idempotency key separates different bookings and repeats for a double submit', async () => {
+  const keys = [];
+  const fetchImpl = async (_url, init) => {
+    keys.push(JSON.parse(init.body).idempotency_key);
+    return new Response(JSON.stringify({payment_link: {url: 'https://sandbox.square.link/u/x', order_id: `ord_${keys.length}`}}), {status: 200});
+  };
+  const send = body => handleCheckoutRequest(checkoutRequest(body), env(), fetchImpl, openNow, session);
+  const base = form({bath: 'byob', petals: 'yes', creme: 'premium', email: 'a-very-long-parent-address@lysrosebabyspa.com'});
+  await send(base);
+  await send(base);
+  await send({...base, petals: 'no'});
+  await send({...base, babyName: 'Twin', babyDob: '2026-09-20'});
+  assert.equal(keys[0], keys[1]);
+  assert.equal(new Set(keys).size, 3);
+});
+
+test('a stored order is not replaced by a different booking', async () => {
+  const store = memoryStore();
+  const fetchImpl = async () => new Response(JSON.stringify({payment_link: {url: 'https://sandbox.square.link/u/x', order_id: 'ord_same'}}), {status: 200});
+  const first = await handleCheckoutRequest(checkoutRequest(form({babyName: 'Lily'})), env(store), fetchImpl, openNow, session);
+  assert.equal(first.status, 200);
+  const second = await handleCheckoutRequest(checkoutRequest(form({babyName: 'Twin', babyDob: '2026-09-20'})), env(store), fetchImpl, openNow, session);
+  assert.equal(second.status, 409);
+  assert.equal(JSON.parse(await store.get('order:ord_same')).booking.babyName, 'Lily');
+  const repeat = await handleCheckoutRequest(checkoutRequest(form({babyName: 'Lily'})), env(store), fetchImpl, openNow, session);
+  assert.equal(repeat.status, 200);
+  assert.equal(JSON.parse(await store.get('order:ord_same')).booking.babyName, 'Lily');
+});
+
+test('retries once when Square rejects the buyer email', async () => {
+  const bodies = [];
+  const fetchImpl = async (_url, init) => {
+    const body = JSON.parse(init.body);
+    bodies.push(body);
+    if (bodies.length === 1) return new Response(JSON.stringify({errors: [{code: 'INVALID_EMAIL_ADDRESS'}]}), {status: 400});
+    return new Response(JSON.stringify({payment_link: {url: 'https://sandbox.square.link/u/x', order_id: 'ord_email'}}), {status: 200});
+  };
+  const response = await handleCheckoutRequest(checkoutRequest(form()), env(), fetchImpl, openNow, session);
+  assert.equal(response.status, 200);
+  assert.equal(bodies[0].pre_populated_data.buyer_email, 'parent@example.com');
+  assert.equal(bodies[1].pre_populated_data, undefined);
+  assert.notEqual(bodies[0].idempotency_key, bodies[1].idempotency_key);
+  const once = [];
+  const other = await handleCheckoutRequest(checkoutRequest(form()), env(), async (_url, init) => {
+    once.push(JSON.parse(init.body));
+    return new Response(JSON.stringify({errors: [{code: 'BAD_REQUEST'}]}), {status: 400});
+  }, openNow, session);
+  assert.equal(other.status, 502);
+  assert.equal(once.length, 1);
 });

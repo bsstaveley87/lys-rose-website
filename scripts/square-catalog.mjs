@@ -16,6 +16,11 @@ if (!apply) {
   process.exit(0);
 }
 
+if (envName === 'production' && process.env.CONFIRM_PRODUCTION !== 'yes') {
+  console.error('Refusing to write to production without CONFIRM_PRODUCTION=yes. No Square request was sent.');
+  process.exit(1);
+}
+
 const token = process.env.SQUARE_ACCESS_TOKEN || '';
 const locationId = process.env.SQUARE_LOCATION_ID || '';
 if (!token || !locationId) {
@@ -41,4 +46,18 @@ if (!response.ok) {
   console.error(`Catalog request failed (${response.status}). No secret values were printed.`);
   process.exit(1);
 }
-console.log(`Created ${objects.length} catalog items at location ${locationId}.`);
+const created = await response.json();
+for (const object of created.objects || []) {
+  const data = object.item_data || {};
+  console.log(JSON.stringify({
+    id: object.id,
+    name: data.name,
+    taxable: data.is_taxable,
+    variations: (data.variations || []).map(variation => ({
+      id: variation.id,
+      name: variation.item_variation_data?.name,
+      price_money: variation.item_variation_data?.price_money,
+    })),
+  }));
+}
+console.log(`Created ${(created.objects || []).length} catalog items at location ${locationId}.`);

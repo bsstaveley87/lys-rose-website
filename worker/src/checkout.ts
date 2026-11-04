@@ -265,6 +265,7 @@ export function catalogUpsertObjects(prices: PriceTable = PRICES) {
         id: '#lys-rose-session',
         item_data: {
           name: item.name,
+          is_taxable: item.taxable,
           variations: item.variations.map(variation => ({
             type: 'ITEM_VARIATION',
             id: `#${variation.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
@@ -285,6 +286,7 @@ export function catalogUpsertObjects(prices: PriceTable = PRICES) {
       id: `#${slug}`,
       item_data: {
         name: item.name,
+        is_taxable: item.taxable,
         variations: [{
           type: 'ITEM_VARIATION',
           id: `#${slug}-price`,
@@ -310,38 +312,67 @@ export async function idempotencyKey(value: string) {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
 }
 
+function paymentLinkBody(order: PreparedOrder, env: CheckoutEnv, key: string, buyerEmail?: string) {
+  const body: {
+    idempotency_key: string;
+    order: ReturnType<typeof squareOrderPayload>;
+    checkout_options: {redirect_url: string};
+    payment_note: string;
+    pre_populated_data?: {buyer_email: string};
+  } = {
+    idempotency_key: key,
+    order: squareOrderPayload(order, env),
+    checkout_options: {redirect_url: `${CHECKOUT_ORIGIN}${REDIRECT_PATH}`},
+    payment_note: order.note,
+  };
+  if (buyerEmail) body.pre_populated_data = {buyer_email: buyerEmail};
+  return body;
+}
+
+function pendingIdentity(record: {booking?: BookingRecord; sessionDate?: string; note?: string}) {
+  return JSON.stringify([record.booking || null, record.sessionDate || '', record.note || '']);
+}
+
+async function postPaymentLink(order: PreparedOrder, env: CheckoutEnv, fetchImpl: typeof fetch, key: string, buyerEmail?: string) {
+  return fetchImpl(`${squareApiHost(env.SQUARE_ENV)}/v2/online-checkout/payment-links`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.SQUARE_ACCESS_TOKEN}`,
+      'Content-Type': 'application/json',
+      'Square-Version': SQUARE_VERSION,
+    },
+    body: JSON.stringify(paymentLinkBody(order, env, key, buyerEmail)),
+  });
+}
+
 export async function openCheckout(order: PreparedOrder, buyerEmail: string, env: CheckoutEnv, fetchImpl: typeof fetch = fetch) {
   if (!env.SQUARE_ACCESS_TOKEN || !env.SQUARE_LOCATION_ID || !env.BOOKINGS) {
     return {ok: false as const, status: 503, error: 'Checkout is not available yet.'};
   }
   const taxCents = taxesEnabled(env) ? salesTaxCents(order.lines) : 0;
-  const key = await idempotencyKey(`${order.referenceId}:${order.total}:${taxCents}:${buyerEmail}`);
+  // referenceId is cut to 40 characters, so twins, same-month siblings, and a petal change shared one key and Square rejected the reuse.
+  const key = await idempotencyKey(JSON.stringify([order.booking, order.sessionDate, order.lines, order.note, taxCents]));
   let response: Response;
   try {
-    response = await fetchImpl(`${squareApiHost(env.SQUARE_ENV)}/v2/online-checkout/payment-links`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${env.SQUARE_ACCESS_TOKEN}`,
-        'Content-Type': 'application/json',
-        'Square-Version': SQUARE_VERSION,
-      },
-      body: JSON.stringify({
-        idempotency_key: key,
-        order: squareOrderPayload(order, env),
-        checkout_options: {redirect_url: `${CHECKOUT_ORIGIN}${REDIRECT_PATH}`},
-        pre_populated_data: {buyer_email: buyerEmail},
-        payment_note: order.note,
-      }),
-    });
+    response = await postPaymentLink(order, env, fetchImpl, key, buyerEmail);
   } catch {
     return {ok: false as const, status: 502, error: 'Checkout is not available yet.'};
+  }
+  if (!response.ok && (await response.clone().text()).includes('INVALID_EMAIL_ADDRESS')) {
+    // The retry omits the email, so it is a different request and needs its own key.
+    const retryKey = await idempotencyKey(JSON.stringify([order.booking, order.sessionDate, order.lines, order.note, taxCents, 'no-email']));
+    try {
+      response = await postPaymentLink(order, env, fetchImpl, retryKey);
+    } catch {
+      return {ok: false as const, status: 502, error: 'Checkout is not available yet.'};
+    }
   }
   if (!response.ok) return {ok: false as const, status: 502, error: 'Checkout is not available yet.'};
   const payload = await response.json() as {payment_link?: {url?: string; order_id?: string}};
   const url = payload.payment_link?.url;
   const orderId = payload.payment_link?.order_id;
   if (!url || !orderId) return {ok: false as const, status: 502, error: 'Checkout is not available yet.'};
-  await env.BOOKINGS.put(`order:${orderId}`, JSON.stringify({
+  const record = {
     referenceId: order.referenceId,
     total: order.total,
     taxCents,
@@ -350,7 +381,17 @@ export async function openCheckout(order: PreparedOrder, buyerEmail: string, env
     closesAt: Number.isFinite(order.closesAt) ? order.closesAt : null,
     sessionDate: order.sessionDate,
     booking: order.booking,
-  }));
+  };
+  const existingRaw = await env.BOOKINGS.get(`order:${orderId}`);
+  if (existingRaw) {
+    let existing: {booking?: BookingRecord; sessionDate?: string; note?: string} = {};
+    try { existing = JSON.parse(existingRaw); } catch { existing = {}; }
+    if (pendingIdentity(existing) !== pendingIdentity(record)) {
+      return {ok: false as const, status: 409, error: 'Checkout is not available yet.'};
+    }
+  } else {
+    await env.BOOKINGS.put(`order:${orderId}`, JSON.stringify(record));
+  }
   return {ok: true as const, url, orderId};
 }
 

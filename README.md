@@ -4,7 +4,7 @@ Website: https://lysrosebabyspa.com. GitHub Pages serves the site; Cloudflare su
 
 ## Build and validate
 
-Requires Node.js 24 or newer for the site checks. Run:
+Requires Node.js 24, as pinned in `.nvmrc` and used in GitHub Actions. Node 20 cannot import the worker TypeScript. The package accepts Node 22.18 or newer. Run:
 
 ```
 npm ci
@@ -58,9 +58,18 @@ Set these in the Cloudflare worker environment, never in git:
 
 `POST /api/square-webhook` checks Square's HMAC-SHA256 signature over the notification URL plus the raw body. Seats are counted only after `payment.updated` or `payment.created` with status `COMPLETED`. The payment link itself is not expired through the API. The order record stores the 48-hour cutoff, and the webhook compares `payment.created_at` with that cutoff. A late payment, a session that is already at the seat cap, or a payment with no matching order is stored as `refund-flagged` and does not take a seat. This preview does not call Square's refund API; someone refunds those payments in the Square dashboard. The seat cap is not written into any page.
 
-`scripts/square-catalog.mjs` prints the catalog it would create and does not call Square. `--apply` creates the items only when both credentials are present. Robe, bath bag, and second adult are listed and skipped while their prices are null.
+`scripts/square-catalog.mjs` prints the catalog it would create and does not call Square. `--apply` creates the items only when both credentials are present. It refuses `SQUARE_ENV=production` unless `CONFIRM_PRODUCTION=yes`. Robe, bath bag, and second adult are listed and skipped while their prices are null. The redirect URL is `https://lysrosebabyspa.com/book/thank-you/`. Do not run `cf deploy` for this preview.
 
-Before a real deploy, the Square dashboard still needs to supply the token, the location id, and a webhook subscription whose notification URL is exactly `https://forms.lysrosebabyspa.com/api/square-webhook`, subscribed to `payment.updated` and `payment.created`, plus the signature key for that subscription. The redirect URL is `https://lysrosebabyspa.com/book/thank-you/`. Do not run `cf deploy` for this preview.
+## Go-live checklist
+
+- Create a Square webhook subscription for `https://forms.lysrosebabyspa.com/api/square-webhook` on `payment.created` and `payment.updated`, and put its signature key in `SQUARE_WEBHOOK_SIGNATURE_KEY`. The URL must match exactly.
+- Create a real `BOOKINGS` KV namespace and set its id in `worker/cloudflare.config.ts`.
+- Set the production `SQUARE_ACCESS_TOKEN` and `SQUARE_LOCATION_ID`, with `SQUARE_ENV=production`.
+- Leave `TAX_ENABLED` false until the Florida registration is approved.
+- Set the robe, bath bag, and second-adult prices.
+- Set `SESSION` and `CHECKOUT_CONFIGURED`.
+- Check the CORS origins in `worker/src/checkout.ts` (`lysrosebabyspa.com`, `www.lysrosebabyspa.com`, and `bsstaveley87.github.io`).
+- Refunds are handled manually in the Square dashboard.
 
 ## Visual assets and content
 

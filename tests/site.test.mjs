@@ -8,7 +8,7 @@ import {BATH_BAG_CENTS, BOOKING_LEAD_HOURS, MIN_AGE_WEEKS, ROBE_CENTS, SEATS_PER
 const approved = {
   '/': {
     title: 'Lys Rose Baby Spa · Fort Lauderdale',
-    description: "A guided session for parents and babies under 12 months: you'll learn infant massage, a warm floral milk bath and a parent-led baby facial. Small group sessions in Fort Lauderdale. Join the waitlist.",
+    description: "A guided session for parents and babies under 12 months: you'll learn a warm floral milk bath, infant massage and a parent-led baby facial. Small group sessions in Fort Lauderdale. Join the waitlist.",
   },
   '/about/': {
     title: 'About · Lys Rose Baby Spa',
@@ -16,7 +16,7 @@ const approved = {
   },
   '/services/': {
     title: 'Services · Lys Rose Baby Spa',
-    description: "Small group baby spa sessions where you'll learn guided infant massage, a warm floral milk bath and a parent-led baby facial with your own baby, plus light refreshments. Led by caring professionals from the world of babies and new parents. Fort Lauderdale.",
+    description: "Small group baby spa sessions where you'll learn a warm floral milk bath, guided infant massage and a parent-led baby facial with your own baby, plus light refreshments. Led by caring professionals from the world of babies and new parents. Fort Lauderdale.",
   },
   '/faq/': {
     title: 'FAQ · Lys Rose Baby Spa',
@@ -196,6 +196,14 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('#booking-checkout input'), null);
   assert.equal(book.querySelector('.card-mock'), null);
   assert.equal(book.querySelector('.booking-pay').getAttribute('type'), 'button');
+  assert.equal(book.querySelector('.booking-intro').textContent, 'A session for you and your baby: a warm floral milk bath, infant massage and a parent-led baby facial.');
+  const homeDoc = await documentFor('index.html');
+  assert.equal(homeDoc.querySelector('.hero-intro').textContent, 'A session for you and your baby: a warm floral milk bath, infant massage and a parent-led baby facial.');
+  const homeSteps = [...homeDoc.querySelectorAll('.session-list h3')];
+  assert.deepEqual(homeSteps.map(node => node.textContent), ['A warm floral milk bath', 'Guided infant massage', 'An intimate small group']);
+  assert.equal(homeSteps[0].nextElementSibling.textContent, 'A warm floral milk bath, then a soft baby robe set for a photo moment.');
+  assert.equal(homeSteps[1].nextElementSibling.textContent, 'Infant massage, with a caring expert in babies and new parents.');
+  assert.equal(homeSteps[2].nextElementSibling.textContent, 'A small group of parents. In Fort Lauderdale, or at home on request.');
   const servicesDoc = await documentFor('services/index.html');
   const serviceHeads = [...servicesDoc.querySelectorAll('h3')];
   assert.equal(serviceHeads[0].textContent, 'i. A warm floral milk bath');

@@ -78,7 +78,7 @@ test('price table ignores tampered client prices and keeps taxes off', async () 
   assert.deepEqual(PRICES.petals, {amount: 0, taxable: false});
   assert.deepEqual(PRICES.robe, {amount: null, taxable: true});
   assert.deepEqual(PRICES.bathBag, {amount: 1800, taxable: true});
-  assert.deepEqual(PRICES.secondAdult, {amount: null, taxable: false});
+  assert.deepEqual(PRICES.secondAdult, {amount: 2500, taxable: false});
   assert.equal(SESSION, null);
   assert.equal(CHECKOUT_CONFIGURED, false);
   assert.equal(CHECKOUT_URL.includes('square'), false);
@@ -171,7 +171,12 @@ test('closed session, age, robe cutoff, and hidden extras never open checkout', 
   assert.equal(hidden.ok, false);
   assert.match(hidden.errors.robe, /isn't available/);
   assert.equal(hidden.errors.bathBag, undefined);
-  assert.match(hidden.errors.secondAdult, /isn't available/);
+  assert.equal(hidden.errors.secondAdult, undefined);
+  const adultOnly = validateBooking(form({secondAdult: true}), {session, now: openNow});
+  assert.equal(adultOnly.ok, true);
+  const adultLine = buildOrder(adultOnly.booking, PRICES, session).lines.find(line => line.name === 'Second adult');
+  assert.equal(adultLine.base_price_money.amount, 2500);
+  assert.equal(adultLine.taxable, false);
   const bagOnly = validateBooking(form({bathBag: true}), {session, now: openNow});
   assert.equal(bagOnly.ok, true);
   const bagLine = buildOrder(bagOnly.booking, PRICES, session).lines.find(line => line.name === 'Floral Milk Bath Bag');
@@ -332,7 +337,9 @@ test('catalog plan prices the session variations together and skips null extras'
   });
   const objects = catalogUpsertObjects();
   assert.equal(objects.some(item => item.item_data.name === 'Embroidered keepsake robe'), false);
-  assert.equal(objects.some(item => item.item_data.name === 'Second adult'), false);
+  const secondAdultItem = objects.find(item => item.item_data.name === 'Second adult');
+  assert.equal(secondAdultItem.item_data.is_taxable, false);
+  assert.equal(secondAdultItem.item_data.variations[0].item_variation_data.price_money.amount, 2500);
   const bathBagItem = objects.find(item => item.item_data.name === 'Floral Milk Bath Bag');
   assert.equal(bathBagItem.item_data.is_taxable, true);
   assert.equal(bathBagItem.item_data.variations[0].item_variation_data.price_money.amount, 1800);
@@ -375,6 +382,8 @@ test('catalog script stays a dry run unless credentials are present', async () =
   assert.equal(printed.items.find(item => item.name === 'Floral Milk Bath Bag').create, true);
   assert.equal(flags['Complimentary rose petals'], false);
   assert.equal(flags['Second adult'], false);
+  assert.equal(printed.items.find(item => item.name === 'Second adult').amount, 2500);
+  assert.equal(printed.items.find(item => item.name === 'Second adult').create, true);
   assert.deepEqual(printed.items[0].variations.map(item => item.taxable), [false, false]);
   assert.match(dry.stdout, /No Square request was sent/);
   const apply = spawnSync(process.execPath, ['scripts/square-catalog.mjs', '--apply'], {encoding: 'utf8', env: {...process.env, SQUARE_ACCESS_TOKEN: '', SQUARE_LOCATION_ID: '', SQUARE_ENV: 'sandbox', CONFIRM_PRODUCTION: ''}});

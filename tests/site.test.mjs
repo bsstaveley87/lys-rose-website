@@ -4,7 +4,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
 import {validateFields, interestOptions, limits} from '../assets/validation.js';
-import {BATH_BAG_CENTS, BOOKING_LEAD_HOURS, MIN_AGE_WEEKS, SEATS_PER_SESSION, SESSION, babyAgeMessage, bookingIsClosed, previewTotal, robeIsClosed, robeNote, sessionDateLabel, sessionStatus, sessionTimeLabel} from '../assets/booking.js';
+import {BATH_BAG_CENTS, BOOKING_LEAD_HOURS, MIN_AGE_WEEKS, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SESSION, babyAgeMessage, bookingIsClosed, previewTotal, robeIsClosed, robeNote, sessionDateLabel, sessionStatus, sessionTimeLabel} from '../assets/booking.js';
 const approved = {
   '/': {
     title: 'Lys Rose Baby Spa · Fort Lauderdale',
@@ -209,7 +209,12 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('#bath-bag-addon [name=bathBag]').hasAttribute('disabled'), false);
   assert.equal(html.includes('$24'), false);
   assert.equal(BATH_BAG_CENTS, 1800);
+  assert.equal(book.querySelector('#second-adult-addon .addon-price').textContent, '+$25');
+  assert.equal(book.querySelector('#second-adult-addon .enhancement-note').textContent, 'One per parent-and-baby place, chosen when you book.');
+  assert.equal(book.querySelector('#second-adult-addon [name=secondAdult]').hasAttribute('disabled'), false);
+  assert.equal(SECOND_ADULT_CENTS, 2500);
   assert.deepEqual(previewTotal(false, 'signature', true), {cents: 29800, label: '$298', addonPending: false});
+  assert.deepEqual(previewTotal(false, 'signature', false, true), {cents: 30500, label: '$305', addonPending: false});
   assert.ok(html.includes('Le Petit Plus (The Little Extras)'));
   assert.equal(book.querySelector('.extras-when').textContent, "All extras are chosen when you book and can't be added later.");
   assert.equal(html.includes('Premium enhancements'), false);
@@ -318,6 +323,9 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   const faqEntities = faqData['@graph'].find(node => node['@type'] === 'FAQPage').mainEntity;
   const refundAnswer = faqEntities.find(item => item.name === 'What is your refund policy?').acceptedAnswer.text;
   assert.equal(refundAnswer, 'Refunds: full refund up to 7 days before your session, 50% up to 48 hours before, and no refunds within 48 hours of your session.');
+  const partnerAnswer = faqEntities.find(item => item.name === 'Can I bring twins, or come with a partner?').acceptedAnswer.text;
+  assert.equal(partnerAnswer, "Twins are welcome. Please come with a second adult, such as a partner, grandparent or aunt, so each baby has their own grown-up, and book a separate place for each twin. A second parent or family member can also join one parent-and-baby place for an add-on fee, chosen when you book; we'll share the details when sessions open.");
+  assert.equal(partnerAnswer.includes('$'), false);
   const bringAnswer = faqEntities.find(item => item.name === 'What should I bring?').acceptedAnswer.text;
   assert.equal(bringAnswer, bring);
   const includedAnswer = faqEntities.find(item => item.name === "What's included in my session?").acceptedAnswer.text;

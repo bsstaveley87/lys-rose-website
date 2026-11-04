@@ -29,7 +29,7 @@ export const PRICES = {
   robe: {amount: null, taxable: true} as PriceLine,
   bathBag: {amount: 1800, taxable: true},
   // [CPA] may be taxable as food; pending CPA check
-  secondAdult: {amount: null, taxable: false} as PriceLine,
+  secondAdult: {amount: 2500, taxable: false},
 };
 
 export const REDIRECT_PATH = '/book/thank-you/';

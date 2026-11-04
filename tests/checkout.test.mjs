@@ -24,6 +24,7 @@ import {
 } from '../worker/src/checkout.ts';
 
 const session = {date: '2026-12-06', start: '10:30', end: '12:30'};
+const sessionLine = 'Lys Rose session · Sun Dec 6, 10:30 AM';
 const openNow = new Date(2026, 10, 1);
 const closedNow = new Date('2026-12-04T15:30:00Z');
 
@@ -94,9 +95,9 @@ test('price table ignores tampered client prices and keeps taxes off', async () 
   const checked = validateBooking(tampered, {session, now: openNow});
   assert.equal(checked.ok, true);
   const order = buildOrder(checked.booking, PRICES, session);
-  assert.deepEqual(order.lines.map(line => [line.name, line.base_price_money.amount]), [
-    ['Lys Rose session', 28000],
-    ['Premium face crème', 1000],
+  assert.deepEqual(order.lines.map(line => [line.name, line.variation_name, line.base_price_money.amount]), [
+    [sessionLine, 'BYOB (Bring your own breastmilk) + rose petals', 28000],
+    ['Premium face crème', undefined, 1000],
   ]);
   assert.equal(order.total, 29000);
   assert.match(order.note, /BYOB/);
@@ -106,7 +107,11 @@ test('price table ignores tampered client prices and keeps taxes off', async () 
   const signature = buildOrder(validateBooking(form(), {session, now: openNow}).booking, PRICES, session);
   assert.equal(signature.total, 28000);
   assert.equal(signature.lines.length, 1);
+  assert.equal(signature.lines[0].name, sessionLine);
+  assert.equal(signature.lines[0].variation_name, 'Floral Milk Soak');
   assert.match(signature.note, /Crème: Signature/);
+  const byob = buildOrder(validateBooking(form({bath: 'byob', petals: 'no'}), {session, now: openNow}).booking, PRICES, session);
+  assert.equal(byob.lines[0].variation_name, 'BYOB (Bring your own breastmilk)');
 
   const gentle = buildOrder(validateBooking(form({creme: 'gentle', faceCream: 'gentle'}), {session, now: openNow}).booking, PRICES, session);
   assert.equal(gentle.total, 28500);
@@ -129,7 +134,12 @@ test('price table ignores tampered client prices and keeps taxes off', async () 
   assert.equal(JSON.stringify(captured.body).toLowerCase().includes('surcharge'), false);
   assert.equal(captured.body.pre_populated_data.buyer_email, 'parent@example.com');
   assert.equal(captured.body.checkout_options.redirect_url, 'https://lysrosebabyspa.com/book/thank-you/');
+  assert.equal(captured.body.checkout_options.enable_coupon, false);
+  assert.equal(captured.body.order.line_items[0].name, sessionLine);
+  assert.equal(captured.body.order.line_items[0].variation_name, 'BYOB (Bring your own breastmilk) + rose petals');
   assert.equal(captured.body.order.line_items[0].base_price_money.amount, 28000);
+  assert.equal(captured.body.order.line_items[1].name, 'Premium face crème');
+  assert.equal(captured.body.order.line_items[1].variation_name, undefined);
   assert.equal(captured.body.order.line_items[1].base_price_money.amount, 1000);
   assert.equal(captured.body.order.location_id, 'LOC123');
   assert.match(captured.authorization, /^Bearer /);
@@ -254,7 +264,7 @@ test('tax at 7% is added only to taxable lines, and only when enabled', async ()
   assert.equal(salesTaxCents(order.lines), Math.round((taxable * 7) / 100));
   assert.equal(salesTaxCents(order.lines), 476);
   assert.deepEqual(order.lines.map(line => [line.name, line.base_price_money.amount, line.taxable]), [
-    ['Lys Rose session', 28000, false],
+    [sessionLine, 28000, false],
     ['Gentle face crème', 500, true],
     ['Embroidered keepsake robe', 4500, true],
     ['Floral Milk Bath Bag', 1800, true],
@@ -268,7 +278,8 @@ test('tax at 7% is added only to taxable lines, and only when enabled', async ()
     'Embroidered keepsake robe',
     'Floral Milk Bath Bag',
   ]);
-  assert.equal(taxed.line_items.find(line => line.name === 'Lys Rose session').applied_taxes, undefined);
+  assert.equal(taxed.line_items.find(line => line.name === sessionLine).applied_taxes, undefined);
+  assert.equal(taxed.line_items.find(line => line.name === sessionLine).variation_name, 'Floral Milk Soak');
   assert.equal(taxed.line_items.find(line => line.name === 'Second adult').applied_taxes, undefined);
   assert.equal(JSON.stringify(taxed).toLowerCase().includes('processing fee'), false);
   const untaxed = squareOrderPayload(order, {TAX_ENABLED: 'false'});
@@ -284,9 +295,10 @@ test('tax at 7% is added only to taxable lines, and only when enabled', async ()
   assert.equal(response.status, 200);
   assert.equal(captured.order.taxes[0].percentage, '7.0');
   assert.deepEqual(captured.order.line_items.map(line => [line.name, line.base_price_money.amount, Boolean(line.applied_taxes)]), [
-    ['Lys Rose session', 28000, false],
+    [sessionLine, 28000, false],
     ['Premium face crème', 1000, true],
   ]);
+  assert.equal(captured.checkout_options.enable_coupon, false);
   assert.equal(salesTaxCents([{taxable: false, base_price_money: {amount: 28000}}, {taxable: true, base_price_money: {amount: 1000}}]), 70);
   assert.equal(captured.order.line_items.some(line => /fee|surcharge/i.test(line.name)), false);
 });

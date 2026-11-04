@@ -55,7 +55,13 @@ export type CheckoutEnv = {
   BOOKINGS?: BookingStore;
 };
 type SessionConfig = {date?: string; start?: string; end?: string} | null;
-export type LineItem = {name: string; quantity: string; base_price_money: {amount: number; currency: 'USD'}; taxable: boolean};
+export type LineItem = {
+  name: string;
+  quantity: string;
+  base_price_money: {amount: number; currency: 'USD'};
+  taxable: boolean;
+  variation_name?: string;
+};
 export type BookingRecord = {
   parentName: string;
   email: string;
@@ -160,8 +166,41 @@ export function validateBooking(raw: unknown, options: {session?: SessionConfig;
   return {ok: true as const, booking, session};
 }
 
-function orderLine(name: string, amount: number, taxable: boolean): LineItem {
-  return {name, quantity: '1', base_price_money: {amount, currency: 'USD'}, taxable};
+function orderLine(name: string, amount: number, taxable: boolean, variationName?: string): LineItem {
+  const line: LineItem = {name, quantity: '1', base_price_money: {amount, currency: 'USD'}, taxable};
+  if (variationName) line.variation_name = variationName;
+  return line;
+}
+
+/** Short date and start time from the session config, for the hosted checkout summary. */
+export function sessionCheckoutWhen(session: SessionConfig) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(session?.date || '');
+  if (!match) return '';
+  const stamp = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  const weekday = new Intl.DateTimeFormat('en-US', {weekday: 'short', timeZone: 'UTC'}).format(stamp);
+  const month = new Intl.DateTimeFormat('en-US', {month: 'short', timeZone: 'UTC'}).format(stamp);
+  const clock = /^(\d{2}):(\d{2})$/.exec(session?.start || '');
+  const date = `${weekday} ${month} ${stamp.getUTCDate()}`;
+  if (!clock) return date;
+  const hour24 = Number(clock[1]);
+  const minute = Number(clock[2]);
+  const suffix = hour24 >= 12 ? 'PM' : 'AM';
+  const hour = hour24 % 12 || 12;
+  const time = minute ? `${hour}:${String(minute).padStart(2, '0')} ${suffix}` : `${hour} ${suffix}`;
+  return `${date}, ${time}`;
+}
+
+export function bathVariationName(bath: string, petals: boolean) {
+  if (bath === 'byob') {
+    const name = 'BYOB (Bring your own breastmilk)';
+    return petals ? `${name} + rose petals` : name;
+  }
+  return 'Floral Milk Soak';
+}
+
+function sessionLineName(session: SessionConfig) {
+  const when = sessionCheckoutWhen(session);
+  return when ? `Lys Rose session · ${when}` : 'Lys Rose session';
 }
 
 /** One rounding of 7% on the taxable merchandise. Non-taxable lines are left out. */
@@ -171,7 +210,7 @@ export function salesTaxCents(lines: Array<Pick<LineItem, 'taxable' | 'base_pric
 }
 
 export function buildOrder(booking: BookingRecord, prices: PriceTable = PRICES, session: SessionConfig = null): PreparedOrder {
-  const lines: LineItem[] = [orderLine('Lys Rose session', prices.session.amount ?? 0, prices.session.taxable)];
+  const lines: LineItem[] = [orderLine(sessionLineName(session), prices.session.amount ?? 0, prices.session.taxable, bathVariationName(booking.bath, booking.petals))];
   const notes = [`Bath: ${booking.bath === 'byob' ? 'BYOB (bring your own breastmilk)' : 'Floral Milk Soak'}`];
   if (booking.bath === 'byob') notes.push(`Complimentary rose petals: ${booking.petals ? 'yes' : 'no'}`);
   const creme = prices.creme[booking.creme as keyof typeof prices.creme];
@@ -194,11 +233,13 @@ export function buildOrder(booking: BookingRecord, prices: PriceTable = PRICES, 
 export function squareOrderPayload(order: PreparedOrder, env: CheckoutEnv = {}) {
   const chargeTax = taxesEnabled(env);
   const line_items = order.lines.map(line => {
-    const item: {name: string; quantity: string; base_price_money: LineItem['base_price_money']; applied_taxes?: Array<{tax_uid: string}>} = {
+    const item: {name: string; quantity: string; base_price_money: LineItem['base_price_money']; variation_name?: string; applied_taxes?: Array<{tax_uid: string}>} = {
       name: line.name,
       quantity: line.quantity,
       base_price_money: line.base_price_money,
     };
+    // Hosted checkout shows variation_name under the line. An unset value becomes "Regular". Ad hoc lines do not display catalog modifiers.
+    if (line.variation_name) item.variation_name = line.variation_name;
     if (chargeTax && line.taxable && line.base_price_money.amount > 0) item.applied_taxes = [{tax_uid: SALES_TAX_UID}];
     return item;
   });
@@ -316,13 +357,13 @@ function paymentLinkBody(order: PreparedOrder, env: CheckoutEnv, key: string, bu
   const body: {
     idempotency_key: string;
     order: ReturnType<typeof squareOrderPayload>;
-    checkout_options: {redirect_url: string};
+    checkout_options: {redirect_url: string; enable_coupon: false};
     payment_note: string;
     pre_populated_data?: {buyer_email: string};
   } = {
     idempotency_key: key,
     order: squareOrderPayload(order, env),
-    checkout_options: {redirect_url: `${CHECKOUT_ORIGIN}${REDIRECT_PATH}`},
+    checkout_options: {redirect_url: `${CHECKOUT_ORIGIN}${REDIRECT_PATH}`, enable_coupon: false},
     payment_note: order.note,
   };
   if (buyerEmail) body.pre_populated_data = {buyer_email: buyerEmail};

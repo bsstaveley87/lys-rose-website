@@ -37,8 +37,7 @@ function form(overrides = {}) {
     babyDob: '2026-09-01',
     bath: 'floral-milk-soak',
     creme: 'signature',
-    confirmReady: ['age', 'pediatrician', 'price', 'health'],
-    healthPolicy: true,
+    confirmReady: ['age', 'pediatrician', 'price', 'symptoms', 'illness', 'checkin', 'contact', 'deposit'],
     ...overrides,
   };
 }
@@ -215,7 +214,7 @@ test('webhook verifies the signature, counts a seat once, and flags late or extr
     sessionDate: '2026-12-06',
     email: 'parent@example.com',
     total: SESSION_PRICE_CENTS,
-    booking: {babyName: 'Lily', email: 'parent@example.com', babyDob: '2026-09-01', healthAcknowledgedAt: '2026-11-01T00:00:00.000Z'},
+    booking: {babyName: 'Lily', email: 'parent@example.com', babyDob: '2026-09-01', ageMonthsAtSession: 3, acknowledgements: {age: {value: true, at: '2026-11-01T00:00:00.000Z'}}},
   }));
   const event = {
     type: 'payment.updated',
@@ -236,7 +235,9 @@ test('webhook verifies the signature, counts a seat once, and flags late or extr
   const booking = JSON.parse(await store.get('booking:pay_1'));
   assert.equal(booking.babyName, 'Lily');
   assert.equal(booking.babyDob, '2026-09-01');
-  assert.equal(booking.healthAcknowledgedAt, '2026-11-01T00:00:00.000Z');
+  assert.equal(booking.ageMonthsAtSession, 3);
+  assert.equal(booking.acknowledgements.age.value, true);
+  assert.equal(booking.acknowledgements.age.at, '2026-11-01T00:00:00.000Z');
   assert.equal(booking.status, 'confirmed');
   const again = await handleWebhookRequest(new Request(url, {method: 'POST', headers: {'x-square-hmacsha256-signature': signature}, body}), env(store));
   assert.equal((await again.json()).duplicate, true);
@@ -441,17 +442,17 @@ test('a stored order is not replaced by a different booking', async () => {
 test('birth date and health acknowledgements are required, recorded, and kept', async () => {
   const source = await readFile(new URL('../worker/src/checkout.ts', import.meta.url), 'utf8');
   assert.equal(source.includes('expirationTtl'), false);
-  const noHealth = validateBooking(form({confirmReady: ['age', 'pediatrician', 'price']}), {session, now: openNow});
+  const noHealth = validateBooking(form({confirmReady: ['age', 'pediatrician', 'price', 'deposit']}), {session, now: openNow});
   assert.equal(noHealth.ok, false);
   assert.match(noHealth.errors.confirmReady, /confirm/);
-  const noPolicy = validateBooking(form({healthPolicy: false}), {session, now: openNow});
-  assert.equal(noPolicy.ok, false);
-  assert.match(noPolicy.errors.healthPolicy, /health and reschedule policy/);
-  const checked = validateBooking(form({healthAcknowledgedAt: '1999-01-01T00:00:00.000Z'}), {session, now: openNow});
+  const checked = validateBooking(form(), {session, now: openNow});
   assert.equal(checked.ok, true);
   assert.equal(checked.booking.babyDob, '2026-09-01');
-  assert.equal(checked.booking.healthAcknowledgedAt, openNow.toISOString());
-  assert.equal(checked.booking.healthPolicyAcknowledgedAt, openNow.toISOString());
+  assert.equal(checked.booking.ageMonthsAtSession, 3);
+  for (const key of ['age', 'pediatrician', 'price', 'symptoms', 'illness', 'checkin', 'contact', 'deposit']) {
+    assert.equal(checked.booking.acknowledgements[key].value, true, key);
+    assert.equal(checked.booking.acknowledgements[key].at, openNow.toISOString(), key);
+  }
   const order = buildOrder(checked.booking, PRICES, session);
   assert.match(order.note, /Baby date of birth: 2026-09-01/);
   const payload = squareOrderPayload(order);
@@ -467,8 +468,10 @@ test('birth date and health acknowledgements are required, recorded, and kept', 
   assert.equal(captured.order.metadata.baby_date_of_birth, '2026-09-01');
   const saved = JSON.parse(await store.get('order:ord_dob'));
   assert.equal(saved.booking.babyDob, '2026-09-01');
-  assert.equal(saved.booking.healthAcknowledgedAt, openNow.toISOString());
-  assert.equal(saved.booking.healthPolicyAcknowledgedAt, openNow.toISOString());
+  assert.equal(saved.booking.ageMonthsAtSession, 3);
+  assert.equal(saved.booking.acknowledgements.symptoms.value, true);
+  assert.equal(saved.booking.acknowledgements.symptoms.at, openNow.toISOString());
+  assert.equal(saved.booking.acknowledgements.deposit.at, openNow.toISOString());
 });
 
 test('retries once when Square rejects the buyer email', async () => {

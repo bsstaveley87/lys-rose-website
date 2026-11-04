@@ -10,12 +10,31 @@ export const MIN_BABY_AGE_DAYS = 28;
 export const MAX_BABY_AGE_MONTHS = 12;
 export const AGE_TOO_YOUNG_MESSAGE = 'Your baby needs to be at least 4 weeks old on the day of the session.';
 export const AGE_TOO_OLD_MESSAGE = 'Our sessions are designed for babies from 4 weeks to 12 months old.';
-/** DRAFT wording pending CFO. Edit this sentence to replace the health acknowledgement. */
-export const HEALTH_ACKNOWLEDGEMENT = "My baby has been fever-free for at least 24 hours before the session, and has not vomited, had diarrhea or had green nasal mucus in the last 24 hours. If any of these happen, I'll stay home and contact Lys Rose to reschedule.";
-/** DRAFT wording pending CFO. Edit this sentence to replace the turned-away policy. */
-export const HEALTH_TURNED_AWAY_POLICY = "If your baby can't take part on the day for health reasons, we'll offer a free reschedule within 60 days or store credit. Cash refunds aren't available in this case.";
 /** Pilot session price in cents. This is the only session price to edit. */
 export const SESSION_PRICE_CENTS = 28500;
+/** Nonrefundable deposit in cents. The refund line and deposit checkbox use this with the session price. */
+export const DEPOSIT_CENTS = 10000;
+/** Full birth dates are kept this many years after the family's last booking, then only age in months remains. */
+export const BIRTH_DATE_RETENTION_YEARS = 3;
+/** DRAFT pending Christy. {deposit}, {price}, {balance} and {half} are filled from the price config. */
+export const REFUND_SUMMARY = "{deposit} of your {price} payment is a nonrefundable deposit that holds your spot. If you cancel 7 or more days before your session, we refund the {balance} balance. If you cancel 48 hours or more before, we refund {half}. Within 48 hours, there's no refund. Add-ons follow the same timing, except personalized robes once they're sent for embroidery. If your baby is unwell, we'll move you to a new date within 60 days. If we cancel, you get a full refund.";
+/** DRAFT pending Christy. {deposit} is filled from DEPOSIT_CENTS. */
+export const DEPOSIT_ACK = "I understand {deposit} of my payment is a nonrefundable deposit that holds my spot. It isn't refunded, but it can go toward a new session for my family booked within 60 days, as long as my baby still meets the age rule (at least 4 weeks and no older than 12 months) on the new date.";
+/** DRAFT pending Christy. */
+export const SICK_SYMPTOMS_ACK = 'In the 24 hours before the session, my baby has had no fever, vomiting or diarrhea, and has no green nasal mucus.';
+/** DRAFT pending Christy. */
+export const SICK_ILLNESS_ACK = 'My baby has no other signs of illness (such as a rash or cough) and no breaks in the skin.';
+/** DRAFT pending Christy. */
+export const SICK_CHECKIN_ACK = "I understand that if my baby seems unwell at check-in, the instructor may ask us not to join. In that case I'll be offered a free reschedule within 60 days, or store credit if no new date works, not a cash refund.";
+/** DRAFT pending Christy. */
+export const SICK_CONTACT_ACK = "I'll contact Lys Rose before the session if my baby becomes unwell.";
+export const BOOKING_CONFIRMATIONS = ['age', 'pediatrician', 'price', 'symptoms', 'illness', 'checkin', 'contact', 'deposit'];
+const DRAFT_ACKS = {
+  symptoms: SICK_SYMPTOMS_ACK,
+  illness: SICK_ILLNESS_ACK,
+  checkin: SICK_CHECKIN_ACK,
+  contact: SICK_CONTACT_ACK,
+};
 
 export function sessionPriceLabel() {
   return `$${SESSION_PRICE_CENTS / 100}`;
@@ -27,6 +46,35 @@ export function sessionPriceLine() {
 
 export function sessionPriceOffer() {
   return (SESSION_PRICE_CENTS / 100).toFixed(2);
+}
+
+export function formatCents(cents) {
+  const negative = cents < 0;
+  const abs = Math.abs(Math.round(cents));
+  const dollars = Math.floor(abs / 100);
+  const remainder = abs % 100;
+  const body = remainder === 0 ? String(dollars) : `${dollars}.${String(remainder).padStart(2, '0')}`;
+  return `${negative ? '-' : ''}$${body}`;
+}
+
+export function refundBalanceCents(priceCents = SESSION_PRICE_CENTS, depositCents = DEPOSIT_CENTS) {
+  return priceCents - depositCents;
+}
+
+export function refundHalfBalanceCents(priceCents = SESSION_PRICE_CENTS, depositCents = DEPOSIT_CENTS) {
+  return Math.round(refundBalanceCents(priceCents, depositCents) / 2);
+}
+
+export function fillRefundSummary(priceCents = SESSION_PRICE_CENTS, depositCents = DEPOSIT_CENTS) {
+  return REFUND_SUMMARY
+    .replaceAll('{deposit}', formatCents(depositCents))
+    .replaceAll('{price}', formatCents(priceCents))
+    .replaceAll('{balance}', formatCents(refundBalanceCents(priceCents, depositCents)))
+    .replaceAll('{half}', formatCents(refundHalfBalanceCents(priceCents, depositCents)));
+}
+
+export function fillDepositAck(depositCents = DEPOSIT_CENTS) {
+  return DEPOSIT_ACK.replaceAll('{deposit}', formatCents(depositCents));
 }
 export const FACE_CREAM_CENTS = {signature: 0, gentle: 500, premium: 1000};
 export const BATH_BAG_CENTS = 1800;
@@ -312,10 +360,29 @@ export function babyAgeMessage(iso, sessionDate = new Date()) {
   return '';
 }
 
+/** Completed calendar months on the session date. The birth date itself is not kept past the retention window. */
+export function ageMonthsAtSession(iso, sessionDate) {
+  const dob = parseIsoDay(iso);
+  const sessionDay = dayStamp(sessionDate);
+  if (dob == null || sessionDay == null) return null;
+  const birth = new Date(dob);
+  const session = new Date(sessionDay);
+  let months = (session.getUTCFullYear() - birth.getUTCFullYear()) * 12 + (session.getUTCMonth() - birth.getUTCMonth());
+  if (session.getUTCDate() < birth.getUTCDate()) months -= 1;
+  return months;
+}
+
 export function applyDraftCopy(documentRef) {
-  const ack = documentRef.querySelector('[data-health-ack]');
-  if (ack) ack.textContent = HEALTH_ACKNOWLEDGEMENT;
-  for (const node of documentRef.querySelectorAll('[data-health-policy]')) node.textContent = HEALTH_TURNED_AWAY_POLICY;
+  const amounts = {
+    deposit: formatCents(DEPOSIT_CENTS),
+    price: formatCents(SESSION_PRICE_CENTS),
+    balance: formatCents(refundBalanceCents()),
+    half: formatCents(refundHalfBalanceCents()),
+  };
+  for (const node of documentRef.querySelectorAll('[data-money]')) node.textContent = amounts[node.getAttribute('data-money')] || '';
+  for (const node of documentRef.querySelectorAll('[data-refund-summary]')) node.textContent = fillRefundSummary();
+  for (const node of documentRef.querySelectorAll('[data-deposit-ack]')) node.textContent = fillDepositAck();
+  for (const node of documentRef.querySelectorAll('[data-ack]')) node.textContent = DRAFT_ACKS[node.getAttribute('data-ack')] || '';
 }
 
 const previewReserved = [0, SEATS_PER_SESSION];
@@ -347,6 +414,12 @@ function showConfirmations(form) {
   if (error) {
     error.textContent = message;
     error.hidden = !message;
+  }
+  const depositMissing = missing.some(box => box.value === 'deposit');
+  const depositError = form.querySelector('#deposit-error');
+  if (depositError) {
+    depositError.textContent = depositMissing ? 'Please confirm the deposit before reserving.' : '';
+    depositError.hidden = !depositMissing;
   }
   return missing;
 }
@@ -390,9 +463,21 @@ function checkoutReady() {
   return Boolean(SESSION?.date) && CHECKOUT_CONFIGURED && !bookingIsClosed(SESSION);
 }
 
+function payReady(form) {
+  const dob = form.querySelector('#baby-dob');
+  const dobOk = Boolean(dob?.value) && !babyAgeMessage(dob.value, ageReference());
+  const boxes = [...form.querySelectorAll('input[type=checkbox][required]')];
+  return dobOk && boxes.length > 0 && boxes.every(box => box.checked);
+}
+
 function applyPayButton(documentRef) {
-  const button = documentRef.querySelector('.booking-pay');
-  if (button) button.disabled = !checkoutReady();
+  const root = documentRef.querySelector ? documentRef : documentRef.ownerDocument;
+  const form = root?.querySelector?.('#booking-form');
+  const button = form?.querySelector('.booking-pay');
+  if (!button || !form) return;
+  const ready = payReady(form);
+  button.disabled = !ready;
+  button.setAttribute('aria-disabled', ready ? 'false' : 'true');
 }
 
 function bookingPayload(form) {
@@ -415,21 +500,7 @@ function bookingPayload(form) {
     allergyDetails: form.querySelector('[name=allergyDetails]')?.value || '',
     waiver: Boolean(form.querySelector('[name=waiver]')?.checked),
     photoRelease: Boolean(form.querySelector('[name=photoRelease]')?.checked),
-    healthPolicy: Boolean(form.querySelector('[name=healthPolicy]')?.checked),
   };
-}
-
-function showPolicy(form) {
-  const box = form.querySelector('[name=healthPolicy]');
-  const error = form.querySelector('#health-policy-error');
-  const missing = Boolean(box && !box.checked);
-  const message = missing ? 'Please confirm the health and reschedule policy.' : '';
-  if (box) box.setAttribute('aria-invalid', missing ? 'true' : 'false');
-  if (error) {
-    error.textContent = message;
-    error.hidden = !message;
-  }
-  return missing;
 }
 
 async function startCheckout(form) {
@@ -454,15 +525,14 @@ async function startCheckout(form) {
       const dob = form.querySelector('#baby-dob');
       if (dob && fields.babyDob) showAge(dob);
       if (fields.confirmReady) showConfirmations(form);
-      if (fields.healthPolicy) showPolicy(form);
-      show(fields.babyDob || fields.healthPolicy || fields.confirmReady || data.error || 'Checkout is not available yet.');
-      if (button) button.disabled = !checkoutReady();
+      show(fields.babyDob || fields.confirmReady || data.error || 'Checkout is not available yet.');
+      applyPayButton(form.ownerDocument || form);
       return;
     }
     window.location.assign(data.url);
   } catch {
     show('Checkout is not available yet.');
-    if (button) button.disabled = !checkoutReady();
+    applyPayButton(form.ownerDocument || form);
   }
 }
 
@@ -498,7 +568,10 @@ export function initBooking(documentRef = document) {
     const sessionDay = dayStamp(ageReference());
     if (sessionDay != null && MIN_BABY_AGE_DAYS != null) dob.max = new Date(sessionDay - MIN_BABY_AGE_DAYS * DAY_MS).toISOString().slice(0, 10);
     if (sessionDay != null && MAX_BABY_AGE_MONTHS != null) dob.min = new Date(addCalendarMonths(sessionDay, -MAX_BABY_AGE_MONTHS)).toISOString().slice(0, 10);
-    dob.addEventListener('change', () => showAge(dob));
+    dob.addEventListener('change', () => {
+      showAge(dob);
+      applyPayButton(documentRef);
+    });
     dob.addEventListener('blur', () => showAge(dob));
   }
   documentRef.addEventListener('change', event => {
@@ -507,12 +580,13 @@ export function initBooking(documentRef = document) {
   });
   form.addEventListener('change', event => {
     if (event.target?.name === 'allergies') syncAllergies(form);
-    if (event.target?.name === 'confirmReady' && missingConfirmations(form).length === 0) showConfirmations(form);
-    if (event.target?.name === 'healthPolicy' && event.target.checked) showPolicy(form);
+    if (event.target?.name === 'confirmReady' || event.target?.name === 'waiver') {
+      if (missingConfirmations(form).length === 0) showConfirmations(form);
+      applyPayButton(documentRef);
+    }
   });
   form.addEventListener('focusout', event => {
     if (event.target?.name === 'confirmReady' && !event.target.checked) showConfirmations(form);
-    if (event.target?.name === 'healthPolicy' && !event.target.checked) showPolicy(form);
   });
   form.addEventListener('submit', event => {
     event.preventDefault();
@@ -528,17 +602,16 @@ export function initBooking(documentRef = document) {
     if (dob) showAge(dob);
     const bathOk = showBath(form);
     const missing = showConfirmations(form);
-    const policyMissing = showPolicy(form);
-    if (ageMessage || !bathOk || missing.length || policyMissing) {
+    if (ageMessage || !bathOk || missing.length) {
       if (ageMessage && dob) dob.focus();
       else if (!bathOk) form.querySelector('[name=bath]')?.focus();
-      else if (missing.length) missing[0]?.focus();
-      else form.querySelector('[name=healthPolicy]')?.focus();
+      else missing[0]?.focus();
       return;
     }
     if (checkoutReady()) startCheckout(form);
   });
-  form.querySelector('.booking-pay')?.addEventListener('click', () => {
+  form.querySelector('.booking-pay')?.addEventListener('click', event => {
+    if (event.currentTarget?.disabled) return;
     if (typeof form.requestSubmit === 'function') form.requestSubmit();
   });
   applyDraftCopy(documentRef);

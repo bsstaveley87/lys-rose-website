@@ -1,4 +1,4 @@
-import {SESSION, SESSION_PRICE_CENTS, SEATS_PER_SESSION, babyAgeMessage, bookingClosesAt, bookingIsClosed, robeIsClosed} from '../../assets/booking.js';
+import {BOOKING_CONFIRMATIONS, SESSION, SESSION_PRICE_CENTS, SEATS_PER_SESSION, ageMonthsAtSession, babyAgeMessage, bookingClosesAt, bookingIsClosed, robeIsClosed} from '../../assets/booking.js';
 
 /**
  * Server-side prices in cents. The browser total is only a preview.
@@ -39,7 +39,7 @@ export const SQUARE_VERSION = '2025-10-16';
 
 const CREME = new Set(['signature', 'gentle', 'premium']);
 const BATH = new Set(['floral-milk-soak', 'byob']);
-const CONFIRMATIONS = ['age', 'pediatrician', 'price', 'health'];
+const CONFIRMATIONS = BOOKING_CONFIRMATIONS;
 const BODY_LIMIT = 16384;
 
 export type PriceTable = typeof PRICES;
@@ -78,8 +78,8 @@ export type BookingRecord = {
   secondAdult: boolean;
   allergies: string;
   allergyDetails: string;
-  healthAcknowledgedAt: string;
-  healthPolicyAcknowledgedAt: string;
+  ageMonthsAtSession: number;
+  acknowledgements: Record<string, {value: boolean; at: string | null}>;
 };
 export type PreparedOrder = {
   lines: LineItem[];
@@ -151,8 +151,7 @@ export function validateBooking(raw: unknown, options: {session?: SessionConfig;
   if (!CREME.has(creme)) errors.creme = 'Please choose a crème.';
   const confirmed = confirmationSet(data);
   if (CONFIRMATIONS.some(item => !confirmed.has(item))) errors.confirmReady = 'Please confirm each item before reserving.';
-  const healthPolicy = flag(data.healthPolicy);
-  if (!healthPolicy) errors.healthPolicy = 'Please confirm the health and reschedule policy.';
+  const monthsAtSession = ageMonthsAtSession(babyDob, session.date);
   const robe = flag(data.robe);
   const bathBag = flag(data.bathBag);
   const secondAdult = flag(data.secondAdult);
@@ -167,8 +166,11 @@ export function validateBooking(raw: unknown, options: {session?: SessionConfig;
     robeName: robe ? text(data.robeName, 40) : '',
     allergies: text(data.allergies, 40),
     allergyDetails: text(data.allergyDetails, 500),
-    healthAcknowledgedAt: now.toISOString(),
-    healthPolicyAcknowledgedAt: now.toISOString(),
+    ageMonthsAtSession: monthsAtSession ?? 0,
+    acknowledgements: Object.fromEntries(CONFIRMATIONS.map(key => {
+      const value = confirmed.has(key);
+      return [key, {value, at: value ? now.toISOString() : null}];
+    })),
   };
   return {ok: true as const, booking, session};
 }
@@ -381,10 +383,8 @@ function paymentLinkBody(order: PreparedOrder, env: CheckoutEnv, key: string, bu
 }
 
 function bookingIdentity(booking: BookingRecord) {
-  const copy = {...booking};
-  delete copy.healthAcknowledgedAt;
-  delete copy.healthPolicyAcknowledgedAt;
-  return copy;
+  const acknowledgements = Object.fromEntries(Object.entries(booking.acknowledgements || {}).map(([key, item]) => [key, item.value]));
+  return {...booking, acknowledgements};
 }
 
 function pendingIdentity(record: {booking?: BookingRecord; sessionDate?: string; note?: string}) {
@@ -438,7 +438,7 @@ export async function openCheckout(order: PreparedOrder, buyerEmail: string, env
     email: buyerEmail,
     closesAt: Number.isFinite(order.closesAt) ? order.closesAt : null,
     sessionDate: order.sessionDate,
-    // Birth date and acknowledgement times stay on this record for analysis. Do not add a time limit.
+    // Birth date stays for 3 years after the family's last booking. ageMonthsAtSession is what remains after that.
     booking: order.booking,
   };
   const existingRaw = await env.BOOKINGS.get(`order:${orderId}`);

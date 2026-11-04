@@ -4,7 +4,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
 import {validateFields, interestOptions, limits} from '../assets/validation.js';
-import {AGE_TOO_OLD_MESSAGE, AGE_TOO_YOUNG_MESSAGE, BATH_BAG_CENTS, BOOKING_LEAD_HOURS, HEALTH_ACKNOWLEDGEMENT, HEALTH_TURNED_AWAY_POLICY, MAX_BABY_AGE_MONTHS, MIN_BABY_AGE_DAYS, ROBE_CENTS, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SESSION, SESSION_PRICE_CENTS, applyRobeCutoff, babyAgeMessage, bookingIsClosed, initBooking, mountRobeAddon, previewTotal, robeIsClosed, robeNote, sessionDateLabel, sessionPriceLabel, sessionPriceLine, sessionPriceOffer, sessionStatus, sessionTimeLabel} from '../assets/booking.js';
+import {AGE_TOO_OLD_MESSAGE, AGE_TOO_YOUNG_MESSAGE, BATH_BAG_CENTS, BOOKING_LEAD_HOURS, DEPOSIT_ACK, DEPOSIT_CENTS, MAX_BABY_AGE_MONTHS, MIN_BABY_AGE_DAYS, REFUND_SUMMARY, ROBE_CENTS, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SESSION, SESSION_PRICE_CENTS, SICK_CHECKIN_ACK, SICK_CONTACT_ACK, SICK_ILLNESS_ACK, SICK_SYMPTOMS_ACK, ageMonthsAtSession, applyRobeCutoff, babyAgeMessage, bookingIsClosed, fillDepositAck, fillRefundSummary, formatCents, initBooking, mountRobeAddon, previewTotal, refundBalanceCents, refundHalfBalanceCents, robeIsClosed, robeNote, sessionDateLabel, sessionPriceLabel, sessionPriceLine, sessionPriceOffer, sessionStatus, sessionTimeLabel} from '../assets/booking.js';
 const approved = {
   '/': {
     title: 'Lys Rose Baby Spa · Fort Lauderdale',
@@ -193,7 +193,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(html.includes('November 22'), false);
   assert.equal(html.includes('10:30 AM'), false);
   assert.equal(book.querySelector('#booking-dates [data-booking-card]'), null);
-  assert.deepEqual([...book.querySelectorAll('#booking-checkout input')].map(input => input.getAttribute('name')), ['healthPolicy']);
+  assert.deepEqual([...book.querySelectorAll('#booking-checkout input')].map(input => input.value), ['deposit']);
   assert.equal(book.querySelector('.card-mock'), null);
   assert.equal(book.querySelector('.booking-pay').getAttribute('type'), 'button');
   assert.equal(book.querySelector('.booking-intro').textContent, 'A session for you and your baby: a warm floral milk bath, infant massage and a parent-led baby facial.');
@@ -355,7 +355,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   const faqData = JSON.parse(faqDoc.querySelector('script[type="application/ld+json"]').textContent);
   const faqEntities = faqData['@graph'].find(node => node['@type'] === 'FAQPage').mainEntity;
   const refundAnswer = faqEntities.find(item => item.name === 'What is your refund policy?').acceptedAnswer.text;
-  assert.equal(refundAnswer, `Refunds: full refund up to 7 days before your session, 50% up to 48 hours before, and no refunds within 48 hours of your session.\n\nDraft ${HEALTH_TURNED_AWAY_POLICY}`);
+  assert.equal(refundAnswer, `Draft ${fillRefundSummary()} Full booking & refund policy`);
   const partnerAnswer = faqEntities.find(item => item.name === 'Can I bring twins, or come with a partner?').acceptedAnswer.text;
   assert.equal(partnerAnswer, "Twins are welcome. Please come with a second adult, such as a partner, grandparent or aunt, so each baby has their own grown-up, and book a separate place for each twin. A second parent or family member can also join one parent-and-baby place for an add-on fee, chosen when you book; we'll share the details when sessions open.");
   assert.equal(partnerAnswer.includes('$'), false);
@@ -375,8 +375,10 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('[name=photoRelease]').hasAttribute('checked'), false);
   assert.equal(book.querySelector('[name=photoRelease]').hasAttribute('required'), false);
   assert.equal(book.querySelector('.booking-pay').hasAttribute('disabled'), true);
-  assert.equal(book.querySelector('#refund-policy').textContent, 'Refunds: full refund up to 7 days before your session, 50% up to 48 hours before, and no refunds within 48 hours of your session.');
-  assert.deepEqual([...book.querySelectorAll('#booking-checkout input')].map(input => input.getAttribute('name')), ['healthPolicy']);
+  assert.equal(book.querySelector('.booking-pay').getAttribute('aria-disabled'), 'true');
+  assert.equal(book.querySelector('#refund-policy').textContent, `Draft ${fillRefundSummary()} Full booking & refund policy`);
+  assert.equal(book.querySelector('#refund-policy a').getAttribute('href'), '/book/policy/');
+  assert.deepEqual([...book.querySelectorAll('#booking-checkout input')].map(input => input.value), ['deposit']);
   assert.equal(html.toLowerCase().includes('stripe'), false);
   assert.equal(html.toLowerCase().includes('square'), false);
   const thanks = await documentFor('book/thank-you/index.html');
@@ -394,8 +396,9 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
     const doc = await documentFor(page.file);
     assert.equal([...doc.querySelectorAll('nav a, header a, footer a')].some(link => (link.getAttribute('href') || '').includes('/book')), false, page.path);
   }
-  for (const page of pages.filter(item => item.path !== '/book/')) {
-    const text = await readFile(new URL(page.file, root), 'utf8');
+  for (const page of pages.filter(item => item.path !== '/book/' && item.path !== '/book/policy/')) {
+    let text = await readFile(new URL(page.file, root), 'utf8');
+    if (page.path === '/faq/') text = text.replaceAll(fillRefundSummary(), '');
     assert.equal(text.includes('$'), false, page.path);
     assert.equal(text.toLowerCase().includes('square'), false, page.path);
     assert.equal(text.includes('per mom and baby'), false, page.path);
@@ -421,19 +424,20 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
     "I understand there's no refund or discount for skipping any part of the session.",
   ];
   const confirmBoxes = [...book.querySelectorAll('[name=confirmReady]')];
-  assert.deepEqual(confirmBoxes.filter(input => input.value !== 'health').map(input => input.closest('label').textContent), confirmations);
+  const approvedValues = new Set(['age', 'pediatrician', 'price']);
+  assert.deepEqual(confirmBoxes.filter(input => approvedValues.has(input.value)).map(input => input.closest('label').textContent), confirmations);
   for (const input of confirmBoxes) assert.equal(input.hasAttribute('required'), true);
-  const healthBox = book.querySelector('[name=confirmReady][value=health]');
-  assert.equal(healthBox.closest('label').querySelector('[data-health-ack]').textContent, HEALTH_ACKNOWLEDGEMENT);
-  assert.equal(healthBox.closest('label').textContent.includes('Draft'), true);
-  assert.equal(HEALTH_ACKNOWLEDGEMENT.includes('48'), false);
-  assert.equal(healthBox.closest('label').textContent.includes('48'), false);
-  assert.equal(book.querySelector('#health-policy [data-health-policy]').textContent, HEALTH_TURNED_AWAY_POLICY);
-  assert.equal(book.querySelector('#health-policy').textContent.includes('Draft'), true);
-  assert.equal(HEALTH_TURNED_AWAY_POLICY.includes('48'), false);
-  assert.equal(book.querySelector('[name=healthPolicy]').hasAttribute('required'), true);
-  assert.equal(book.querySelector('[name=healthPolicy]').closest('label').textContent.includes('I understand the health and reschedule policy.'), true);
-  assert.equal(book.querySelector('#health-policy').parentElement.id, 'booking-checkout');
+  const draftAcks = {symptoms: SICK_SYMPTOMS_ACK, illness: SICK_ILLNESS_ACK, checkin: SICK_CHECKIN_ACK, contact: SICK_CONTACT_ACK};
+  for (const [value, sentence] of Object.entries(draftAcks)) {
+    const box = book.querySelector(`[name=confirmReady][value=${value}]`);
+    assert.equal(box.hasAttribute('required'), true, value);
+    assert.equal(box.closest('label').querySelector('[data-ack]').textContent, sentence, value);
+    assert.equal(box.closest('label').textContent.includes('Draft'), true, value);
+  }
+  assert.equal(book.querySelector('[data-deposit-ack]').textContent, fillDepositAck());
+  assert.equal(book.querySelector('[name=confirmReady][value=deposit]').hasAttribute('required'), true);
+  assert.equal(book.querySelector('[name=healthPolicy]'), null);
+  assert.equal(book.querySelector('[name=confirmReady][value=health]'), null);
   assert.equal(MIN_BABY_AGE_DAYS, 28);
   assert.equal(MAX_BABY_AGE_MONTHS, 12);
   assert.equal(sessionStatus(0), 'Available');
@@ -453,7 +457,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(babyAgeMessage('2026-02-31', sessionDay), 'Please enter a valid date of birth.');
 });
 test('the booking form shows both age limits before checkout', () => {
-  const {document: doc} = parseHTML(`<!doctype html><html><body><form id="booking-form"><label><input id="baby-dob" name="babyDob" type="date" required/></label><span id="baby-dob-error" hidden></span><input type="checkbox" name="confirmReady" value="health" required/><span data-health-ack></span><p id="health-policy"><span data-health-policy></span></p><input type="checkbox" name="healthPolicy" required/><span id="health-policy-error" hidden></span><button class="booking-pay" type="button"></button></form></body></html>`);
+  const {document: doc} = parseHTML(`<!doctype html><html><body><form id="booking-form"><label><input id="baby-dob" name="babyDob" type="date" required/></label><span id="baby-dob-error" hidden></span><span data-refund-summary></span><span data-deposit-ack></span><span data-ack="symptoms"></span><button class="booking-pay" type="button" disabled aria-disabled="true"></button></form></body></html>`);
   initBooking(doc);
   const dob = doc.querySelector('#baby-dob');
   const error = doc.querySelector('#baby-dob-error');
@@ -470,10 +474,60 @@ test('the booking form shows both age limits before checkout', () => {
   dob.dispatchEvent(new doc.defaultView.Event('change'));
   assert.equal(error.hidden, true);
   assert.equal(error.textContent, '');
-  assert.equal(doc.querySelector('[data-health-ack]').textContent, HEALTH_ACKNOWLEDGEMENT);
-  assert.equal(doc.querySelector('[data-health-policy]').textContent, HEALTH_TURNED_AWAY_POLICY);
+  assert.equal(doc.querySelector('[data-refund-summary]').textContent, fillRefundSummary());
+  assert.equal(doc.querySelector('[data-deposit-ack]').textContent, fillDepositAck());
+  assert.equal(doc.querySelector('[data-ack=symptoms]').textContent, SICK_SYMPTOMS_ACK);
   assert.match(dob.max, /^\d{4}-\d{2}-\d{2}$/);
   assert.match(dob.min, /^\d{4}-\d{2}-\d{2}$/);
+});
+test('refund dollars come from the session price and the deposit', () => {
+  assert.equal(DEPOSIT_CENTS, 10000);
+  assert.equal(refundBalanceCents(), SESSION_PRICE_CENTS - DEPOSIT_CENTS);
+  assert.equal(refundHalfBalanceCents(), Math.round((SESSION_PRICE_CENTS - DEPOSIT_CENTS) / 2));
+  assert.equal(fillRefundSummary(), `$100 of your $285 payment is a nonrefundable deposit that holds your spot. If you cancel 7 or more days before your session, we refund the $185 balance. If you cancel 48 hours or more before, we refund $92.50. Within 48 hours, there's no refund. Add-ons follow the same timing, except personalized robes once they're sent for embroidery. If your baby is unwell, we'll move you to a new date within 60 days. If we cancel, you get a full refund.`);
+  assert.equal(fillRefundSummary(28000, 10000), REFUND_SUMMARY.replaceAll('{deposit}', '$100').replaceAll('{price}', '$280').replaceAll('{balance}', '$180').replaceAll('{half}', '$90'));
+  assert.equal(fillRefundSummary(28000, 10000).includes('$92.50'), false);
+  assert.equal(fillDepositAck(), DEPOSIT_ACK.replaceAll('{deposit}', '$100'));
+  assert.equal(fillDepositAck(15000).includes(formatCents(15000)), true);
+  assert.equal(ageMonthsAtSession('2026-09-01', '2026-12-06'), 3);
+  assert.equal(ageMonthsAtSession('2025-12-06', '2026-12-06'), 12);
+  assert.equal(ageMonthsAtSession('2026-11-08', '2026-12-06'), 0);
+});
+test('the pay button stays off until the birth date is valid and every required box is ticked', () => {
+  const values = ['age', 'pediatrician', 'price', 'symptoms', 'illness', 'checkin', 'contact', 'deposit'];
+  const boxes = values.map(value => `<input type="checkbox" name="confirmReady" value="${value}" required/>`).join('') + '<input type="checkbox" name="waiver" required/>';
+  const {document: doc} = parseHTML(`<!doctype html><html><body><form id="booking-form"><input id="baby-dob" name="babyDob" type="date"/><span id="baby-dob-error" hidden></span>${boxes}<button class="booking-pay" type="button" disabled aria-disabled="true">Reserve and pay</button></form></body></html>`);
+  initBooking(doc);
+  const button = doc.querySelector('.booking-pay');
+  const dob = doc.querySelector('#baby-dob');
+  const today = new Date();
+  dob.value = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate() - 40)).toISOString().slice(0, 10);
+  dob.dispatchEvent(new doc.defaultView.Event('change'));
+  assert.equal(button.disabled, true);
+  assert.equal(button.getAttribute('aria-disabled'), 'true');
+  for (const box of doc.querySelectorAll('input[type=checkbox][required]')) {
+    box.checked = true;
+    box.dispatchEvent(new doc.defaultView.Event('change', {bubbles: true}));
+  }
+  assert.equal(button.disabled, false);
+  assert.equal(button.getAttribute('aria-disabled'), 'false');
+  const deposit = doc.querySelector('[value=deposit]');
+  deposit.checked = false;
+  deposit.dispatchEvent(new doc.defaultView.Event('change', {bubbles: true}));
+  assert.equal(button.disabled, true);
+  assert.equal(button.getAttribute('aria-disabled'), 'true');
+});
+test('the draft policy page keeps the refund terms and leaves out fees and discretion', async () => {
+  const policy = await documentFor('book/policy/index.html');
+  assert.equal(policy.querySelector('meta[name=robots]').content, 'noindex,nofollow');
+  assert.match(policy.querySelector('.draft-banner').textContent, /Draft/);
+  assert.match(policy.querySelector('.draft-banner').textContent, /Not yet in effect/);
+  assert.equal(policy.body.textContent.includes(fillRefundSummary()), true);
+  const lower = policy.body.textContent.toLowerCase();
+  assert.equal(lower.includes('processing fee'), false);
+  assert.equal(lower.includes('card fee'), false);
+  assert.equal(lower.includes('discretion'), false);
+  assert.equal(policy.body.textContent.includes('one-time courtesy'), false);
 });
 test('a set robe price replaces the coming soon row with the cutoff note', () => {
   const {document: doc} = parseHTML('<div id="book-addons"><ul class="addon-preview"><li id="robe-addon" data-robe-addon class="is-coming-soon" aria-disabled="true"></li><li id="bath-bag-addon"></li></ul></div>');

@@ -106,8 +106,11 @@
 <label class="choice-row"><input type="checkbox" name="confirmReady" value="age" required aria-describedby="booking-confirm-error"/><span>My baby is at least 4 weeks old, has no breaks in the skin, the umbilical cord stump has fallen off and healed, and any circumcision site is fully healed.</span></label>
 <label class="choice-row"><input type="checkbox" name="confirmReady" value="pediatrician" required aria-describedby="booking-confirm-error"/><span>I've talked with my pediatrician about the products and activities used in the session, and I know I can skip any part at any time.</span></label>
 <label class="choice-row"><input type="checkbox" name="confirmReady" value="price" required aria-describedby="booking-confirm-error"/><span>I understand there's no refund or discount for skipping any part of the session.</span></label>
-<!-- DRAFT wording pending CFO. The sentence is HEALTH_ACKNOWLEDGEMENT in assets/booking.js. -->
-<label class="choice-row"><input type="checkbox" name="confirmReady" value="health" required aria-describedby="booking-confirm-error"/><span><span class="placeholder-mark">Draft</span> <span data-health-ack></span></span></label>
+<!-- DRAFT pending Christy. Sentences are SICK_*_ACK in assets/booking.js. -->
+<label class="choice-row"><input type="checkbox" name="confirmReady" value="symptoms" required aria-describedby="booking-confirm-error"/><span><span class="placeholder-mark">Draft</span> <span data-ack="symptoms"></span></span></label>
+<label class="choice-row"><input type="checkbox" name="confirmReady" value="illness" required aria-describedby="booking-confirm-error"/><span><span class="placeholder-mark">Draft</span> <span data-ack="illness"></span></span></label>
+<label class="choice-row"><input type="checkbox" name="confirmReady" value="checkin" required aria-describedby="booking-confirm-error"/><span><span class="placeholder-mark">Draft</span> <span data-ack="checkin"></span></span></label>
+<label class="choice-row"><input type="checkbox" name="confirmReady" value="contact" required aria-describedby="booking-confirm-error"/><span><span class="placeholder-mark">Draft</span> <span data-ack="contact"></span></span></label>
 <span class="field-error" id="booking-confirm-error" hidden></span>
 </div>
 <fieldset class="booking-choice">
@@ -125,13 +128,12 @@
 </div>
 <div class="checkout-preview" id="booking-checkout">
 <p class="checkout-label">Online pay at checkout is a preview only. No card details are collected.</p>
-<p class="refund-policy" id="refund-policy">Refunds: full refund up to 7 days before your session, 50% up to 48 hours before, and no refunds within 48 hours of your session.</p>
-<!-- DRAFT wording pending CFO. The sentence is HEALTH_TURNED_AWAY_POLICY in assets/booking.js. -->
-<p class="refund-policy" id="health-policy"><span class="placeholder-mark">Draft</span> <span data-health-policy></span></p>
-<label class="choice-row"><input type="checkbox" name="healthPolicy" value="yes" required aria-describedby="health-policy-error"/><span>I understand the health and reschedule policy.</span></label>
-<p class="field-error" id="health-policy-error" hidden></p>
+<!-- DRAFT pending Christy. The sentence is REFUND_SUMMARY in assets/booking.js. Amounts come from SESSION_PRICE_CENTS and DEPOSIT_CENTS. -->
+<p class="refund-policy" id="refund-policy"><span class="placeholder-mark">Draft</span> <span data-refund-summary></span> <a href="/book/policy/">Full booking &amp; refund policy</a></p>
+<label class="choice-row"><input type="checkbox" name="confirmReady" value="deposit" required aria-describedby="deposit-error"/><span><span class="placeholder-mark">Draft</span> <span data-deposit-ack></span></span></label>
+<p class="field-error" id="deposit-error" hidden></p>
 <p class="field-error" id="checkout-error" hidden></p>
-<button class="submit-button booking-pay" type="button" disabled>Reserve and pay</button>
+<button class="submit-button booking-pay" type="button" disabled aria-disabled="true">Reserve and pay</button>
 </div>
 </form>
 <script type="module" src="../assets/booking.js"></script>

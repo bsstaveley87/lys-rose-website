@@ -196,6 +196,10 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('#booking-checkout input'), null);
   assert.equal(book.querySelector('.card-mock'), null);
   assert.equal(book.querySelector('.booking-pay').getAttribute('type'), 'button');
+  const serviceSteps = [...(await documentFor('services/index.html')).querySelectorAll('h3')].map(item => item.textContent);
+  assert.equal(serviceSteps[0], 'i. A warm floral milk bath');
+  assert.equal(serviceSteps[1], 'ii. Guided infant massage');
+  assert.equal(serviceSteps[2], 'iii. Parent-led baby facial');
   assert.equal(book.querySelector('.booking-price').textContent, sessionPriceLine());
   assert.equal(book.querySelector('.price-note'), null);
   assert.equal(html.includes('$280'), false);

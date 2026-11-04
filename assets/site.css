@@ -232,7 +232,10 @@ body.menu-open { overflow:hidden; }
 .enhancement-note { font-size:15px; line-height:1.5; }
 .extras-when { margin:0 0 4px; }
 [data-robe-addon].is-closed .available-to-add { display:none; }
-[data-robe-addon].is-closed { opacity:.72; }
+[data-robe-addon].is-closed,
+[data-robe-addon].is-coming-soon { opacity:.72; }
+.coming-soon-badge { flex:0 0 auto; padding:3px 10px; border:1px solid #BFA695; border-radius:999px; background:#F6F2EF; color:#504B49; font:500 12px/1.4 Jost,sans-serif; letter-spacing:.08em; }
+.visually-hidden { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 .available-to-add { font:500 13px/1.4 Jost,sans-serif; letter-spacing:0; }
 .face-upgrade { display:flex; flex-direction:column; gap:14px; margin-top:16px; padding:16px; border:1px solid var(--champagne); background:var(--cream); }
 .face-upgrade p { margin:0; font-size:16px; line-height:1.5; }

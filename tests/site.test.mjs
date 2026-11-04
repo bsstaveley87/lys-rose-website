@@ -4,7 +4,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
 import {validateFields, interestOptions, limits} from '../assets/validation.js';
-import {BATH_BAG_CENTS, BOOKING_LEAD_HOURS, MIN_AGE_WEEKS, ROBE_CENTS, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SESSION, SESSION_PRICE_CENTS, babyAgeMessage, bookingIsClosed, previewTotal, robeIsClosed, robeNote, sessionDateLabel, sessionPriceLabel, sessionPriceLine, sessionPriceNote, sessionPriceOffer, sessionStatus, sessionTimeLabel} from '../assets/booking.js';
+import {BATH_BAG_CENTS, BOOKING_LEAD_HOURS, MIN_AGE_WEEKS, ROBE_CENTS, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SESSION, SESSION_PRICE_CENTS, applyRobeCutoff, babyAgeMessage, bookingIsClosed, mountRobeAddon, previewTotal, robeIsClosed, robeNote, sessionDateLabel, sessionPriceLabel, sessionPriceLine, sessionPriceNote, sessionPriceOffer, sessionStatus, sessionTimeLabel} from '../assets/booking.js';
 const approved = {
   '/': {
     title: 'Lys Rose Baby Spa · Fort Lauderdale',
@@ -209,9 +209,18 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(html.includes('Take-home robe set'), false);
   assert.equal(html.includes('gift bag'), false);
   assert.equal((html.match(/available to add/g) || []).length, 0);
-  assert.equal(book.querySelector('#robe-addon'), null);
-  assert.equal(html.includes('Embroidered Keepsake Robe'), false);
   assert.equal(ROBE_CENTS, null);
+  const robe = book.querySelector('#robe-addon');
+  assert.equal(robe.classList.contains('is-coming-soon'), true);
+  assert.equal(robe.getAttribute('aria-disabled'), 'true');
+  assert.equal(robe.querySelector('#robe-option').hasAttribute('disabled'), true);
+  assert.equal(robe.querySelector('#robe-option').getAttribute('aria-disabled'), 'true');
+  assert.equal(robe.querySelector('#robe-option').hasAttribute('name'), false);
+  assert.equal(robe.querySelector('#robe-coming-soon').textContent, 'Coming soon');
+  assert.equal(robe.querySelector('.visually-hidden').textContent, 'Coming soon');
+  assert.equal(robe.querySelector('.enhancement-note').textContent, 'A personalized embroidered robe for your baby.');
+  assert.equal(robe.querySelector('#robe-note'), null);
+  assert.equal(html.includes('this option closes 14 days before your session'), false);
   assert.equal(book.querySelector('#bath-bag-addon .addon-price').textContent, '+$18');
   assert.equal(book.querySelector('#bath-bag-addon [name=bathBag]').hasAttribute('disabled'), false);
   assert.equal(html.includes('$24'), false);
@@ -404,6 +413,18 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(babyAgeMessage('2026-09-04', today), '');
   assert.match(babyAgeMessage('2025-10-29', today), /under 12 months/);
   assert.equal(babyAgeMessage('2025-10-30', today), '');
+});
+test('a set robe price replaces the coming soon row with the cutoff note', () => {
+  const {document: doc} = parseHTML('<div id="book-addons"><ul class="addon-preview"><li id="robe-addon" data-robe-addon class="is-coming-soon" aria-disabled="true"></li><li id="bath-bag-addon"></li></ul></div>');
+  mountRobeAddon(doc, 4500);
+  applyRobeCutoff(doc);
+  const robe = doc.querySelector('#robe-addon');
+  assert.equal(robe.classList.contains('is-coming-soon'), false);
+  assert.equal(robe.querySelector('[name=robe]').hasAttribute('disabled'), false);
+  assert.equal(robe.querySelector('.addon-price').textContent, '+$45');
+  assert.equal(robe.querySelector('#robe-note').textContent, robeNote(''));
+  assert.equal(robe.querySelector('#robe-coming-soon'), null);
+  assert.equal(doc.querySelector('#bath-bag-addon').previousElementSibling.id, 'robe-addon');
 });
 test('brand text and hero overlay retain readable contrast',()=>{
   const luminance=rgb=>rgb.map(x=>x/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4).reduce((sum,x,i)=>sum+x*[.2126,.7152,.0722][i],0);

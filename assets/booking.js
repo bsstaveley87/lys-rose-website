@@ -220,20 +220,27 @@ function applySession(documentRef, now = new Date()) {
   if (form) form.dataset.bookingClosed = closed ? 'true' : 'false';
 }
 
-function mountRobeAddon(documentRef) {
-  if (ROBE_CENTS == null) return;
-  const list = documentRef.querySelector('#book-addons .addon-preview');
-  if (!list || list.querySelector('[data-robe-addon]')) return;
-  const item = documentRef.createElement('li');
-  item.id = 'robe-addon';
-  item.dataset.robeAddon = '';
-  item.innerHTML = `<label><input type="checkbox" id="robe-option" name="robe" value="yes" form="booking-form"/><span class="addon-copy"><span class="addon-heading"><span class="enhancement-title">Embroidered Keepsake Robe</span><span class="addon-price">+$${ROBE_CENTS / 100}</span></span><span class="enhancement-note">A personalized embroidered robe for your baby.</span><span class="enhancement-note robe-note" id="robe-note"></span></span></label>`;
+function placeRobeAddon(list, item) {
   const bathBag = list.querySelector('#bath-bag-addon');
   if (bathBag) list.insertBefore(item, bathBag);
   else list.appendChild(item);
 }
 
-function applyRobeCutoff(documentRef, now = new Date()) {
+/** Coming soon while ROBE_CENTS is null. A set price replaces that row with the selectable robe. */
+export function mountRobeAddon(documentRef, cents = ROBE_CENTS) {
+  const list = documentRef.querySelector('#book-addons .addon-preview');
+  if (!list) return;
+  const existing = list.querySelector('[data-robe-addon]');
+  if (cents == null) return;
+  const item = documentRef.createElement('li');
+  item.id = 'robe-addon';
+  item.dataset.robeAddon = '';
+  item.innerHTML = `<label><input type="checkbox" id="robe-option" name="robe" value="yes" form="booking-form"/><span class="addon-copy"><span class="addon-heading"><span class="enhancement-title">Embroidered Keepsake Robe</span><span class="addon-price">+$${cents / 100}</span></span><span class="enhancement-note">A personalized embroidered robe for your baby.</span><span class="enhancement-note robe-note" id="robe-note"></span></span></label>`;
+  if (existing) existing.remove();
+  placeRobeAddon(list, item);
+}
+
+export function applyRobeCutoff(documentRef, now = new Date()) {
   const robe = documentRef.querySelector('[data-robe-addon]');
   if (!robe) return;
   const sessionIso = SESSION?.date || '';

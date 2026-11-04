@@ -14,7 +14,7 @@ const SALES_TAX_UID = 'sales-tax';
 type PriceLine = {amount: number | null; taxable: boolean};
 
 export const PRICES = {
-  session: {amount: 28000, taxable: false},
+  session: {amount: 28500, taxable: false},
   bath: {
     'floral-milk-soak': {amount: 0, taxable: false},
     byob: {amount: 0, taxable: false},

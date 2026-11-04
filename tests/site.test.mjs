@@ -173,7 +173,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(event.location.address.streetAddress, undefined);
   assert.equal(event.location.name, undefined);
   assert.equal(event.offers['@type'], 'Offer');
-  assert.equal(event.offers.price, '280.00');
+  assert.equal(event.offers.price, '285.00');
   assert.equal(event.offers.priceCurrency, 'USD');
   assert.equal(Object.hasOwn(event, 'remainingAttendeeCapacity'), false);
   assert.equal(Object.hasOwn(event.offers, 'eligibleQuantity'), false);
@@ -196,9 +196,9 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('#booking-checkout input'), null);
   assert.equal(book.querySelector('.card-mock'), null);
   assert.equal(book.querySelector('.booking-pay').getAttribute('type'), 'button');
-  assert.equal(book.querySelector('.booking-price').textContent, '$280 per parent & baby');
-  assert.equal(html.includes('$280 per mom'), false);
-  assert.equal(book.querySelector('.price-note').textContent, 'Sales tax applies to take-home add-ons.');
+  assert.equal(book.querySelector('.booking-price').textContent, '$285 per parent & baby');
+  assert.equal(html.includes('$280'), false);
+  assert.equal(book.querySelector('.price-note').textContent, '$285 per mom and baby. Taxes may apply to add-ons.');
   assert.equal(html.includes('This is the price before taxes and processing fees.'), false);
   assert.equal(html.toLowerCase().includes('processing fee'), false);
   assert.equal(html.includes('$TBD'), false);
@@ -216,8 +216,8 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('#second-adult-addon .enhancement-note').textContent, 'One per parent-and-baby place, chosen when you book.');
   assert.equal(book.querySelector('#second-adult-addon [name=secondAdult]').hasAttribute('disabled'), false);
   assert.equal(SECOND_ADULT_CENTS, 2500);
-  assert.deepEqual(previewTotal(false, 'signature', true), {cents: 29800, label: '$298', addonPending: false});
-  assert.deepEqual(previewTotal(false, 'signature', false, true), {cents: 30500, label: '$305', addonPending: false});
+  assert.deepEqual(previewTotal(false, 'signature', true), {cents: 30300, label: '$303', addonPending: false});
+  assert.deepEqual(previewTotal(false, 'signature', false, true), {cents: 31000, label: '$310', addonPending: false});
   assert.ok(html.includes('Le Petit Plus (The Little Extras)'));
   assert.equal(book.querySelector('.extras-when').textContent, "All extras are chosen when you book and can't be added later.");
   assert.equal(html.includes('Premium enhancements'), false);
@@ -296,11 +296,11 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('.jar-option'), null);
   assert.equal(html.includes('Water (Aqua), Glycerin, Simmondsia Chinensis (Jojoba) Seed Oil'), false);
   assert.equal(html.includes("I've read the ingredients and will share any allergies with Lys Rose. [Allergy acknowledgment wording pending review]"), false);
-  assert.equal(book.querySelector('#booking-total').textContent, '$280');
+  assert.equal(book.querySelector('#booking-total').textContent, '$285');
   assert.equal(book.querySelector('#face-cream-charge').hasAttribute('hidden'), true);
-  assert.deepEqual(previewTotal(false, 'signature'), {cents:28000, label:'$280', addonPending:false});
-  assert.deepEqual(previewTotal(false, 'gentle'), {cents:28500, label:'$285', addonPending:false});
-  assert.deepEqual(previewTotal(false, 'premium'), {cents:29000, label:'$290', addonPending:false});
+  assert.deepEqual(previewTotal(false, 'signature'), {cents:28500, label:'$285', addonPending:false});
+  assert.deepEqual(previewTotal(false, 'gentle'), {cents:29000, label:'$290', addonPending:false});
+  assert.deepEqual(previewTotal(false, 'premium'), {cents:29500, label:'$295', addonPending:false});
   for (const word of ['hypoallergenic', 'soothing']) assert.equal(html.toLowerCase().includes(word), false, word);
   assert.equal(/\bfacial\b/i.test(html.toLowerCase().replaceAll('parent-led baby facial','').replaceAll('facials','')), false);
   const included = [
@@ -391,7 +391,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(sessionStatus(0), 'Available');
   assert.equal(sessionStatus(SEATS_PER_SESSION - 1), 'Available');
   assert.equal(sessionStatus(SEATS_PER_SESSION), 'Fully booked');
-  assert.deepEqual(previewTotal(true), {cents:28000, label:'$280', addonPending:true});
+  assert.deepEqual(previewTotal(true), {cents:28500, label:'$285', addonPending:true});
   assert.equal(previewTotal(false).addonPending, false);
   const today = new Date(2026, 9, 29);
   assert.equal(babyAgeMessage('2026-10-01', today), '');

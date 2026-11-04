@@ -67,7 +67,7 @@ test('price table ignores tampered client prices and keeps taxes off', async () 
   assert.equal(taxesEnabled(), false);
   assert.equal(taxesEnabled({TAX_ENABLED: 'false'}), false);
   assert.equal(taxesEnabled({TAX_ENABLED: 'true'}), true);
-  assert.deepEqual(PRICES.session, {amount: 28000, taxable: false});
+  assert.deepEqual(PRICES.session, {amount: 28500, taxable: false});
   assert.deepEqual(PRICES.creme, {
     signature: {amount: 0, taxable: false},
     gentle: {amount: 500, taxable: true},
@@ -96,16 +96,16 @@ test('price table ignores tampered client prices and keeps taxes off', async () 
   assert.equal(checked.ok, true);
   const order = buildOrder(checked.booking, PRICES, session);
   assert.deepEqual(order.lines.map(line => [line.name, line.variation_name, line.base_price_money.amount]), [
-    [sessionLine, 'BYOB (Bring your own breastmilk) + rose petals', 28000],
+    [sessionLine, 'BYOB (Bring your own breastmilk) + rose petals', 28500],
     ['Premium face crème', undefined, 1000],
   ]);
-  assert.equal(order.total, 29000);
+  assert.equal(order.total, 29500);
   assert.match(order.note, /BYOB/);
   assert.match(order.note, /rose petals: yes/);
   assert.equal(order.lines.some(line => line.base_price_money.amount === 1), false);
 
   const signature = buildOrder(validateBooking(form(), {session, now: openNow}).booking, PRICES, session);
-  assert.equal(signature.total, 28000);
+  assert.equal(signature.total, 28500);
   assert.equal(signature.lines.length, 1);
   assert.equal(signature.lines[0].name, sessionLine);
   assert.equal(signature.lines[0].variation_name, 'Floral Milk Soak');
@@ -114,7 +114,7 @@ test('price table ignores tampered client prices and keeps taxes off', async () 
   assert.equal(byob.lines[0].variation_name, 'BYOB (Bring your own breastmilk)');
 
   const gentle = buildOrder(validateBooking(form({creme: 'gentle', faceCream: 'gentle'}), {session, now: openNow}).booking, PRICES, session);
-  assert.equal(gentle.total, 28500);
+  assert.equal(gentle.total, 29000);
   assert.equal(gentle.lines[1].name, 'Gentle face crème');
   assert.equal(gentle.lines[1].base_price_money.amount, 500);
 
@@ -137,13 +137,13 @@ test('price table ignores tampered client prices and keeps taxes off', async () 
   assert.equal(captured.body.checkout_options.enable_coupon, false);
   assert.equal(captured.body.order.line_items[0].name, sessionLine);
   assert.equal(captured.body.order.line_items[0].variation_name, 'BYOB (Bring your own breastmilk) + rose petals');
-  assert.equal(captured.body.order.line_items[0].base_price_money.amount, 28000);
+  assert.equal(captured.body.order.line_items[0].base_price_money.amount, 28500);
   assert.equal(captured.body.order.line_items[1].name, 'Premium face crème');
   assert.equal(captured.body.order.line_items[1].variation_name, undefined);
   assert.equal(captured.body.order.line_items[1].base_price_money.amount, 1000);
   assert.equal(captured.body.order.location_id, 'LOC123');
   assert.match(captured.authorization, /^Bearer /);
-  assert.deepEqual(captured.body.order.line_items.map(line => line.base_price_money.amount), [28000, 1000]);
+  assert.deepEqual(captured.body.order.line_items.map(line => line.base_price_money.amount), [28500, 1000]);
 });
 
 test('closed session, age, robe cutoff, and hidden extras never open checkout', async () => {
@@ -185,7 +185,7 @@ test('closed session, age, robe cutoff, and hidden extras never open checkout', 
   const openRobe = validateBooking(form({robe: true, robeName: 'Lily', bathBag: true, secondAdult: true}), {session, now: openNow, prices: robePrices});
   assert.equal(openRobe.ok, true);
   const priced = buildOrder(openRobe.booking, robePrices, session);
-  assert.equal(priced.total, 28000 + 4500 + 1800 + 4000);
+  assert.equal(priced.total, 28500 + 4500 + 1800 + 4000);
   assert.match(priced.lines[1].name, /Lily/);
   assert.equal(calls.length, 0);
   const missing = await openCheckout(buildOrder(validateBooking(form(), {session, now: openNow}).booking, PRICES, session), 'parent@example.com', {BOOKINGS: memoryStore()}, fetchImpl);
@@ -201,7 +201,7 @@ test('webhook verifies the signature, counts a seat once, and flags late or extr
     closesAt: Date.parse('2026-12-04T15:30:00Z'),
     sessionDate: '2026-12-06',
     email: 'parent@example.com',
-    total: 28000,
+    total: 28500,
     booking: {babyName: 'Lily', email: 'parent@example.com'},
   }));
   const event = {
@@ -276,7 +276,7 @@ test('tax at 7% is added only to taxable lines, and only when enabled', async ()
   assert.equal(salesTaxCents(order.lines), Math.round((taxable * 7) / 100));
   assert.equal(salesTaxCents(order.lines), 476);
   assert.deepEqual(order.lines.map(line => [line.name, line.base_price_money.amount, line.taxable]), [
-    [sessionLine, 28000, false],
+    [sessionLine, 28500, false],
     ['Gentle face crème', 500, true],
     ['Embroidered keepsake robe', 4500, true],
     ['Floral Milk Bath Bag', 1800, true],
@@ -307,11 +307,11 @@ test('tax at 7% is added only to taxable lines, and only when enabled', async ()
   assert.equal(response.status, 200);
   assert.equal(captured.order.taxes[0].percentage, '7.0');
   assert.deepEqual(captured.order.line_items.map(line => [line.name, line.base_price_money.amount, Boolean(line.applied_taxes)]), [
-    [sessionLine, 28000, false],
+    [sessionLine, 28500, false],
     ['Premium face crème', 1000, true],
   ]);
   assert.equal(captured.checkout_options.enable_coupon, false);
-  assert.equal(salesTaxCents([{taxable: false, base_price_money: {amount: 28000}}, {taxable: true, base_price_money: {amount: 1000}}]), 70);
+  assert.equal(salesTaxCents([{taxable: false, base_price_money: {amount: 28500}}, {taxable: true, base_price_money: {amount: 1000}}]), 70);
   assert.equal(captured.order.line_items.some(line => /fee|surcharge/i.test(line.name)), false);
 });
 
@@ -322,7 +322,7 @@ test('catalog plan prices the session variations together and skips null extras'
   const sessionItem = plan.items[0];
   assert.equal(sessionItem.name, 'Lys Rose Session');
   assert.equal(sessionItem.taxable, false);
-  assert.deepEqual(sessionItem.variations.map(item => item.amount), [28000, 28000]);
+  assert.deepEqual(sessionItem.variations.map(item => item.amount), [28500, 28500]);
   assert.deepEqual(sessionItem.variations.map(item => item.taxable), [false, false]);
   assert.deepEqual(sessionItem.variations.map(item => item.name), ['Floral Milk Soak', 'BYOB']);
   const flags = Object.fromEntries(plan.items.filter(item => !item.variations).map(item => [item.name, item.taxable]));
@@ -345,7 +345,7 @@ test('catalog plan prices the session variations together and skips null extras'
   assert.equal(bathBagItem.item_data.variations[0].item_variation_data.price_money.amount, 1800);
   const sessionObject = objects.find(item => item.id === '#lys-rose-session');
   assert.equal(sessionObject.item_data.is_taxable, false);
-  assert.equal(sessionObject.item_data.variations[0].item_variation_data.price_money.amount, 28000);
+  assert.equal(sessionObject.item_data.variations[0].item_variation_data.price_money.amount, 28500);
   assert.equal(objects.find(item => item.item_data.name === 'Gentle face crème').item_data.is_taxable, true);
   assert.equal(objects.find(item => item.item_data.name === 'Signature face crème').item_data.is_taxable, false);
   assert.equal(objects.find(item => item.item_data.name === 'Premium face crème').item_data.is_taxable, true);

@@ -13,10 +13,6 @@ export function sessionPriceLine() {
   return `${sessionPriceLabel()} per parent & baby`;
 }
 
-export function sessionPriceNote() {
-  return `${sessionPriceLabel()} per mom and baby. Taxes may apply to add-ons.`;
-}
-
 export function sessionPriceOffer() {
   return (SESSION_PRICE_CENTS / 100).toFixed(2);
 }
@@ -177,8 +173,6 @@ export function sessionTimeLabel(session) {
 function applySessionPrice(documentRef) {
   const line = documentRef.querySelector('[data-session-price]');
   if (line) line.textContent = sessionPriceLine();
-  const note = documentRef.querySelector('[data-session-price-note]');
-  if (note) note.textContent = sessionPriceNote();
   const total = documentRef.querySelector('[data-session-price-total]');
   if (total) total.textContent = sessionPriceLabel();
   for (const script of documentRef.querySelectorAll('script[type="application/ld+json"]')) {
@@ -235,7 +229,7 @@ export function mountRobeAddon(documentRef, cents = ROBE_CENTS) {
   const item = documentRef.createElement('li');
   item.id = 'robe-addon';
   item.dataset.robeAddon = '';
-  item.innerHTML = `<label><input type="checkbox" id="robe-option" name="robe" value="yes" form="booking-form"/><span class="addon-copy"><span class="addon-heading"><span class="enhancement-title">Embroidered Keepsake Robe</span><span class="addon-price">+$${cents / 100}</span></span><span class="enhancement-note">A personalized embroidered robe for your baby.</span><span class="enhancement-note robe-note" id="robe-note"></span></span></label>`;
+  item.innerHTML = `<label><input type="checkbox" id="robe-option" name="robe" value="yes" form="booking-form"/><span class="addon-copy"><span class="addon-heading"><span class="enhancement-title">Embroidered Keepsake Robe</span><span class="addon-price">+$${cents / 100}</span></span><span class="enhancement-note">A personalized embroidered robe for your baby.</span><span class="enhancement-note robe-note" id="robe-note"></span><span class="enhancement-note">Taxes may apply to enhancements.</span></span></label>`;
   if (existing) existing.remove();
   placeRobeAddon(list, item);
 }

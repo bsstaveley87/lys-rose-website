@@ -69,8 +69,8 @@ The pilot price is $285. Edit one number:
 These files use that number and should not get a second copy of it:
 
 - `worker/src/checkout.ts`: the session line reads `SESSION_PRICE_CENTS` and stays not taxable.
-- `scripts/build.mjs`: writes the booking-page price line, the note (`$X per mom and baby. Taxes may apply to add-ons.`), the order total, and the JSON-LD offer from that constant.
-- `book/index.html`: placeholders only (`data-session-price`, `data-session-price-note`, `data-session-price-total`, and `SESSION_PRICE` in the offer).
+- `scripts/build.mjs`: writes the booking-page price line, the order total, and the JSON-LD offer from that constant.
+- `book/index.html`: placeholders only (`data-session-price`, `data-session-price-total`, and `SESSION_PRICE` in the offer). There is no sentence under the big price.
 - `faq/index.html`: marked so the session price is not added. Public pages stay free of prices.
 
 Run `npm run build` and `npm test`. The test fails if the worker price and `SESSION_PRICE_CENTS` drift apart.

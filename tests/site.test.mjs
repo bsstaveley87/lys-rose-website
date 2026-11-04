@@ -4,7 +4,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
 import {validateFields, interestOptions, limits} from '../assets/validation.js';
-import {BATH_BAG_CENTS, BOOKING_LEAD_HOURS, MIN_AGE_WEEKS, ROBE_CENTS, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SESSION, SESSION_PRICE_CENTS, applyRobeCutoff, babyAgeMessage, bookingIsClosed, mountRobeAddon, previewTotal, robeIsClosed, robeNote, sessionDateLabel, sessionPriceLabel, sessionPriceLine, sessionPriceNote, sessionPriceOffer, sessionStatus, sessionTimeLabel} from '../assets/booking.js';
+import {BATH_BAG_CENTS, BOOKING_LEAD_HOURS, MIN_AGE_WEEKS, ROBE_CENTS, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SESSION, SESSION_PRICE_CENTS, applyRobeCutoff, babyAgeMessage, bookingIsClosed, mountRobeAddon, previewTotal, robeIsClosed, robeNote, sessionDateLabel, sessionPriceLabel, sessionPriceLine, sessionPriceOffer, sessionStatus, sessionTimeLabel} from '../assets/booking.js';
 const approved = {
   '/': {
     title: 'Lys Rose Baby Spa · Fort Lauderdale',
@@ -197,8 +197,11 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('.card-mock'), null);
   assert.equal(book.querySelector('.booking-pay').getAttribute('type'), 'button');
   assert.equal(book.querySelector('.booking-price').textContent, sessionPriceLine());
+  assert.equal(book.querySelector('.price-note'), null);
   assert.equal(html.includes('$280'), false);
-  assert.equal(book.querySelector('.price-note').textContent, sessionPriceNote());
+  assert.equal(html.includes('per mom and baby'), false);
+  assert.equal(html.includes('Taxes may apply to add-ons.'), false);
+  assert.equal((html.match(/Taxes may apply to enhancements\./g) || []).length, 4);
   const bookSource = await readFile(new URL('../book/index.html', import.meta.url), 'utf8');
   assert.equal(bookSource.includes('SESSION_PRICE'), true);
   assert.equal(bookSource.includes('28500'), false);
@@ -378,6 +381,8 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
     const text = await readFile(new URL(page.file, root), 'utf8');
     assert.equal(text.includes('$'), false, page.path);
     assert.equal(text.toLowerCase().includes('square'), false, page.path);
+    assert.equal(text.includes('per mom and baby'), false, page.path);
+    assert.equal(text.includes('Taxes may apply'), false, page.path);
   }
   assert.equal(book.querySelector('#baby-dob').getAttribute('type'), 'date');
   assert.equal(book.querySelector('#baby-dob').hasAttribute('required'), true);

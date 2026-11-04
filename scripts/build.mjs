@@ -2,7 +2,7 @@ import {cp,mkdir,rm,readFile,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
-import {sessionPriceLabel,sessionPriceLine,sessionPriceOffer} from '../assets/booking.js';
+import {applyDraftCopy,sessionPriceLabel,sessionPriceLine,sessionPriceOffer} from '../assets/booking.js';
 const root=new URL('../',import.meta.url);
 const output=new URL('_site/',root);
 const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -100,6 +100,7 @@ function applySessionPrice(document) {
 for(const page of pages) {
   const {document}=parseHTML(await readFile(new URL(page.file,root),'utf8'));
   applySessionPrice(document);
+  applyDraftCopy(document);
   for(const [selector,html] of sharedComponents) {
     const target=document.querySelector(selector); if(target) target.outerHTML=html;
   }

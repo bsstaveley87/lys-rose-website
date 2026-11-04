@@ -89,7 +89,7 @@
 <label class="field" for="parent-email"><span class="field-label" id="parent-email-label">Email</span><input class="input" id="parent-email" name="email" type="email" autocomplete="email" required maxlength="254" aria-labelledby="parent-email-label"/></label>
 <label class="field" for="parent-phone"><span class="field-label" id="parent-phone-label">Phone</span><input class="input" id="parent-phone" name="phone" type="tel" autocomplete="tel" required maxlength="30" aria-labelledby="parent-phone-label"/></label>
 <label class="field" for="baby-name"><span class="field-label" id="baby-name-label">Baby's name</span><input class="input" id="baby-name" name="babyName" type="text" required maxlength="100" aria-labelledby="baby-name-label"/></label>
-<label class="field" for="baby-dob"><span class="field-label" id="baby-dob-label">Baby's date of birth</span><input class="input" id="baby-dob" name="babyDob" type="date" required aria-labelledby="baby-dob-label" aria-describedby="baby-dob-hint baby-dob-error"/><span class="field-hint" id="baby-dob-hint">For babies at least 4 weeks old and under 12 months.</span><span class="field-error" id="baby-dob-error" hidden></span></label>
+<label class="field" for="baby-dob"><span class="field-label" id="baby-dob-label">Baby's date of birth</span><input class="input" id="baby-dob" name="babyDob" type="date" required autocomplete="bday" aria-labelledby="baby-dob-label" aria-describedby="baby-dob-hint baby-dob-error"/><span class="field-hint" id="baby-dob-hint">For babies from 4 weeks to 12 months old on the day of the session.</span><span class="field-error" id="baby-dob-error" hidden></span></label>
 <fieldset class="booking-choice" id="bath-choice">
 <legend>Choose your bath</legend>
 <label class="choice-row"><input type="radio" name="bath" value="floral-milk-soak" required/> Floral Milk Soak</label>
@@ -106,6 +106,8 @@
 <label class="choice-row"><input type="checkbox" name="confirmReady" value="age" required aria-describedby="booking-confirm-error"/><span>My baby is at least 4 weeks old, has no breaks in the skin, the umbilical cord stump has fallen off and healed, and any circumcision site is fully healed.</span></label>
 <label class="choice-row"><input type="checkbox" name="confirmReady" value="pediatrician" required aria-describedby="booking-confirm-error"/><span>I've talked with my pediatrician about the products and activities used in the session, and I know I can skip any part at any time.</span></label>
 <label class="choice-row"><input type="checkbox" name="confirmReady" value="price" required aria-describedby="booking-confirm-error"/><span>I understand there's no refund or discount for skipping any part of the session.</span></label>
+<!-- DRAFT wording pending CFO. The sentence is HEALTH_ACKNOWLEDGEMENT in assets/booking.js. -->
+<label class="choice-row"><input type="checkbox" name="confirmReady" value="health" required aria-describedby="booking-confirm-error"/><span><span class="placeholder-mark">Draft</span> <span data-health-ack></span></span></label>
 <span class="field-error" id="booking-confirm-error" hidden></span>
 </div>
 <fieldset class="booking-choice">
@@ -124,6 +126,10 @@
 <div class="checkout-preview" id="booking-checkout">
 <p class="checkout-label">Online pay at checkout is a preview only. No card details are collected.</p>
 <p class="refund-policy" id="refund-policy">Refunds: full refund up to 7 days before your session, 50% up to 48 hours before, and no refunds within 48 hours of your session.</p>
+<!-- DRAFT wording pending CFO. The sentence is HEALTH_TURNED_AWAY_POLICY in assets/booking.js. -->
+<p class="refund-policy" id="health-policy"><span class="placeholder-mark">Draft</span> <span data-health-policy></span></p>
+<label class="choice-row"><input type="checkbox" name="healthPolicy" value="yes" required aria-describedby="health-policy-error"/><span>I understand the health and reschedule policy.</span></label>
+<p class="field-error" id="health-policy-error" hidden></p>
 <p class="field-error" id="checkout-error" hidden></p>
 <button class="submit-button booking-pay" type="button" disabled>Reserve and pay</button>
 </div>

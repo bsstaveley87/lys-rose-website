@@ -37,7 +37,8 @@ function form(overrides = {}) {
     babyDob: '2026-09-01',
     bath: 'floral-milk-soak',
     creme: 'signature',
-    confirmReady: ['age', 'pediatrician', 'price'],
+    confirmReady: ['age', 'pediatrician', 'price', 'health'],
+    healthPolicy: true,
     ...overrides,
   };
 }
@@ -160,9 +161,16 @@ test('closed session, age, robe cutoff, and hidden extras never open checkout', 
   const unannounced = await handleCheckoutRequest(checkoutRequest(form()), env(), fetchImpl);
   assert.equal(unannounced.status, 409);
   assert.match((await unannounced.json()).fields.session, /not open/);
-  const young = validateBooking(form({babyDob: '2026-10-02'}), {session, now: new Date(2026, 9, 29)});
+  const young = validateBooking(form({babyDob: '2026-11-09'}), {session, now: new Date(2026, 9, 29)});
   assert.equal(young.ok, false);
   assert.match(young.errors.babyDob, /4 weeks/);
+  const oldEnoughOnSession = validateBooking(form({babyDob: '2026-11-08'}), {session, now: new Date(2026, 10, 1)});
+  assert.equal(oldEnoughOnSession.ok, true);
+  const tooOld = validateBooking(form({babyDob: '2025-12-05'}), {session, now: openNow});
+  assert.equal(tooOld.ok, false);
+  assert.match(tooOld.errors.babyDob, /12 months/);
+  const birthday = validateBooking(form({babyDob: '2025-12-06'}), {session, now: openNow});
+  assert.equal(birthday.ok, true);
   const robePrices = {
     ...PRICES,
     robe: {amount: 4500, taxable: true},
@@ -207,7 +215,7 @@ test('webhook verifies the signature, counts a seat once, and flags late or extr
     sessionDate: '2026-12-06',
     email: 'parent@example.com',
     total: SESSION_PRICE_CENTS,
-    booking: {babyName: 'Lily', email: 'parent@example.com'},
+    booking: {babyName: 'Lily', email: 'parent@example.com', babyDob: '2026-09-01', healthAcknowledgedAt: '2026-11-01T00:00:00.000Z'},
   }));
   const event = {
     type: 'payment.updated',
@@ -227,6 +235,8 @@ test('webhook verifies the signature, counts a seat once, and flags late or extr
   assert.equal(await store.get('seats:2026-12-06'), '1');
   const booking = JSON.parse(await store.get('booking:pay_1'));
   assert.equal(booking.babyName, 'Lily');
+  assert.equal(booking.babyDob, '2026-09-01');
+  assert.equal(booking.healthAcknowledgedAt, '2026-11-01T00:00:00.000Z');
   assert.equal(booking.status, 'confirmed');
   const again = await handleWebhookRequest(new Request(url, {method: 'POST', headers: {'x-square-hmacsha256-signature': signature}, body}), env(store));
   assert.equal((await again.json()).duplicate, true);
@@ -426,6 +436,39 @@ test('a stored order is not replaced by a different booking', async () => {
   const repeat = await handleCheckoutRequest(checkoutRequest(form({babyName: 'Lily'})), env(store), fetchImpl, openNow, session);
   assert.equal(repeat.status, 200);
   assert.equal(JSON.parse(await store.get('order:ord_same')).booking.babyName, 'Lily');
+});
+
+test('birth date and health acknowledgements are required, recorded, and kept', async () => {
+  const source = await readFile(new URL('../worker/src/checkout.ts', import.meta.url), 'utf8');
+  assert.equal(source.includes('expirationTtl'), false);
+  const noHealth = validateBooking(form({confirmReady: ['age', 'pediatrician', 'price']}), {session, now: openNow});
+  assert.equal(noHealth.ok, false);
+  assert.match(noHealth.errors.confirmReady, /confirm/);
+  const noPolicy = validateBooking(form({healthPolicy: false}), {session, now: openNow});
+  assert.equal(noPolicy.ok, false);
+  assert.match(noPolicy.errors.healthPolicy, /health and reschedule policy/);
+  const checked = validateBooking(form({healthAcknowledgedAt: '1999-01-01T00:00:00.000Z'}), {session, now: openNow});
+  assert.equal(checked.ok, true);
+  assert.equal(checked.booking.babyDob, '2026-09-01');
+  assert.equal(checked.booking.healthAcknowledgedAt, openNow.toISOString());
+  assert.equal(checked.booking.healthPolicyAcknowledgedAt, openNow.toISOString());
+  const order = buildOrder(checked.booking, PRICES, session);
+  assert.match(order.note, /Baby date of birth: 2026-09-01/);
+  const payload = squareOrderPayload(order);
+  assert.equal(payload.metadata.baby_date_of_birth, '2026-09-01');
+  const store = memoryStore();
+  let captured;
+  const response = await handleCheckoutRequest(checkoutRequest(form()), env(store), async (_url, init) => {
+    captured = JSON.parse(init.body);
+    return new Response(JSON.stringify({payment_link: {url: 'https://sandbox.square.link/u/preview', order_id: 'ord_dob'}}), {status: 200});
+  }, openNow, session);
+  assert.equal(response.status, 200);
+  assert.equal(captured.payment_note.includes('Baby date of birth: 2026-09-01'), true);
+  assert.equal(captured.order.metadata.baby_date_of_birth, '2026-09-01');
+  const saved = JSON.parse(await store.get('order:ord_dob'));
+  assert.equal(saved.booking.babyDob, '2026-09-01');
+  assert.equal(saved.booking.healthAcknowledgedAt, openNow.toISOString());
+  assert.equal(saved.booking.healthPolicyAcknowledgedAt, openNow.toISOString());
 });
 
 test('retries once when Square rejects the buyer email', async () => {

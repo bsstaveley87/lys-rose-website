@@ -1,7 +1,19 @@
 // Preview-only booking rules. Seat count stays in this module and is never written into the page.
 export const SEATS_PER_SESSION = 12;
-// Christy's rule: babies are at least 4 weeks old. The form also requires three confirmations before booking.
-export const MIN_AGE_WEEKS = 4;
+/** Youngest age, in days, on the session date. 28 days is 4 weeks. */
+export const MIN_BABY_AGE_DAYS = 28;
+/**
+ * Oldest age, in calendar months, on the session date.
+ * A baby who turns this many months on the session date is allowed.
+ * Null means no upper limit.
+ */
+export const MAX_BABY_AGE_MONTHS = 12;
+export const AGE_TOO_YOUNG_MESSAGE = 'Your baby needs to be at least 4 weeks old on the day of the session.';
+export const AGE_TOO_OLD_MESSAGE = 'Our sessions are designed for babies from 4 weeks to 12 months old.';
+/** DRAFT wording pending CFO. Edit this sentence to replace the health acknowledgement. */
+export const HEALTH_ACKNOWLEDGEMENT = "My baby has been fever-free for at least 24 hours before the session, and has not vomited, had diarrhea or had green nasal mucus in the last 24 hours. If any of these happen, I'll stay home and contact Lys Rose to reschedule.";
+/** DRAFT wording pending CFO. Edit this sentence to replace the turned-away policy. */
+export const HEALTH_TURNED_AWAY_POLICY = "If your baby can't take part on the day for health reasons, we'll offer a free reschedule within 60 days or store credit. Cash refunds aren't available in this case.";
 /** Pilot session price in cents. This is the only session price to edit. */
 export const SESSION_PRICE_CENTS = 28500;
 
@@ -258,42 +270,63 @@ function utcDay(year, monthIndex, day) {
   return Date.UTC(year, monthIndex, day);
 }
 
-function shiftMonths(utcMs, months) {
+function addCalendarMonths(utcMs, months) {
   const date = new Date(utcMs);
   const day = date.getUTCDate();
-  date.setUTCDate(1);
-  date.setUTCMonth(date.getUTCMonth() + months);
-  const last = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate();
-  date.setUTCDate(Math.min(day, last));
-  return date.getTime();
+  const stamp = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1));
+  const last = new Date(Date.UTC(stamp.getUTCFullYear(), stamp.getUTCMonth() + 1, 0)).getUTCDate();
+  stamp.setUTCDate(Math.min(day, last));
+  return stamp.getTime();
 }
 
-export function babyAgeMessage(iso, today = new Date()) {
-  if (!iso) return "Please enter your baby's date of birth.";
+function parseIsoDay(iso) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-  if (!match) return 'Please enter a valid date of birth.';
+  if (!match) return null;
   const year = Number(match[1]);
   const month = Number(match[2]);
   const day = Number(match[3]);
   const check = new Date(Date.UTC(year, month - 1, day));
-  if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) {
-    return 'Please enter a valid date of birth.';
+  if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) return null;
+  return utcDay(year, month - 1, day);
+}
+
+function dayStamp(value) {
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return null;
+    return utcDay(value.getFullYear(), value.getMonth(), value.getDate());
   }
-  const dob = utcDay(year, month - 1, day);
-  const now = utcDay(today.getFullYear(), today.getMonth(), today.getDate());
-  if (dob > now) return 'Please enter a date of birth in the past.';
-  const youngest = now - MIN_AGE_WEEKS * 7 * DAY_MS;
-  const oldest = shiftMonths(now, -12);
-  if (dob > youngest) return 'Please enter a date of birth at least 4 weeks ago.';
-  if (dob <= oldest) return 'Sessions are for babies under 12 months.';
+  if (typeof value === 'string') return parseIsoDay(value);
+  return null;
+}
+
+/** Age is measured on the session date. A Date argument is that calendar day. */
+export function babyAgeMessage(iso, sessionDate = new Date()) {
+  if (!iso) return "Please enter your baby's date of birth.";
+  const dob = parseIsoDay(iso);
+  if (dob == null) return 'Please enter a valid date of birth.';
+  const sessionDay = dayStamp(sessionDate);
+  if (sessionDay == null) return 'Please enter a valid date of birth.';
+  const ageDays = Math.round((sessionDay - dob) / DAY_MS);
+  if (MIN_BABY_AGE_DAYS != null && ageDays < MIN_BABY_AGE_DAYS) return AGE_TOO_YOUNG_MESSAGE;
+  if (MAX_BABY_AGE_MONTHS != null && sessionDay > addCalendarMonths(dob, MAX_BABY_AGE_MONTHS)) return AGE_TOO_OLD_MESSAGE;
   return '';
+}
+
+export function applyDraftCopy(documentRef) {
+  const ack = documentRef.querySelector('[data-health-ack]');
+  if (ack) ack.textContent = HEALTH_ACKNOWLEDGEMENT;
+  for (const node of documentRef.querySelectorAll('[data-health-policy]')) node.textContent = HEALTH_TURNED_AWAY_POLICY;
 }
 
 const previewReserved = [0, SEATS_PER_SESSION];
 
+function ageReference() {
+  return SESSION?.date || new Date();
+}
+
 function showAge(input) {
-  const message = babyAgeMessage(input.value);
-  const error = document.getElementById('baby-dob-error');
+  const message = babyAgeMessage(input.value, ageReference());
+  const error = (input.ownerDocument || document).getElementById('baby-dob-error');
   input.setAttribute('aria-invalid', message ? 'true' : 'false');
   if (!error) return;
   error.textContent = message;
@@ -382,7 +415,21 @@ function bookingPayload(form) {
     allergyDetails: form.querySelector('[name=allergyDetails]')?.value || '',
     waiver: Boolean(form.querySelector('[name=waiver]')?.checked),
     photoRelease: Boolean(form.querySelector('[name=photoRelease]')?.checked),
+    healthPolicy: Boolean(form.querySelector('[name=healthPolicy]')?.checked),
   };
+}
+
+function showPolicy(form) {
+  const box = form.querySelector('[name=healthPolicy]');
+  const error = form.querySelector('#health-policy-error');
+  const missing = Boolean(box && !box.checked);
+  const message = missing ? 'Please confirm the health and reschedule policy.' : '';
+  if (box) box.setAttribute('aria-invalid', missing ? 'true' : 'false');
+  if (error) {
+    error.textContent = message;
+    error.hidden = !message;
+  }
+  return missing;
 }
 
 async function startCheckout(form) {
@@ -403,7 +450,12 @@ async function startCheckout(form) {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok || !data.url) {
-      show(data.error || 'Checkout is not available yet.');
+      const fields = data.fields || {};
+      const dob = form.querySelector('#baby-dob');
+      if (dob && fields.babyDob) showAge(dob);
+      if (fields.confirmReady) showConfirmations(form);
+      if (fields.healthPolicy) showPolicy(form);
+      show(fields.babyDob || fields.healthPolicy || fields.confirmReady || data.error || 'Checkout is not available yet.');
       if (button) button.disabled = !checkoutReady();
       return;
     }
@@ -443,12 +495,9 @@ export function initBooking(documentRef = document) {
   });
   const dob = form.querySelector('#baby-dob');
   if (dob) {
-    const today = new Date();
-    const oldest = new Date(shiftMonths(utcDay(today.getFullYear(), today.getMonth(), today.getDate()), -12) + DAY_MS);
-    const youngest = new Date(utcDay(today.getFullYear(), today.getMonth(), today.getDate()) - MIN_AGE_WEEKS * 7 * DAY_MS);
-    const iso = date => date.toISOString().slice(0, 10);
-    dob.min = iso(oldest);
-    dob.max = iso(youngest);
+    const sessionDay = dayStamp(ageReference());
+    if (sessionDay != null && MIN_BABY_AGE_DAYS != null) dob.max = new Date(sessionDay - MIN_BABY_AGE_DAYS * DAY_MS).toISOString().slice(0, 10);
+    if (sessionDay != null && MAX_BABY_AGE_MONTHS != null) dob.min = new Date(addCalendarMonths(sessionDay, -MAX_BABY_AGE_MONTHS)).toISOString().slice(0, 10);
     dob.addEventListener('change', () => showAge(dob));
     dob.addEventListener('blur', () => showAge(dob));
   }
@@ -459,9 +508,11 @@ export function initBooking(documentRef = document) {
   form.addEventListener('change', event => {
     if (event.target?.name === 'allergies') syncAllergies(form);
     if (event.target?.name === 'confirmReady' && missingConfirmations(form).length === 0) showConfirmations(form);
+    if (event.target?.name === 'healthPolicy' && event.target.checked) showPolicy(form);
   });
   form.addEventListener('focusout', event => {
     if (event.target?.name === 'confirmReady' && !event.target.checked) showConfirmations(form);
+    if (event.target?.name === 'healthPolicy' && !event.target.checked) showPolicy(form);
   });
   form.addEventListener('submit', event => {
     event.preventDefault();
@@ -473,14 +524,16 @@ export function initBooking(documentRef = document) {
       }
       return;
     }
-    const ageMessage = dob ? babyAgeMessage(dob.value) : '';
+    const ageMessage = dob ? babyAgeMessage(dob.value, ageReference()) : '';
     if (dob) showAge(dob);
     const bathOk = showBath(form);
     const missing = showConfirmations(form);
-    if (ageMessage || !bathOk || missing.length) {
+    const policyMissing = showPolicy(form);
+    if (ageMessage || !bathOk || missing.length || policyMissing) {
       if (ageMessage && dob) dob.focus();
       else if (!bathOk) form.querySelector('[name=bath]')?.focus();
-      else missing[0]?.focus();
+      else if (missing.length) missing[0]?.focus();
+      else form.querySelector('[name=healthPolicy]')?.focus();
       return;
     }
     if (checkoutReady()) startCheckout(form);
@@ -488,6 +541,7 @@ export function initBooking(documentRef = document) {
   form.querySelector('.booking-pay')?.addEventListener('click', () => {
     if (typeof form.requestSubmit === 'function') form.requestSubmit();
   });
+  applyDraftCopy(documentRef);
   syncAllergies(form);
   syncBath(form);
   syncTotal(documentRef);

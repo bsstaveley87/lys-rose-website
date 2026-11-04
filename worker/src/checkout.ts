@@ -39,7 +39,7 @@ export const SQUARE_VERSION = '2025-10-16';
 
 const CREME = new Set(['signature', 'gentle', 'premium']);
 const BATH = new Set(['floral-milk-soak', 'byob']);
-const CONFIRMATIONS = ['age', 'pediatrician', 'price'];
+const CONFIRMATIONS = ['age', 'pediatrician', 'price', 'health'];
 const BODY_LIMIT = 16384;
 
 export type PriceTable = typeof PRICES;
@@ -78,6 +78,8 @@ export type BookingRecord = {
   secondAdult: boolean;
   allergies: string;
   allergyDetails: string;
+  healthAcknowledgedAt: string;
+  healthPolicyAcknowledgedAt: string;
 };
 export type PreparedOrder = {
   lines: LineItem[];
@@ -141,7 +143,7 @@ export function validateBooking(raw: unknown, options: {session?: SessionConfig;
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Please enter a valid email address.';
   if (!phone || phone.replace(/\D/g, '').length < 7) errors.phone = 'Please enter a phone number.';
   if (!babyName) errors.babyName = "Please enter your baby's name.";
-  const age = babyAgeMessage(babyDob, now);
+  const age = babyAgeMessage(babyDob, session.date);
   if (age) errors.babyDob = age;
   const bath = text(data.bath, 40);
   if (!BATH.has(bath)) errors.bath = 'Please choose a bath.';
@@ -149,6 +151,8 @@ export function validateBooking(raw: unknown, options: {session?: SessionConfig;
   if (!CREME.has(creme)) errors.creme = 'Please choose a crème.';
   const confirmed = confirmationSet(data);
   if (CONFIRMATIONS.some(item => !confirmed.has(item))) errors.confirmReady = 'Please confirm each item before reserving.';
+  const healthPolicy = flag(data.healthPolicy);
+  if (!healthPolicy) errors.healthPolicy = 'Please confirm the health and reschedule policy.';
   const robe = flag(data.robe);
   const bathBag = flag(data.bathBag);
   const secondAdult = flag(data.secondAdult);
@@ -163,6 +167,8 @@ export function validateBooking(raw: unknown, options: {session?: SessionConfig;
     robeName: robe ? text(data.robeName, 40) : '',
     allergies: text(data.allergies, 40),
     allergyDetails: text(data.allergyDetails, 500),
+    healthAcknowledgedAt: now.toISOString(),
+    healthPolicyAcknowledgedAt: now.toISOString(),
   };
   return {ok: true as const, booking, session};
 }
@@ -212,7 +218,7 @@ export function salesTaxCents(lines: Array<Pick<LineItem, 'taxable' | 'base_pric
 
 export function buildOrder(booking: BookingRecord, prices: PriceTable = PRICES, session: SessionConfig = null): PreparedOrder {
   const lines: LineItem[] = [orderLine(sessionLineName(session), prices.session.amount ?? 0, prices.session.taxable, bathVariationName(booking.bath, booking.petals))];
-  const notes = [`Bath: ${booking.bath === 'byob' ? 'BYOB (bring your own breastmilk)' : 'Floral Milk Soak'}`];
+  const notes = [`Baby date of birth: ${booking.babyDob}`, `Bath: ${booking.bath === 'byob' ? 'BYOB (bring your own breastmilk)' : 'Floral Milk Soak'}`];
   if (booking.bath === 'byob') notes.push(`Complimentary rose petals: ${booking.petals ? 'yes' : 'no'}`);
   const creme = prices.creme[booking.creme as keyof typeof prices.creme];
   if (creme.amount != null && creme.amount > 0) {
@@ -248,12 +254,15 @@ export function squareOrderPayload(order: PreparedOrder, env: CheckoutEnv = {}) 
     location_id?: string;
     reference_id: string;
     line_items: typeof line_items;
+    metadata: Record<string, string>;
     pricing_options: {auto_apply_taxes: false};
     taxes?: Array<{uid: string; name: string; type: 'ADDITIVE'; percentage: string; scope: 'LINE_ITEM'}>;
   } = {
     location_id: env.SQUARE_LOCATION_ID,
     reference_id: order.referenceId,
     line_items,
+    // Kept for analysis. The booking record is not expired after the session.
+    metadata: {baby_date_of_birth: order.booking.babyDob},
     pricing_options: {auto_apply_taxes: false},
   };
   if (line_items.some(line => line.applied_taxes)) {
@@ -371,8 +380,15 @@ function paymentLinkBody(order: PreparedOrder, env: CheckoutEnv, key: string, bu
   return body;
 }
 
+function bookingIdentity(booking: BookingRecord) {
+  const copy = {...booking};
+  delete copy.healthAcknowledgedAt;
+  delete copy.healthPolicyAcknowledgedAt;
+  return copy;
+}
+
 function pendingIdentity(record: {booking?: BookingRecord; sessionDate?: string; note?: string}) {
-  return JSON.stringify([record.booking || null, record.sessionDate || '', record.note || '']);
+  return JSON.stringify([record.booking ? bookingIdentity(record.booking) : null, record.sessionDate || '', record.note || '']);
 }
 
 async function postPaymentLink(order: PreparedOrder, env: CheckoutEnv, fetchImpl: typeof fetch, key: string, buyerEmail?: string) {
@@ -393,7 +409,7 @@ export async function openCheckout(order: PreparedOrder, buyerEmail: string, env
   }
   const taxCents = taxesEnabled(env) ? salesTaxCents(order.lines) : 0;
   // referenceId is cut to 40 characters, so twins, same-month siblings, and a petal change shared one key and Square rejected the reuse.
-  const key = await idempotencyKey(JSON.stringify([order.booking, order.sessionDate, order.lines, order.note, taxCents]));
+  const key = await idempotencyKey(JSON.stringify([bookingIdentity(order.booking), order.sessionDate, order.lines, order.note, taxCents]));
   let response: Response;
   try {
     response = await postPaymentLink(order, env, fetchImpl, key, buyerEmail);
@@ -402,7 +418,7 @@ export async function openCheckout(order: PreparedOrder, buyerEmail: string, env
   }
   if (!response.ok && (await response.clone().text()).includes('INVALID_EMAIL_ADDRESS')) {
     // The retry omits the email, so it is a different request and needs its own key.
-    const retryKey = await idempotencyKey(JSON.stringify([order.booking, order.sessionDate, order.lines, order.note, taxCents, 'no-email']));
+    const retryKey = await idempotencyKey(JSON.stringify([bookingIdentity(order.booking), order.sessionDate, order.lines, order.note, taxCents, 'no-email']));
     try {
       response = await postPaymentLink(order, env, fetchImpl, retryKey);
     } catch {
@@ -422,6 +438,7 @@ export async function openCheckout(order: PreparedOrder, buyerEmail: string, env
     email: buyerEmail,
     closesAt: Number.isFinite(order.closesAt) ? order.closesAt : null,
     sessionDate: order.sessionDate,
+    // Birth date and acknowledgement times stay on this record for analysis. Do not add a time limit.
     booking: order.booking,
   };
   const existingRaw = await env.BOOKINGS.get(`order:${orderId}`);

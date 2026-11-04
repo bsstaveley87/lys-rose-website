@@ -219,6 +219,9 @@ body.menu-open { overflow:hidden; }
 .enhancement-title { font-weight:500; }
 .addon-preview input[type=checkbox],
 .face-ack input[type=checkbox] { appearance:none; -webkit-appearance:none; width:20px; height:20px; min-width:20px; margin-top:2px; border:1.5px solid #504B49; border-radius:2px; background:#FFFBFA; opacity:1; cursor:not-allowed; }
+.addon-preview input[type=checkbox]:not(:disabled) { cursor:pointer; }
+.addon-preview input[type=checkbox]:checked { background:#504B49; box-shadow:inset 0 0 0 2px #FFFBFA; }
+.addon-heading { display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
 .addon-preview .addon-copy { display:flex; flex-direction:column; gap:4px; }
 .face-cream { margin:0; padding:0; border:0; min-inline-size:0; display:flex; flex-direction:column; gap:2px; }
 .face-cream legend { display:block; margin:0 0 8px; padding:0; }

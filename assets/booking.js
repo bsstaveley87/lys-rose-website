@@ -4,6 +4,7 @@ export const SEATS_PER_SESSION = 12;
 export const MIN_AGE_WEEKS = 4;
 export const SESSION_PRICE_CENTS = 28000;
 export const FACE_CREAM_CENTS = {signature: 0, gentle: 500, premium: 1000};
+export const BATH_BAG_CENTS = 1800;
 export const ROBE_LEAD_DAYS = 14;
 export const BOOKING_LEAD_HOURS = 48;
 const ROBE_TIME_ZONE = 'America/New_York';
@@ -24,8 +25,8 @@ export function sessionStatus(reserved) {
   return Number(reserved) < SEATS_PER_SESSION ? 'Available' : 'Fully booked';
 }
 
-export function previewTotal(addonSelected, faceCream = 'signature') {
-  const extra = FACE_CREAM_CENTS[faceCream] || 0;
+export function previewTotal(addonSelected, faceCream = 'signature', bathBag = false) {
+  const extra = (FACE_CREAM_CENTS[faceCream] || 0) + (bathBag ? BATH_BAG_CENTS : 0);
   const cents = SESSION_PRICE_CENTS + extra;
   return {
     cents,
@@ -315,6 +316,7 @@ function applyPayButton(documentRef) {
 }
 
 function bookingPayload(form) {
+  const page = form.ownerDocument || form;
   return {
     parentName: form.querySelector('[name=parentName]')?.value || '',
     email: form.querySelector('[name=email]')?.value || '',
@@ -323,11 +325,11 @@ function bookingPayload(form) {
     babyDob: form.querySelector('[name=babyDob]')?.value || '',
     bath: form.querySelector('[name=bath]:checked')?.value || '',
     rosePetals: Boolean(form.querySelector('[name=rosePetals]')?.checked),
-    creme: form.querySelector('[name=faceCream]:checked')?.value || '',
+    creme: page.querySelector('[name=faceCream]:checked')?.value || '',
     confirmReady: [...form.querySelectorAll('[name=confirmReady]:checked')].map(box => box.value),
-    robe: Boolean(form.querySelector('[name=robe]')?.checked),
-    robeName: form.querySelector('[name=robeName]')?.value || '',
-    bathBag: Boolean(form.querySelector('[name=bathBag]')?.checked),
+    robe: Boolean(page.querySelector('[name=robe]')?.checked),
+    robeName: page.querySelector('[name=robeName]')?.value || '',
+    bathBag: Boolean(page.querySelector('[name=bathBag]')?.checked),
     secondAdult: Boolean(form.querySelector('[name=secondAdult]')?.checked),
     allergies: form.querySelector('[name=allergies]:checked')?.value || '',
     allergyDetails: form.querySelector('[name=allergyDetails]')?.value || '',
@@ -367,7 +369,8 @@ async function startCheckout(form) {
 
 function syncTotal(documentRef = document) {
   const choice = documentRef.querySelector('[name=faceCream]:checked')?.value || 'signature';
-  const total = previewTotal(false, choice);
+  const bathBag = Boolean(documentRef.querySelector('[name=bathBag]')?.checked);
+  const total = previewTotal(false, choice, bathBag);
   const amount = documentRef.getElementById('booking-total');
   if (amount) amount.textContent = total.label;
   const line = documentRef.getElementById('face-cream-charge');
@@ -402,7 +405,7 @@ export function initBooking(documentRef = document) {
     dob.addEventListener('blur', () => showAge(dob));
   }
   documentRef.addEventListener('change', event => {
-    if (event.target?.name === 'faceCream') syncTotal(documentRef);
+    if (event.target?.name === 'faceCream' || event.target?.name === 'bathBag') syncTotal(documentRef);
     if (event.target?.name === 'bath') syncBath(form);
   });
   form.addEventListener('change', event => {

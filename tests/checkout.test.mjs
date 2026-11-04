@@ -77,7 +77,7 @@ test('price table ignores tampered client prices and keeps taxes off', async () 
   assert.deepEqual(PRICES.bath.byob, {amount: 0, taxable: false});
   assert.deepEqual(PRICES.petals, {amount: 0, taxable: false});
   assert.deepEqual(PRICES.robe, {amount: null, taxable: true});
-  assert.deepEqual(PRICES.bathBag, {amount: null, taxable: true});
+  assert.deepEqual(PRICES.bathBag, {amount: 1800, taxable: true});
   assert.deepEqual(PRICES.secondAdult, {amount: null, taxable: false});
   assert.equal(SESSION, null);
   assert.equal(CHECKOUT_CONFIGURED, false);
@@ -170,6 +170,13 @@ test('closed session, age, robe cutoff, and hidden extras never open checkout', 
   const hidden = validateBooking(form({robe: true, bathBag: true, secondAdult: true}), {session, now: openNow});
   assert.equal(hidden.ok, false);
   assert.match(hidden.errors.robe, /isn't available/);
+  assert.equal(hidden.errors.bathBag, undefined);
+  assert.match(hidden.errors.secondAdult, /isn't available/);
+  const bagOnly = validateBooking(form({bathBag: true}), {session, now: openNow});
+  assert.equal(bagOnly.ok, true);
+  const bagLine = buildOrder(bagOnly.booking, PRICES, session).lines.find(line => line.name === 'Floral Milk Bath Bag');
+  assert.equal(bagLine.base_price_money.amount, 1800);
+  assert.equal(bagLine.taxable, true);
   const openRobe = validateBooking(form({robe: true, robeName: 'Lily', bathBag: true, secondAdult: true}), {session, now: openNow, prices: robePrices});
   assert.equal(openRobe.ok, true);
   const priced = buildOrder(openRobe.booking, robePrices, session);
@@ -325,8 +332,10 @@ test('catalog plan prices the session variations together and skips null extras'
   });
   const objects = catalogUpsertObjects();
   assert.equal(objects.some(item => item.item_data.name === 'Embroidered keepsake robe'), false);
-  assert.equal(objects.some(item => item.item_data.name === 'Floral Milk Bath Bag'), false);
   assert.equal(objects.some(item => item.item_data.name === 'Second adult'), false);
+  const bathBagItem = objects.find(item => item.item_data.name === 'Floral Milk Bath Bag');
+  assert.equal(bathBagItem.item_data.is_taxable, true);
+  assert.equal(bathBagItem.item_data.variations[0].item_variation_data.price_money.amount, 1800);
   const sessionObject = objects.find(item => item.id === '#lys-rose-session');
   assert.equal(sessionObject.item_data.is_taxable, false);
   assert.equal(sessionObject.item_data.variations[0].item_variation_data.price_money.amount, 28000);
@@ -362,6 +371,8 @@ test('catalog script stays a dry run unless credentials are present', async () =
   assert.equal(flags['Premium face crème'], true);
   assert.equal(flags['Embroidered keepsake robe'], true);
   assert.equal(flags['Floral Milk Bath Bag'], true);
+  assert.equal(printed.items.find(item => item.name === 'Floral Milk Bath Bag').amount, 1800);
+  assert.equal(printed.items.find(item => item.name === 'Floral Milk Bath Bag').create, true);
   assert.equal(flags['Complimentary rose petals'], false);
   assert.equal(flags['Second adult'], false);
   assert.deepEqual(printed.items[0].variations.map(item => item.taxable), [false, false]);

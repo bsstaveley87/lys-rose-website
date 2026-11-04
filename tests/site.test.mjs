@@ -4,7 +4,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
 import {validateFields, interestOptions, limits} from '../assets/validation.js';
-import {BOOKING_LEAD_HOURS, MIN_AGE_WEEKS, SEATS_PER_SESSION, SESSION, babyAgeMessage, bookingIsClosed, previewTotal, robeIsClosed, robeNote, sessionDateLabel, sessionStatus, sessionTimeLabel} from '../assets/booking.js';
+import {BATH_BAG_CENTS, BOOKING_LEAD_HOURS, MIN_AGE_WEEKS, SEATS_PER_SESSION, SESSION, babyAgeMessage, bookingIsClosed, previewTotal, robeIsClosed, robeNote, sessionDateLabel, sessionStatus, sessionTimeLabel} from '../assets/booking.js';
 const approved = {
   '/': {
     title: 'Lys Rose Baby Spa · Fort Lauderdale',
@@ -204,7 +204,12 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(html.includes('$TBD'), false);
   assert.equal(html.includes('Take-home robe set'), false);
   assert.equal(html.includes('gift bag'), false);
-  assert.equal((html.match(/available to add/g) || []).length, 2);
+  assert.equal((html.match(/available to add/g) || []).length, 1);
+  assert.equal(book.querySelector('#bath-bag-addon .addon-price').textContent, '$18');
+  assert.equal(book.querySelector('#bath-bag-addon [name=bathBag]').hasAttribute('disabled'), false);
+  assert.equal(html.includes('$24'), false);
+  assert.equal(BATH_BAG_CENTS, 1800);
+  assert.deepEqual(previewTotal(false, 'signature', true), {cents: 29800, label: '$298', addonPending: false});
   assert.ok(html.includes('Le Petit Plus (The Little Extras)'));
   assert.equal(book.querySelector('.extras-when').textContent, "All extras are chosen when you book and can't be added later.");
   assert.equal(html.includes('Premium enhancements'), false);

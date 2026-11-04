@@ -27,7 +27,7 @@ export const PRICES = {
   },
   // Embroidered or plain: both taxable.
   robe: {amount: null, taxable: true} as PriceLine,
-  bathBag: {amount: null, taxable: true} as PriceLine,
+  bathBag: {amount: 1800, taxable: true},
   // [CPA] may be taxable as food; pending CPA check
   secondAdult: {amount: null, taxable: false} as PriceLine,
 };

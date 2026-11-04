@@ -58,7 +58,7 @@ Set these in the Cloudflare worker environment, never in git:
 
 `POST /api/square-webhook` checks Square's HMAC-SHA256 signature over the notification URL plus the raw body. Seats are counted only after `payment.updated` or `payment.created` with status `COMPLETED`. The payment link itself is not expired through the API. The order record stores the 48-hour cutoff, and the webhook compares `payment.created_at` with that cutoff. A late payment, a session that is already at the seat cap, or a payment with no matching order is stored as `refund-flagged` and does not take a seat. This preview does not call Square's refund API; someone refunds those payments in the Square dashboard. The seat cap is not written into any page.
 
-`scripts/square-catalog.mjs` prints the catalog it would create and does not call Square. `--apply` creates the items only when both credentials are present. It refuses `SQUARE_ENV=production` unless `CONFIRM_PRODUCTION=yes`. Robe, bath bag, and second adult are listed and skipped while their prices are null. The redirect URL is `https://lysrosebabyspa.com/book/thank-you/`. Do not run `cf deploy` for this preview.
+`scripts/square-catalog.mjs` prints the catalog it would create and does not call Square. `--apply` creates the items only when both credentials are present. It refuses `SQUARE_ENV=production` unless `CONFIRM_PRODUCTION=yes`. The Floral Milk Bath Bag is $18 and taxable. The robe and second adult are listed and skipped while their prices are null. The redirect URL is `https://lysrosebabyspa.com/book/thank-you/`. Do not run `cf deploy` for this preview.
 
 ## Go-live checklist
 
@@ -66,7 +66,7 @@ Set these in the Cloudflare worker environment, never in git:
 - Create a real `BOOKINGS` KV namespace and set its id in `worker/cloudflare.config.ts`.
 - Set the production `SQUARE_ACCESS_TOKEN` and `SQUARE_LOCATION_ID`, with `SQUARE_ENV=production`.
 - Leave `TAX_ENABLED` false until the Florida registration is approved.
-- Set the robe, bath bag, and second-adult prices.
+- Set the robe and second-adult prices. The Floral Milk Bath Bag is already $18.
 - Set `SESSION` and `CHECKOUT_CONFIGURED`.
 - Check the CORS origins in `worker/src/checkout.ts` (`lysrosebabyspa.com`, `www.lysrosebabyspa.com`, and `bsstaveley87.github.io`).
 - Refunds are handled manually in the Square dashboard.

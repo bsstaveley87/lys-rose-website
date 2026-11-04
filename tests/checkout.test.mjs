@@ -6,6 +6,9 @@ import {CHECKOUT_CONFIGURED, CHECKOUT_URL, SESSION} from '../assets/booking.js';
 import {
   PRICES,
   TAX_ENABLED,
+  TAX_RATE,
+  salesTaxCents,
+  squareOrderPayload,
   taxesEnabled,
   buildOrder,
   catalogPlan,
@@ -59,17 +62,22 @@ function checkoutRequest(body, origin = 'https://lysrosebabyspa.com') {
 
 test('price table ignores tampered client prices and keeps taxes off', async () => {
   assert.equal(TAX_ENABLED, false);
+  assert.equal(TAX_RATE, 0.07);
   assert.equal(taxesEnabled(), false);
   assert.equal(taxesEnabled({TAX_ENABLED: 'false'}), false);
   assert.equal(taxesEnabled({TAX_ENABLED: 'true'}), true);
-  assert.equal(PRICES.session, 28000);
-  assert.deepEqual(PRICES.creme, {signature: 0, gentle: 500, premium: 1000});
-  assert.equal(PRICES.bath['floral-milk-soak'], 0);
-  assert.equal(PRICES.bath.byob, 0);
-  assert.equal(PRICES.petals, 0);
-  assert.equal(PRICES.robe, null);
-  assert.equal(PRICES.bathBag, null);
-  assert.equal(PRICES.secondAdult, null);
+  assert.deepEqual(PRICES.session, {amount: 28000, taxable: false});
+  assert.deepEqual(PRICES.creme, {
+    signature: {amount: 0, taxable: false},
+    gentle: {amount: 500, taxable: true},
+    premium: {amount: 1000, taxable: true},
+  });
+  assert.deepEqual(PRICES.bath['floral-milk-soak'], {amount: 0, taxable: false});
+  assert.deepEqual(PRICES.bath.byob, {amount: 0, taxable: false});
+  assert.deepEqual(PRICES.petals, {amount: 0, taxable: false});
+  assert.deepEqual(PRICES.robe, {amount: null, taxable: true});
+  assert.deepEqual(PRICES.bathBag, {amount: null, taxable: true});
+  assert.deepEqual(PRICES.secondAdult, {amount: null, taxable: false});
   assert.equal(SESSION, null);
   assert.equal(CHECKOUT_CONFIGURED, false);
   assert.equal(CHECKOUT_URL.includes('square'), false);
@@ -115,6 +123,10 @@ test('price table ignores tampered client prices and keeps taxes off', async () 
   assert.deepEqual(await response.json(), {url: 'https://sandbox.square.link/u/preview'});
   assert.equal(captured.url, 'https://connect.squareupsandbox.com/v2/online-checkout/payment-links');
   assert.equal(captured.body.order.pricing_options.auto_apply_taxes, false);
+  assert.equal(captured.body.order.taxes, undefined);
+  assert.equal(captured.body.order.line_items.every(line => line.applied_taxes == null), true);
+  assert.equal(JSON.stringify(captured.body).toLowerCase().includes('processing fee'), false);
+  assert.equal(JSON.stringify(captured.body).toLowerCase().includes('surcharge'), false);
   assert.equal(captured.body.pre_populated_data.buyer_email, 'parent@example.com');
   assert.equal(captured.body.checkout_options.redirect_url, 'https://lysrosebabyspa.com/book/thank-you/');
   assert.equal(captured.body.order.line_items[0].base_price_money.amount, 28000);
@@ -136,7 +148,12 @@ test('closed session, age, robe cutoff, and hidden extras never open checkout', 
   const young = validateBooking(form({babyDob: '2026-10-02'}), {session, now: new Date(2026, 9, 29)});
   assert.equal(young.ok, false);
   assert.match(young.errors.babyDob, /4 weeks/);
-  const robePrices = {...PRICES, robe: 4500, bathBag: 1800, secondAdult: 4000};
+  const robePrices = {
+    ...PRICES,
+    robe: {amount: 4500, taxable: true},
+    bathBag: {amount: 1800, taxable: true},
+    secondAdult: {amount: 4000, taxable: false},
+  };
   const robeClosed = validateBooking(form({robe: true, robeName: 'Lily'}), {session, now: new Date('2026-11-23T05:00:00Z'), prices: robePrices});
   assert.equal(robeClosed.ok, false);
   assert.match(robeClosed.errors.robe, /closed/);
@@ -216,13 +233,84 @@ test('webhook verifies the signature, counts a seat once, and flags late or extr
   assert.equal(await routeCheckout(new Request('https://forms.lysrosebabyspa.com/waitlist', {method: 'POST'})), null);
 });
 
+test('tax at 7% is added only to taxable lines, and only when enabled', async () => {
+  const prices = {
+    ...PRICES,
+    robe: {amount: 4500, taxable: true},
+    bathBag: {amount: 1800, taxable: true},
+    secondAdult: {amount: 4000, taxable: false},
+  };
+  const booking = validateBooking(form({
+    creme: 'gentle',
+    robe: true,
+    bathBag: true,
+    secondAdult: true,
+    total: 1,
+    price: 1,
+  }), {session, now: openNow, prices});
+  assert.equal(booking.ok, true);
+  const order = buildOrder(booking.booking, prices, session);
+  const taxable = 500 + 4500 + 1800;
+  assert.equal(salesTaxCents(order.lines), Math.round((taxable * 7) / 100));
+  assert.equal(salesTaxCents(order.lines), 476);
+  assert.deepEqual(order.lines.map(line => [line.name, line.base_price_money.amount, line.taxable]), [
+    ['Lys Rose session', 28000, false],
+    ['Gentle face crème', 500, true],
+    ['Embroidered keepsake robe', 4500, true],
+    ['Floral Milk Bath Bag', 1800, true],
+    ['Second adult', 4000, false],
+  ]);
+  const taxed = squareOrderPayload(order, {TAX_ENABLED: 'true', SQUARE_LOCATION_ID: 'LOC123'});
+  assert.equal(taxed.pricing_options.auto_apply_taxes, false);
+  assert.deepEqual(taxed.taxes, [{uid: 'sales-tax', name: 'Sales tax', type: 'ADDITIVE', percentage: '7.0', scope: 'LINE_ITEM'}]);
+  assert.deepEqual(taxed.line_items.filter(line => line.applied_taxes).map(line => line.name), [
+    'Gentle face crème',
+    'Embroidered keepsake robe',
+    'Floral Milk Bath Bag',
+  ]);
+  assert.equal(taxed.line_items.find(line => line.name === 'Lys Rose session').applied_taxes, undefined);
+  assert.equal(taxed.line_items.find(line => line.name === 'Second adult').applied_taxes, undefined);
+  assert.equal(JSON.stringify(taxed).toLowerCase().includes('processing fee'), false);
+  const untaxed = squareOrderPayload(order, {TAX_ENABLED: 'false'});
+  assert.equal(untaxed.taxes, undefined);
+  assert.equal(untaxed.line_items.every(line => line.applied_taxes == null), true);
+  assert.equal(salesTaxCents(buildOrder(validateBooking(form(), {session, now: openNow}).booking).lines), 0);
+
+  let captured;
+  const response = await handleCheckoutRequest(checkoutRequest(form({creme: 'premium', amount: 50})), {...env(), TAX_ENABLED: 'true'}, async (_url, init) => {
+    captured = JSON.parse(init.body);
+    return new Response(JSON.stringify({payment_link: {url: 'https://sandbox.square.link/u/preview', order_id: 'ord_tax'}}), {status: 200});
+  }, openNow, session);
+  assert.equal(response.status, 200);
+  assert.equal(captured.order.taxes[0].percentage, '7.0');
+  assert.deepEqual(captured.order.line_items.map(line => [line.name, line.base_price_money.amount, Boolean(line.applied_taxes)]), [
+    ['Lys Rose session', 28000, false],
+    ['Premium face crème', 1000, true],
+  ]);
+  assert.equal(salesTaxCents([{taxable: false, base_price_money: {amount: 28000}}, {taxable: true, base_price_money: {amount: 1000}}]), 70);
+  assert.equal(captured.order.line_items.some(line => /fee|surcharge/i.test(line.name)), false);
+});
+
 test('catalog plan prices the session variations together and skips null extras', () => {
   const plan = catalogPlan();
   assert.equal(plan.taxes, 'off');
+  assert.equal(plan.rate, 0.07);
   const sessionItem = plan.items[0];
   assert.equal(sessionItem.name, 'Lys Rose Session');
+  assert.equal(sessionItem.taxable, false);
   assert.deepEqual(sessionItem.variations.map(item => item.amount), [28000, 28000]);
+  assert.deepEqual(sessionItem.variations.map(item => item.taxable), [false, false]);
   assert.deepEqual(sessionItem.variations.map(item => item.name), ['Floral Milk Soak', 'BYOB']);
+  const flags = Object.fromEntries(plan.items.filter(item => !item.variations).map(item => [item.name, item.taxable]));
+  assert.deepEqual(flags, {
+    'Signature face crème': false,
+    'Gentle face crème': true,
+    'Premium face crème': true,
+    'Embroidered keepsake robe': true,
+    'Floral Milk Bath Bag': true,
+    'Complimentary rose petals': false,
+    'Second adult': false,
+  });
   const objects = catalogUpsertObjects();
   assert.equal(objects.some(item => item.item_data.name === 'Embroidered keepsake robe'), false);
   assert.equal(objects.some(item => item.item_data.name === 'Floral Milk Bath Bag'), false);
@@ -249,6 +337,17 @@ test('catalog script stays a dry run unless credentials are present', async () =
   assert.match(dry.stdout, /Floral Milk Bath Bag/);
   assert.match(dry.stdout, /Second adult/);
   assert.match(dry.stdout, /"mode": "dry-run"/);
+  const printed = JSON.parse(dry.stdout.slice(0, dry.stdout.indexOf('\nDry run')));
+  const flags = Object.fromEntries(printed.items.map(item => [item.name, item.taxable]));
+  assert.equal(flags['Lys Rose Session'], false);
+  assert.equal(flags['Signature face crème'], false);
+  assert.equal(flags['Gentle face crème'], true);
+  assert.equal(flags['Premium face crème'], true);
+  assert.equal(flags['Embroidered keepsake robe'], true);
+  assert.equal(flags['Floral Milk Bath Bag'], true);
+  assert.equal(flags['Complimentary rose petals'], false);
+  assert.equal(flags['Second adult'], false);
+  assert.deepEqual(printed.items[0].variations.map(item => item.taxable), [false, false]);
   assert.match(dry.stdout, /No Square request was sent/);
   const apply = spawnSync(process.execPath, ['scripts/square-catalog.mjs', '--apply'], {encoding: 'utf8', env: {...process.env, SQUARE_ACCESS_TOKEN: '', SQUARE_LOCATION_ID: '', SQUARE_ENV: 'sandbox'}});
   assert.notEqual(apply.status, 0);

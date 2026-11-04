@@ -5,9 +5,9 @@ const envName = process.env.SQUARE_ENV === 'production' ? 'production' : 'sandbo
 const plan = catalogPlan();
 console.log(JSON.stringify({
   mode: apply ? 'apply' : 'dry-run',
-  taxes: TAX_ENABLED ? 'on' : 'off',
+  tax: {enabled: TAX_ENABLED, rate: '7%', note: 'A tax line is sent only when enabled, and only for items marked taxable. No processing fee is added.'},
   host: squareApiHost(envName),
-  note: 'Prices come from the worker price table. A null amount is not created. No card data is involved.',
+  note: 'Prices come from the worker price table. A null amount is not created. Each item includes its taxable flag. No card data is involved.',
   items: plan.items,
 }, null, 2));
 

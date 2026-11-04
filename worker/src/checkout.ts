@@ -2,18 +2,34 @@ import {SESSION, SEATS_PER_SESSION, babyAgeMessage, bookingClosesAt, bookingIsCl
 
 /**
  * Server-side prices in cents. The browser total is only a preview.
- * A null add-on price means that extra is hidden and cannot be purchased.
+ * A null amount means that extra is hidden and cannot be purchased.
  * Taxes stay off until Florida registration is done and the CFO turns the flag on.
+ * TAX_RATE is Florida's 6% state sales tax plus the 1% Broward surtax.
+ * There is no surcharge and no processing fee.
  */
 export const TAX_ENABLED = false;
+export const TAX_RATE = 0.07;
+const SALES_TAX_UID = 'sales-tax';
+
+type PriceLine = {amount: number | null; taxable: boolean};
+
 export const PRICES = {
-  session: 28000,
-  bath: {'floral-milk-soak': 0, byob: 0},
-  petals: 0,
-  creme: {signature: 0, gentle: 500, premium: 1000},
-  robe: null as number | null,
-  bathBag: null as number | null,
-  secondAdult: null as number | null,
+  session: {amount: 28000, taxable: false},
+  bath: {
+    'floral-milk-soak': {amount: 0, taxable: false},
+    byob: {amount: 0, taxable: false},
+  },
+  petals: {amount: 0, taxable: false},
+  creme: {
+    signature: {amount: 0, taxable: false},
+    gentle: {amount: 500, taxable: true},
+    premium: {amount: 1000, taxable: true},
+  },
+  // Embroidered or plain: both taxable.
+  robe: {amount: null, taxable: true} as PriceLine,
+  bathBag: {amount: null, taxable: true} as PriceLine,
+  // [CPA] may be taxable as food; pending CPA check
+  secondAdult: {amount: null, taxable: false} as PriceLine,
 };
 
 export const REDIRECT_PATH = '/book/thank-you/';
@@ -39,7 +55,7 @@ export type CheckoutEnv = {
   BOOKINGS?: BookingStore;
 };
 type SessionConfig = {date?: string; start?: string; end?: string} | null;
-export type LineItem = {name: string; quantity: string; base_price_money: {amount: number; currency: 'USD'}};
+export type LineItem = {name: string; quantity: string; base_price_money: {amount: number; currency: 'USD'}; taxable: boolean};
 export type BookingRecord = {
   parentName: string;
   email: string;
@@ -130,10 +146,10 @@ export function validateBooking(raw: unknown, options: {session?: SessionConfig;
   const bathBag = flag(data.bathBag);
   const secondAdult = flag(data.secondAdult);
   const petals = bath === 'byob' && flag(data.petals ?? data.rosePetals);
-  if (robe && prices.robe == null) errors.robe = "That extra isn't available.";
-  if (robe && prices.robe != null && robeIsClosed(session.date, now)) errors.robe = 'The embroidered robe option has closed for this session.';
-  if (bathBag && prices.bathBag == null) errors.bathBag = "That extra isn't available.";
-  if (secondAdult && prices.secondAdult == null) errors.secondAdult = "That extra isn't available.";
+  if (robe && prices.robe.amount == null) errors.robe = "That extra isn't available.";
+  if (robe && prices.robe.amount != null && robeIsClosed(session.date, now)) errors.robe = 'The embroidered robe option has closed for this session.';
+  if (bathBag && prices.bathBag.amount == null) errors.bathBag = "That extra isn't available.";
+  if (secondAdult && prices.secondAdult.amount == null) errors.secondAdult = "That extra isn't available.";
   if (Object.keys(errors).length) return {ok: false as const, status: 400, errors};
   const booking: BookingRecord = {
     parentName, email, phone, babyName, babyDob, bath, creme, petals, robe, bathBag, secondAdult,
@@ -144,52 +160,97 @@ export function validateBooking(raw: unknown, options: {session?: SessionConfig;
   return {ok: true as const, booking, session};
 }
 
+function orderLine(name: string, amount: number, taxable: boolean): LineItem {
+  return {name, quantity: '1', base_price_money: {amount, currency: 'USD'}, taxable};
+}
+
+/** One rounding of 7% on the taxable merchandise. Non-taxable lines are left out. */
+export function salesTaxCents(lines: Array<Pick<LineItem, 'taxable' | 'base_price_money'>>) {
+  const taxable = lines.reduce((sum, line) => sum + (line.taxable ? line.base_price_money.amount : 0), 0);
+  return Math.round((taxable * 7) / 100);
+}
+
 export function buildOrder(booking: BookingRecord, prices: PriceTable = PRICES, session: SessionConfig = null): PreparedOrder {
-  const lines: LineItem[] = [{
-    name: 'Lys Rose session',
-    quantity: '1',
-    base_price_money: {amount: prices.session, currency: 'USD'},
-  }];
+  const lines: LineItem[] = [orderLine('Lys Rose session', prices.session.amount ?? 0, prices.session.taxable)];
   const notes = [`Bath: ${booking.bath === 'byob' ? 'BYOB (bring your own breastmilk)' : 'Floral Milk Soak'}`];
   if (booking.bath === 'byob') notes.push(`Complimentary rose petals: ${booking.petals ? 'yes' : 'no'}`);
-  const cremePrice = prices.creme[booking.creme as keyof typeof prices.creme] ?? 0;
-  if (cremePrice > 0) {
-    lines.push({
-      name: booking.creme === 'premium' ? 'Premium face crème' : 'Gentle face crème',
-      quantity: '1',
-      base_price_money: {amount: cremePrice, currency: 'USD'},
-    });
+  const creme = prices.creme[booking.creme as keyof typeof prices.creme];
+  if (creme.amount != null && creme.amount > 0) {
+    lines.push(orderLine(booking.creme === 'premium' ? 'Premium face crème' : 'Gentle face crème', creme.amount, creme.taxable));
   } else notes.push('Crème: Signature');
-  const extras: Array<[boolean, number | null, string]> = [
+  const extras: Array<[boolean, PriceLine, string]> = [
     [booking.robe, prices.robe, booking.robeName ? `Embroidered keepsake robe (${booking.robeName})` : 'Embroidered keepsake robe'],
     [booking.bathBag, prices.bathBag, 'Floral Milk Bath Bag'],
     [booking.secondAdult, prices.secondAdult, 'Second adult'],
   ];
-  for (const [selected, amount, name] of extras) {
-    if (selected && amount != null) lines.push({name, quantity: '1', base_price_money: {amount, currency: 'USD'}});
+  for (const [selected, price, name] of extras) {
+    if (selected && price.amount != null) lines.push(orderLine(name, price.amount, price.taxable));
   }
   const total = lines.reduce((sum, line) => sum + line.base_price_money.amount, 0);
   const referenceId = `lys-${booking.email}-${booking.babyDob}-${booking.bath}-${booking.creme}`.replace(/[^a-z0-9-]/gi, '').slice(0, 40);
   return {lines, note: notes.join('. '), total, referenceId, closesAt: bookingClosesAt(session), sessionDate: session?.date || '', booking};
 }
 
-type CatalogVariation = {name: string; amount: number; currency: 'USD'};
-type CatalogItem = {name: string; create: boolean; amount?: number | null; currency?: 'USD'; variations?: CatalogVariation[]};
+export function squareOrderPayload(order: PreparedOrder, env: CheckoutEnv = {}) {
+  const chargeTax = taxesEnabled(env);
+  const line_items = order.lines.map(line => {
+    const item: {name: string; quantity: string; base_price_money: LineItem['base_price_money']; applied_taxes?: Array<{tax_uid: string}>} = {
+      name: line.name,
+      quantity: line.quantity,
+      base_price_money: line.base_price_money,
+    };
+    if (chargeTax && line.taxable && line.base_price_money.amount > 0) item.applied_taxes = [{tax_uid: SALES_TAX_UID}];
+    return item;
+  });
+  const payload: {
+    location_id?: string;
+    reference_id: string;
+    line_items: typeof line_items;
+    pricing_options: {auto_apply_taxes: false};
+    taxes?: Array<{uid: string; name: string; type: 'ADDITIVE'; percentage: string; scope: 'LINE_ITEM'}>;
+  } = {
+    location_id: env.SQUARE_LOCATION_ID,
+    reference_id: order.referenceId,
+    line_items,
+    pricing_options: {auto_apply_taxes: false},
+  };
+  if (line_items.some(line => line.applied_taxes)) {
+    payload.taxes = [{
+      uid: SALES_TAX_UID,
+      name: 'Sales tax',
+      type: 'ADDITIVE',
+      percentage: '7.0',
+      scope: 'LINE_ITEM',
+    }];
+  }
+  return payload;
+}
+
+type CatalogVariation = {name: string; amount: number; currency: 'USD'; taxable: boolean};
+type CatalogItem = {name: string; create: boolean; taxable: boolean; amount?: number | null; currency?: 'USD'; variations?: CatalogVariation[]};
 
 export function catalogPlan(prices: PriceTable = PRICES) {
-  const item = (name: string, amount: number | null): CatalogItem => ({name, amount, currency: 'USD', create: amount != null});
+  const item = (name: string, price: PriceLine): CatalogItem => ({
+    name,
+    amount: price.amount,
+    taxable: price.taxable,
+    currency: 'USD',
+    create: price.amount != null,
+  });
   return {
-    taxes: taxesEnabled() ? 'auto' : 'off',
+    taxes: taxesEnabled() ? '7%' : 'off',
+    rate: TAX_RATE,
     items: [
-      {name: 'Lys Rose Session', create: true, variations: [
-        {name: 'Floral Milk Soak', amount: prices.session, currency: 'USD' as const},
-        {name: 'BYOB', amount: prices.session, currency: 'USD' as const},
+      {name: 'Lys Rose Session', create: true, taxable: prices.session.taxable, variations: [
+        {name: 'Floral Milk Soak', amount: prices.session.amount ?? 0, currency: 'USD' as const, taxable: false},
+        {name: 'BYOB', amount: prices.session.amount ?? 0, currency: 'USD' as const, taxable: false},
       ]},
       item('Signature face crème', prices.creme.signature),
       item('Gentle face crème', prices.creme.gentle),
       item('Premium face crème', prices.creme.premium),
       item('Embroidered keepsake robe', prices.robe),
       item('Floral Milk Bath Bag', prices.bathBag),
+      {...item('Complimentary rose petals', prices.petals), create: false},
       item('Second adult', prices.secondAdult),
     ] as CatalogItem[],
   };
@@ -253,7 +314,8 @@ export async function openCheckout(order: PreparedOrder, buyerEmail: string, env
   if (!env.SQUARE_ACCESS_TOKEN || !env.SQUARE_LOCATION_ID || !env.BOOKINGS) {
     return {ok: false as const, status: 503, error: 'Checkout is not available yet.'};
   }
-  const key = await idempotencyKey(`${order.referenceId}:${order.total}:${buyerEmail}`);
+  const taxCents = taxesEnabled(env) ? salesTaxCents(order.lines) : 0;
+  const key = await idempotencyKey(`${order.referenceId}:${order.total}:${taxCents}:${buyerEmail}`);
   let response: Response;
   try {
     response = await fetchImpl(`${squareApiHost(env.SQUARE_ENV)}/v2/online-checkout/payment-links`, {
@@ -265,12 +327,7 @@ export async function openCheckout(order: PreparedOrder, buyerEmail: string, env
       },
       body: JSON.stringify({
         idempotency_key: key,
-        order: {
-          location_id: env.SQUARE_LOCATION_ID,
-          reference_id: order.referenceId,
-          line_items: order.lines,
-          pricing_options: {auto_apply_taxes: taxesEnabled(env)},
-        },
+        order: squareOrderPayload(order, env),
         checkout_options: {redirect_url: `${CHECKOUT_ORIGIN}${REDIRECT_PATH}`},
         pre_populated_data: {buyer_email: buyerEmail},
         payment_note: order.note,
@@ -287,6 +344,7 @@ export async function openCheckout(order: PreparedOrder, buyerEmail: string, env
   await env.BOOKINGS.put(`order:${orderId}`, JSON.stringify({
     referenceId: order.referenceId,
     total: order.total,
+    taxCents,
     note: order.note,
     email: buyerEmail,
     closesAt: Number.isFinite(order.closesAt) ? order.closesAt : null,

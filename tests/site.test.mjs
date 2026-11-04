@@ -198,7 +198,9 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('.booking-pay').getAttribute('type'), 'button');
   assert.equal(book.querySelector('.booking-price').textContent, '$280 per parent & baby');
   assert.equal(html.includes('$280 per mom'), false);
-  assert.ok(html.includes('This is the price before taxes and processing fees.'));
+  assert.equal(book.querySelector('.price-note').textContent, 'Sales tax applies to take-home add-ons.');
+  assert.equal(html.includes('This is the price before taxes and processing fees.'), false);
+  assert.equal(html.toLowerCase().includes('processing fee'), false);
   assert.equal(html.includes('$TBD'), false);
   assert.equal(html.includes('Take-home robe set'), false);
   assert.equal(html.includes('gift bag'), false);

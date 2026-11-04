@@ -73,8 +73,8 @@
 <p class="enhancement-note extras-when">All extras are chosen when you book and can't be added later.</p>
 <ul class="addon-preview">
 <li class="face-cream-choice"><fieldset class="face-cream"><legend class="enhancement-title">Face crème</legend><label class="face-cream-option"><input type="radio" name="faceCream" value="signature" form="booking-form" checked required/><span>Signature face crème</span><span class="face-cream-price">Included</span></label><label class="face-cream-option"><input type="radio" name="faceCream" value="gentle" form="booking-form"/><span>Gentle face crème</span><span class="face-cream-price">+$5</span></label><label class="face-cream-option"><input type="radio" name="faceCream" value="premium" form="booking-form"/><span>Premium face crème</span><span class="face-cream-price">+$10</span></label></fieldset></li>
-<li id="robe-addon" data-robe-addon><label><input type="checkbox" id="robe-option" disabled=""/><span class="addon-copy"><span class="enhancement-title">Embroidered Keepsake Robe</span><span class="enhancement-note">A personalized embroidered robe for your baby.</span><span class="enhancement-note robe-note" id="robe-note">Personalized robes are embroidered to order, so this option closes 14 days before your session.</span><span class="available-to-add">available to add</span></span></label></li>
-<li><label><input type="checkbox" disabled=""/><span class="addon-copy"><span class="enhancement-title">The Lys Rose Floral Milk Bath Bag</span><span class="enhancement-note">Our floral milk bath to take home: 4–6 uses in a baby bath, or 1–2 in a shallow full-size tub.</span><span class="enhancement-note">Ingredients: organic coconut milk powder, organic colloidal oatmeal, organic dried rose petals.</span><span class="available-to-add">available to add</span></span></label></li>
+<li id="robe-addon" data-robe-addon><label><input type="checkbox" id="robe-option" name="robe" disabled=""/><span class="addon-copy"><span class="enhancement-title">Embroidered Keepsake Robe</span><span class="enhancement-note">A personalized embroidered robe for your baby.</span><span class="enhancement-note robe-note" id="robe-note">Personalized robes are embroidered to order, so this option closes 14 days before your session.</span><span class="available-to-add">available to add</span></span></label></li>
+<li><label><input type="checkbox" name="bathBag" disabled=""/><span class="addon-copy"><span class="enhancement-title">The Lys Rose Floral Milk Bath Bag</span><span class="enhancement-note">Our floral milk bath to take home: 4–6 uses in a baby bath, or 1–2 in a shallow full-size tub.</span><span class="enhancement-note">Ingredients: organic coconut milk powder, organic colloidal oatmeal, organic dried rose petals.</span><span class="available-to-add">available to add</span></span></label></li>
 </ul>
 </div>
 </div>
@@ -91,7 +91,7 @@
 <label class="field" for="baby-dob"><span class="field-label" id="baby-dob-label">Baby's date of birth</span><input class="input" id="baby-dob" name="babyDob" type="date" required aria-labelledby="baby-dob-label" aria-describedby="baby-dob-hint baby-dob-error"/><span class="field-hint" id="baby-dob-hint">For babies at least 4 weeks old and under 12 months.</span><span class="field-error" id="baby-dob-error" hidden></span></label>
 <fieldset class="booking-choice" id="bath-choice">
 <legend>Choose your bath</legend>
-<label class="choice-row"><input type="radio" name="bath" value="floral" required/> Floral Milk Soak</label>
+<label class="choice-row"><input type="radio" name="bath" value="floral-milk-soak" required/> Floral Milk Soak</label>
 <label class="choice-row"><input type="radio" name="bath" value="byob" required/> BYOB (Bring your own breastmilk)</label>
 <div id="byob-details" hidden>
 <p class="field-hint" id="byob-note">Bring your breastmilk cold or frozen. We can warm it for you on site. You'll add it to your baby's bath yourself.</p>
@@ -122,6 +122,8 @@
 </div>
 <div class="checkout-preview" id="booking-checkout">
 <p class="checkout-label">Online pay at checkout is a preview only. No card details are collected.</p>
+<p class="refund-policy" id="refund-policy">Refunds: full refund up to 7 days before your session, 50% up to 48 hours before, and no refunds within 48 hours of your session.</p>
+<p class="field-error" id="checkout-error" hidden></p>
 <button class="submit-button booking-pay" type="button" disabled>Reserve and pay</button>
 </div>
 </form>

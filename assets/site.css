@@ -194,6 +194,7 @@ body.menu-open { overflow:hidden; }
 .fees-note { margin:0; padding-top:8px; border-top:1px solid var(--champagne); font:500 15px/1.45 Jost,sans-serif; }
 .checkout-preview { display:flex; flex-direction:column; gap:16px; padding:20px; border:1px dashed var(--champagne); background:var(--stone); }
 .checkout-label { margin:0; font:500 15px/1.45 Jost,sans-serif; letter-spacing:.04em; }
+.refund-policy { margin:0; font:400 15px/1.5 Jost,sans-serif; letter-spacing:0; text-transform:none; }
 .card-mock { display:grid; grid-template-columns:1.4fr .8fr .6fr; gap:8px; }
 .card-mock span { display:flex; align-items:center; min-height:54px; padding:0 12px; background:var(--cream); border:1px solid var(--input-border); color:var(--champagne); font-size:14px; letter-spacing:.04em; }
 .disclaimer { font-size:14px; line-height:1.5; }

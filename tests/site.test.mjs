@@ -78,7 +78,7 @@ test('FAQ schema mirrors every visible answer exactly',async()=>{
   const doc=await documentFor('faq/index.html');
   const data=JSON.parse(doc.querySelector('script[type="application/ld+json"]').textContent);
   const faq=data['@graph'].find(x=>x['@type']==='FAQPage');
-  const items=[...doc.querySelectorAll('.faq-item')];assert.equal(faq.mainEntity.length,items.length);assert.equal(items.length,15);
+  const items=[...doc.querySelectorAll('.faq-item')];assert.equal(faq.mainEntity.length,items.length);assert.equal(items.length,16);
   items.forEach((item,i)=>assert.equal(faq.mainEntity[i].acceptedAnswer.text,[...item.querySelectorAll('p')].map(p=>p.textContent.trim()).join('\n\n')));
 });
 test('form controls have explicit accessible labels and inline error associations',async()=>{
@@ -244,6 +244,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(bookingIsClosed(announced, new Date('2026-12-04T15:29:00Z')), false);
   assert.equal(bookingIsClosed(announced, new Date('2026-12-04T15:30:00Z')), true);
   assert.equal(book.querySelector('#bath-choice legend').textContent, 'Choose your bath');
+  assert.deepEqual([...book.querySelectorAll('[name=bath]')].map(input => input.value), ['floral-milk-soak', 'byob']);
   assert.deepEqual([...book.querySelectorAll('[name=bath]')].map(input => input.closest('label').textContent.trim()), ['Floral Milk Soak', 'BYOB (Bring your own breastmilk)']);
   for (const input of book.querySelectorAll('[name=bath]')) assert.equal(input.hasAttribute('required'), true);
   assert.equal(book.querySelector('#byob-details').hasAttribute('hidden'), true);
@@ -308,6 +309,8 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   const faqDoc = await documentFor('faq/index.html');
   const faqData = JSON.parse(faqDoc.querySelector('script[type="application/ld+json"]').textContent);
   const faqEntities = faqData['@graph'].find(node => node['@type'] === 'FAQPage').mainEntity;
+  const refundAnswer = faqEntities.find(item => item.name === 'What is your refund policy?').acceptedAnswer.text;
+  assert.equal(refundAnswer, 'Refunds: full refund up to 7 days before your session, 50% up to 48 hours before, and no refunds within 48 hours of your session.');
   const bringAnswer = faqEntities.find(item => item.name === 'What should I bring?').acceptedAnswer.text;
   assert.equal(bringAnswer, bring);
   const includedAnswer = faqEntities.find(item => item.name === "What's included in my session?").acceptedAnswer.text;
@@ -324,8 +327,17 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('[name=photoRelease]').hasAttribute('checked'), false);
   assert.equal(book.querySelector('[name=photoRelease]').hasAttribute('required'), false);
   assert.equal(book.querySelector('.booking-pay').hasAttribute('disabled'), true);
+  assert.equal(book.querySelector('#refund-policy').textContent, 'Refunds: full refund up to 7 days before your session, 50% up to 48 hours before, and no refunds within 48 hours of your session.');
+  assert.equal(book.querySelector('#booking-checkout input'), null);
   assert.equal(html.toLowerCase().includes('stripe'), false);
   assert.equal(html.toLowerCase().includes('square'), false);
+  const thanks = await documentFor('book/thank-you/index.html');
+  assert.equal(thanks.querySelector('meta[name=robots]').content, 'noindex,nofollow');
+  assert.equal(thanks.querySelector('h1').textContent, 'Thank you');
+  assert.equal(thanks.querySelector('.booking-tagline').textContent, 'Inspired by Lily Rose. Shared with love.');
+  assert.ok(thanks.body.textContent.includes('Your booking is being confirmed. An email is coming.'));
+  assert.equal(thanks.documentElement.outerHTML.toLowerCase().includes('square'), false);
+  assert.equal(thanks.documentElement.outerHTML.includes('$'), false);
   const robots = await readFile(new URL('robots.txt', root), 'utf8');
   assert.match(robots, /Disallow: \/book\//);
   const xml = await readFile(new URL('sitemap.xml', root), 'utf8');
@@ -337,6 +349,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   for (const page of pages.filter(item => item.path !== '/book/')) {
     const text = await readFile(new URL(page.file, root), 'utf8');
     assert.equal(text.includes('$'), false, page.path);
+    assert.equal(text.toLowerCase().includes('square'), false, page.path);
   }
   assert.equal(book.querySelector('#baby-dob').getAttribute('type'), 'date');
   assert.equal(book.querySelector('#baby-dob').hasAttribute('required'), true);

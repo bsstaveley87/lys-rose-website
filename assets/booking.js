@@ -14,6 +14,9 @@ const ROBE_TIME_ZONE = 'America/New_York';
  * Example: {date:'2026-12-06', start:'10:30', end:'12:30'}
  */
 export const SESSION = null;
+/** Hosted checkout stays off until a session date is set and the worker has its secrets. */
+export const CHECKOUT_CONFIGURED = false;
+export const CHECKOUT_URL = 'https://forms.lysrosebabyspa.com/api/checkout';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -302,6 +305,66 @@ function syncAllergies(form) {
   }
 }
 
+function checkoutReady() {
+  return Boolean(SESSION?.date) && CHECKOUT_CONFIGURED && !bookingIsClosed(SESSION);
+}
+
+function applyPayButton(documentRef) {
+  const button = documentRef.querySelector('.booking-pay');
+  if (button) button.disabled = !checkoutReady();
+}
+
+function bookingPayload(form) {
+  return {
+    parentName: form.querySelector('[name=parentName]')?.value || '',
+    email: form.querySelector('[name=email]')?.value || '',
+    phone: form.querySelector('[name=phone]')?.value || '',
+    babyName: form.querySelector('[name=babyName]')?.value || '',
+    babyDob: form.querySelector('[name=babyDob]')?.value || '',
+    bath: form.querySelector('[name=bath]:checked')?.value || '',
+    rosePetals: Boolean(form.querySelector('[name=rosePetals]')?.checked),
+    creme: form.querySelector('[name=faceCream]:checked')?.value || '',
+    confirmReady: [...form.querySelectorAll('[name=confirmReady]:checked')].map(box => box.value),
+    robe: Boolean(form.querySelector('[name=robe]')?.checked),
+    robeName: form.querySelector('[name=robeName]')?.value || '',
+    bathBag: Boolean(form.querySelector('[name=bathBag]')?.checked),
+    secondAdult: Boolean(form.querySelector('[name=secondAdult]')?.checked),
+    allergies: form.querySelector('[name=allergies]:checked')?.value || '',
+    allergyDetails: form.querySelector('[name=allergyDetails]')?.value || '',
+    waiver: Boolean(form.querySelector('[name=waiver]')?.checked),
+    photoRelease: Boolean(form.querySelector('[name=photoRelease]')?.checked),
+  };
+}
+
+async function startCheckout(form) {
+  const button = form.querySelector('.booking-pay');
+  const error = form.querySelector('#checkout-error');
+  const show = message => {
+    if (!error) return;
+    error.textContent = message;
+    error.hidden = !message;
+  };
+  show('');
+  if (button) button.disabled = true;
+  try {
+    const response = await fetch(CHECKOUT_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', Accept: 'application/json'},
+      body: JSON.stringify(bookingPayload(form)),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.url) {
+      show(data.error || 'Checkout is not available yet.');
+      if (button) button.disabled = !checkoutReady();
+      return;
+    }
+    window.location.assign(data.url);
+  } catch {
+    show('Checkout is not available yet.');
+    if (button) button.disabled = !checkoutReady();
+  }
+}
+
 function syncTotal(documentRef = document) {
   const choice = documentRef.querySelector('[name=faceCream]:checked')?.value || 'signature';
   const total = previewTotal(false, choice);
@@ -367,13 +430,19 @@ export function initBooking(documentRef = document) {
       if (ageMessage && dob) dob.focus();
       else if (!bathOk) form.querySelector('[name=bath]')?.focus();
       else missing[0]?.focus();
+      return;
     }
+    if (checkoutReady()) startCheckout(form);
+  });
+  form.querySelector('.booking-pay')?.addEventListener('click', () => {
+    if (typeof form.requestSubmit === 'function') form.requestSubmit();
   });
   syncAllergies(form);
   syncBath(form);
   syncTotal(documentRef);
   applySession(documentRef);
   applyRobeCutoff(documentRef);
+  applyPayButton(documentRef);
 }
 
 if (typeof document !== 'undefined') initBooking(document);

@@ -6,6 +6,8 @@ export const SESSION_PRICE_CENTS = 28000;
 export const FACE_CREAM_CENTS = {signature: 0, gentle: 500, premium: 1000};
 export const BATH_BAG_CENTS = 1800;
 export const SECOND_ADULT_CENTS = 2500;
+/** Null hides the robe row. Set this to cents, and the server price, to offer it again. */
+export const ROBE_CENTS = null;
 export const ROBE_LEAD_DAYS = 14;
 export const BOOKING_LEAD_HOURS = 48;
 const ROBE_TIME_ZONE = 'America/New_York';
@@ -186,6 +188,19 @@ function applySession(documentRef, now = new Date()) {
   if (notice) notice.hidden = !closed;
   const form = documentRef.querySelector('#booking-form');
   if (form) form.dataset.bookingClosed = closed ? 'true' : 'false';
+}
+
+function mountRobeAddon(documentRef) {
+  if (ROBE_CENTS == null) return;
+  const list = documentRef.querySelector('#book-addons .addon-preview');
+  if (!list || list.querySelector('[data-robe-addon]')) return;
+  const item = documentRef.createElement('li');
+  item.id = 'robe-addon';
+  item.dataset.robeAddon = '';
+  item.innerHTML = `<label><input type="checkbox" id="robe-option" name="robe" value="yes" form="booking-form"/><span class="addon-copy"><span class="addon-heading"><span class="enhancement-title">Embroidered Keepsake Robe</span><span class="addon-price">+$${ROBE_CENTS / 100}</span></span><span class="enhancement-note">A personalized embroidered robe for your baby.</span><span class="enhancement-note robe-note" id="robe-note"></span></span></label>`;
+  const bathBag = list.querySelector('#bath-bag-addon');
+  if (bathBag) list.insertBefore(item, bathBag);
+  else list.appendChild(item);
 }
 
 function applyRobeCutoff(documentRef, now = new Date()) {
@@ -446,6 +461,7 @@ export function initBooking(documentRef = document) {
   syncBath(form);
   syncTotal(documentRef);
   applySession(documentRef);
+  mountRobeAddon(documentRef);
   applyRobeCutoff(documentRef);
   applyPayButton(documentRef);
 }

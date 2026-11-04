@@ -4,7 +4,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
 import {validateFields, interestOptions, limits} from '../assets/validation.js';
-import {BATH_BAG_CENTS, BOOKING_LEAD_HOURS, MIN_AGE_WEEKS, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SESSION, babyAgeMessage, bookingIsClosed, previewTotal, robeIsClosed, robeNote, sessionDateLabel, sessionStatus, sessionTimeLabel} from '../assets/booking.js';
+import {BATH_BAG_CENTS, BOOKING_LEAD_HOURS, MIN_AGE_WEEKS, ROBE_CENTS, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SESSION, babyAgeMessage, bookingIsClosed, previewTotal, robeIsClosed, robeNote, sessionDateLabel, sessionStatus, sessionTimeLabel} from '../assets/booking.js';
 const approved = {
   '/': {
     title: 'Lys Rose Baby Spa · Fort Lauderdale',
@@ -204,8 +204,11 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(html.includes('$TBD'), false);
   assert.equal(html.includes('Take-home robe set'), false);
   assert.equal(html.includes('gift bag'), false);
-  assert.equal((html.match(/available to add/g) || []).length, 1);
-  assert.equal(book.querySelector('#bath-bag-addon .addon-price').textContent, '$18');
+  assert.equal((html.match(/available to add/g) || []).length, 0);
+  assert.equal(book.querySelector('#robe-addon'), null);
+  assert.equal(html.includes('Embroidered Keepsake Robe'), false);
+  assert.equal(ROBE_CENTS, null);
+  assert.equal(book.querySelector('#bath-bag-addon .addon-price').textContent, '+$18');
   assert.equal(book.querySelector('#bath-bag-addon [name=bathBag]').hasAttribute('disabled'), false);
   assert.equal(html.includes('$24'), false);
   assert.equal(BATH_BAG_CENTS, 1800);
@@ -235,10 +238,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
     {value: 'gentle', checked: false, label: 'Gentle face crème+$5'},
     {value: 'premium', checked: false, label: 'Premium face crème+$10'},
   ]);
-  assert.ok(html.includes('Embroidered Keepsake Robe'));
-  assert.ok(html.includes('A personalized embroidered robe for your baby.'));
   const robeLine = 'Personalized robes are embroidered to order, so this option closes 14 days before your session.';
-  assert.equal(book.querySelector('#robe-note').textContent, robeLine);
   assert.equal(robeNote(''), robeLine);
   assert.equal(robeNote('2026-12-06'), 'Personalized robes are embroidered to order, so this option closes 14 days before your session (November 22 for December 6).');
   assert.equal(robeIsClosed('2026-12-06', new Date('2026-11-22T23:59:59-05:00')), false);

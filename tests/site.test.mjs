@@ -4,7 +4,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
 import {validateFields, interestOptions, limits} from '../assets/validation.js';
-import {BATH_BAG_CENTS, BOOKING_LEAD_HOURS, MIN_AGE_WEEKS, ROBE_CENTS, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SESSION, babyAgeMessage, bookingIsClosed, previewTotal, robeIsClosed, robeNote, sessionDateLabel, sessionStatus, sessionTimeLabel} from '../assets/booking.js';
+import {BATH_BAG_CENTS, BOOKING_LEAD_HOURS, MIN_AGE_WEEKS, ROBE_CENTS, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SESSION, SESSION_PRICE_CENTS, babyAgeMessage, bookingIsClosed, previewTotal, robeIsClosed, robeNote, sessionDateLabel, sessionPriceLabel, sessionPriceLine, sessionPriceNote, sessionPriceOffer, sessionStatus, sessionTimeLabel} from '../assets/booking.js';
 const approved = {
   '/': {
     title: 'Lys Rose Baby Spa · Fort Lauderdale',
@@ -173,7 +173,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(event.location.address.streetAddress, undefined);
   assert.equal(event.location.name, undefined);
   assert.equal(event.offers['@type'], 'Offer');
-  assert.equal(event.offers.price, '285.00');
+  assert.equal(event.offers.price, sessionPriceOffer());
   assert.equal(event.offers.priceCurrency, 'USD');
   assert.equal(Object.hasOwn(event, 'remainingAttendeeCapacity'), false);
   assert.equal(Object.hasOwn(event.offers, 'eligibleQuantity'), false);
@@ -196,9 +196,13 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('#booking-checkout input'), null);
   assert.equal(book.querySelector('.card-mock'), null);
   assert.equal(book.querySelector('.booking-pay').getAttribute('type'), 'button');
-  assert.equal(book.querySelector('.booking-price').textContent, '$285 per parent & baby');
+  assert.equal(book.querySelector('.booking-price').textContent, sessionPriceLine());
   assert.equal(html.includes('$280'), false);
-  assert.equal(book.querySelector('.price-note').textContent, '$285 per mom and baby. Taxes may apply to add-ons.');
+  assert.equal(book.querySelector('.price-note').textContent, sessionPriceNote());
+  const bookSource = await readFile(new URL('../book/index.html', import.meta.url), 'utf8');
+  assert.equal(bookSource.includes('SESSION_PRICE'), true);
+  assert.equal(bookSource.includes('28500'), false);
+  assert.equal(bookSource.includes('$285'), false);
   assert.equal(html.includes('This is the price before taxes and processing fees.'), false);
   assert.equal(html.toLowerCase().includes('processing fee'), false);
   assert.equal(html.includes('$TBD'), false);
@@ -216,8 +220,8 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('#second-adult-addon .enhancement-note').textContent, 'One per parent-and-baby place, chosen when you book.');
   assert.equal(book.querySelector('#second-adult-addon [name=secondAdult]').hasAttribute('disabled'), false);
   assert.equal(SECOND_ADULT_CENTS, 2500);
-  assert.deepEqual(previewTotal(false, 'signature', true), {cents: 30300, label: '$303', addonPending: false});
-  assert.deepEqual(previewTotal(false, 'signature', false, true), {cents: 31000, label: '$310', addonPending: false});
+  assert.deepEqual(previewTotal(false, 'signature', true), {cents: SESSION_PRICE_CENTS + BATH_BAG_CENTS, label: `$${(SESSION_PRICE_CENTS + BATH_BAG_CENTS) / 100}`, addonPending: false});
+  assert.deepEqual(previewTotal(false, 'signature', false, true), {cents: SESSION_PRICE_CENTS + SECOND_ADULT_CENTS, label: `$${(SESSION_PRICE_CENTS + SECOND_ADULT_CENTS) / 100}`, addonPending: false});
   assert.ok(html.includes('Le Petit Plus (The Little Extras)'));
   assert.equal(book.querySelector('.extras-when').textContent, "All extras are chosen when you book and can't be added later.");
   assert.equal(html.includes('Premium enhancements'), false);
@@ -296,11 +300,11 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('.jar-option'), null);
   assert.equal(html.includes('Water (Aqua), Glycerin, Simmondsia Chinensis (Jojoba) Seed Oil'), false);
   assert.equal(html.includes("I've read the ingredients and will share any allergies with Lys Rose. [Allergy acknowledgment wording pending review]"), false);
-  assert.equal(book.querySelector('#booking-total').textContent, '$285');
+  assert.equal(book.querySelector('#booking-total').textContent, sessionPriceLabel());
   assert.equal(book.querySelector('#face-cream-charge').hasAttribute('hidden'), true);
-  assert.deepEqual(previewTotal(false, 'signature'), {cents:28500, label:'$285', addonPending:false});
-  assert.deepEqual(previewTotal(false, 'gentle'), {cents:29000, label:'$290', addonPending:false});
-  assert.deepEqual(previewTotal(false, 'premium'), {cents:29500, label:'$295', addonPending:false});
+  assert.deepEqual(previewTotal(false, 'signature'), {cents:SESSION_PRICE_CENTS, label:sessionPriceLabel(), addonPending:false});
+  assert.deepEqual(previewTotal(false, 'gentle'), {cents:SESSION_PRICE_CENTS + 500, label:`$${(SESSION_PRICE_CENTS + 500) / 100}`, addonPending:false});
+  assert.deepEqual(previewTotal(false, 'premium'), {cents:SESSION_PRICE_CENTS + 1000, label:`$${(SESSION_PRICE_CENTS + 1000) / 100}`, addonPending:false});
   for (const word of ['hypoallergenic', 'soothing']) assert.equal(html.toLowerCase().includes(word), false, word);
   assert.equal(/\bfacial\b/i.test(html.toLowerCase().replaceAll('parent-led baby facial','').replaceAll('facials','')), false);
   const included = [
@@ -391,7 +395,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(sessionStatus(0), 'Available');
   assert.equal(sessionStatus(SEATS_PER_SESSION - 1), 'Available');
   assert.equal(sessionStatus(SEATS_PER_SESSION), 'Fully booked');
-  assert.deepEqual(previewTotal(true), {cents:28500, label:'$285', addonPending:true});
+  assert.deepEqual(previewTotal(true), {cents:SESSION_PRICE_CENTS, label:sessionPriceLabel(), addonPending:true});
   assert.equal(previewTotal(false).addonPending, false);
   const today = new Date(2026, 9, 29);
   assert.equal(babyAgeMessage('2026-10-01', today), '');

@@ -57,9 +57,10 @@
 <p class="session-closed" id="booking-window" hidden tabindex="-1">Booking for this session has closed.</p>
 </article></li>
 </ul>
-<p class="booking-price">$285 per parent &amp; baby</p>
-<p class="price-note">$285 per mom and baby. Taxes may apply to add-ons.</p>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Event","name":"Lys Rose session","eventAttendanceMode":"https://schema.org/OfflineEventAttendanceMode","eventStatus":"https://schema.org/EventScheduled","location":{"@type":"Place","address":{"@type":"PostalAddress","addressLocality":"Fort Lauderdale","addressRegion":"FL","addressCountry":"US"}},"offers":{"@type":"Offer","price":"285.00","priceCurrency":"USD","url":"https://lysrosebabyspa.com/book/"},"organizer":{"@type":"Organization","name":"Lys Rose Baby Spa","url":"https://lysrosebabyspa.com/"}}</script>
+<!-- Session price is filled from SESSION_PRICE_CENTS in assets/booking.js. Do not hardcode it here. -->
+<p class="booking-price" data-session-price></p>
+<p class="price-note" data-session-price-note></p>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Event","name":"Lys Rose session","eventAttendanceMode":"https://schema.org/OfflineEventAttendanceMode","eventStatus":"https://schema.org/EventScheduled","location":{"@type":"Place","address":{"@type":"PostalAddress","addressLocality":"Fort Lauderdale","addressRegion":"FL","addressCountry":"US"}},"offers":{"@type":"Offer","price":"SESSION_PRICE","priceCurrency":"USD","url":"https://lysrosebabyspa.com/book/"},"organizer":{"@type":"Organization","name":"Lys Rose Baby Spa","url":"https://lysrosebabyspa.com/"}}</script>
 </div>
 </section>
 <section class="editorial-section" id="book-offer">
@@ -118,7 +119,7 @@
 </div>
 <div class="booking-total" id="booking-summary">
 <p class="total-line" id="face-cream-charge" hidden><span id="face-cream-charge-label"></span><span id="face-cream-charge-amount"></span></p>
-<p class="total-line total-due"><span>Total</span><strong id="booking-total">$285</strong></p>
+<p class="total-line total-due"><span>Total</span><strong id="booking-total" data-session-price-total></strong></p>
 </div>
 <div class="checkout-preview" id="booking-checkout">
 <p class="checkout-label">Online pay at checkout is a preview only. No card details are collected.</p>

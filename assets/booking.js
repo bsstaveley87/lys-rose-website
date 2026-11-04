@@ -2,7 +2,24 @@
 export const SEATS_PER_SESSION = 12;
 // Christy's rule: babies are at least 4 weeks old. The form also requires three confirmations before booking.
 export const MIN_AGE_WEEKS = 4;
+/** Pilot session price in cents. This is the only session price to edit. */
 export const SESSION_PRICE_CENTS = 28500;
+
+export function sessionPriceLabel() {
+  return `$${SESSION_PRICE_CENTS / 100}`;
+}
+
+export function sessionPriceLine() {
+  return `${sessionPriceLabel()} per parent & baby`;
+}
+
+export function sessionPriceNote() {
+  return `${sessionPriceLabel()} per mom and baby. Taxes may apply to add-ons.`;
+}
+
+export function sessionPriceOffer() {
+  return (SESSION_PRICE_CENTS / 100).toFixed(2);
+}
 export const FACE_CREAM_CENTS = {signature: 0, gentle: 500, premium: 1000};
 export const BATH_BAG_CENTS = 1800;
 export const SECOND_ADULT_CENTS = 2500;
@@ -157,7 +174,20 @@ export function sessionTimeLabel(session) {
   return `${start} to ${end}`;
 }
 
+function applySessionPrice(documentRef) {
+  const line = documentRef.querySelector('[data-session-price]');
+  if (line) line.textContent = sessionPriceLine();
+  const note = documentRef.querySelector('[data-session-price-note]');
+  if (note) note.textContent = sessionPriceNote();
+  const total = documentRef.querySelector('[data-session-price-total]');
+  if (total) total.textContent = sessionPriceLabel();
+  for (const script of documentRef.querySelectorAll('script[type="application/ld+json"]')) {
+    if (script.textContent.includes('SESSION_PRICE')) script.textContent = script.textContent.replaceAll('SESSION_PRICE', sessionPriceOffer());
+  }
+}
+
 function applySession(documentRef, now = new Date()) {
+  applySessionPrice(documentRef);
   const dateEl = documentRef.querySelector('#session-date');
   const timeEl = documentRef.querySelector('#session-time');
   if (dateEl) dateEl.textContent = sessionDateLabel(SESSION);

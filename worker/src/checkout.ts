@@ -1,4 +1,4 @@
-import {SESSION, SEATS_PER_SESSION, babyAgeMessage, bookingClosesAt, bookingIsClosed, robeIsClosed} from '../../assets/booking.js';
+import {SESSION, SESSION_PRICE_CENTS, SEATS_PER_SESSION, babyAgeMessage, bookingClosesAt, bookingIsClosed, robeIsClosed} from '../../assets/booking.js';
 
 /**
  * Server-side prices in cents. The browser total is only a preview.
@@ -14,7 +14,8 @@ const SALES_TAX_UID = 'sales-tax';
 type PriceLine = {amount: number | null; taxable: boolean};
 
 export const PRICES = {
-  session: {amount: 28500, taxable: false},
+  // Session amount is SESSION_PRICE_CENTS. Do not type a second number here.
+  session: {amount: SESSION_PRICE_CENTS, taxable: false},
   bath: {
     'floral-milk-soak': {amount: 0, taxable: false},
     byob: {amount: 0, taxable: false},

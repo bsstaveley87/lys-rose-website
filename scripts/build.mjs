@@ -2,6 +2,7 @@ import {cp,mkdir,rm,readFile,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
+import {sessionPriceLabel,sessionPriceLine,sessionPriceNote,sessionPriceOffer} from '../assets/booking.js';
 const root=new URL('../',import.meta.url);
 const output=new URL('_site/',root);
 const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -87,8 +88,20 @@ const sharedComponents=sharedSelectors.map(selector=>{
   }
   return [selector,component.outerHTML];
 });
+function applySessionPrice(document) {
+  const line=document.querySelector('[data-session-price]');
+  if(line) line.textContent=sessionPriceLine();
+  const note=document.querySelector('[data-session-price-note]');
+  if(note) note.textContent=sessionPriceNote();
+  const total=document.querySelector('[data-session-price-total]');
+  if(total) total.textContent=sessionPriceLabel();
+  for(const script of document.querySelectorAll('script[type="application/ld+json"]')) {
+    if(script.textContent.includes('SESSION_PRICE')) script.textContent=script.textContent.replaceAll('SESSION_PRICE',sessionPriceOffer());
+  }
+}
 for(const page of pages) {
   const {document}=parseHTML(await readFile(new URL(page.file,root),'utf8'));
+  applySessionPrice(document);
   for(const [selector,html] of sharedComponents) {
     const target=document.querySelector(selector); if(target) target.outerHTML=html;
   }

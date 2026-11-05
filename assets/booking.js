@@ -29,6 +29,24 @@ export const SICK_CHECKIN_ACK = "I understand that if my baby seems unwell at ch
 /** DRAFT pending Christy. */
 export const SICK_CONTACT_ACK = "I'll contact Lys Rose before the session if my baby becomes unwell.";
 export const BOOKING_CONFIRMATIONS = ['age', 'pediatrician', 'price', 'symptoms', 'illness', 'checkin', 'contact', 'deposit'];
+/**
+ * DRAFT pending CFO.
+ * The assumption-of-risk paragraph is section 2 of booking-waiver-esignature-draft-2026-11-04.md.
+ * That file was not available here, so this is not a rewritten release.
+ */
+export const WAIVER_RELEASE_TEXT = '';
+/** Placeholder only. Do not replace this with drafted statutory language. */
+export const FLORIDA_STATUTORY_NOTICE = '[Florida statutory notice: attorney to insert]';
+/** DRAFT pending CFO. Lead-in from the waiver e-signature draft. */
+export const SIGNATURE_LEAD = 'By typing your full name below, you are electronically signing this booking agreement and the acknowledgements above.';
+/** DRAFT pending CFO. */
+export const ESIGN_CONSENT = 'I agree to sign and receive these documents electronically. I can ask for a paper copy at any time by emailing hello@lysrosebabyspa.com.';
+export const AGE_ACK = 'My baby is at least 4 weeks old, has no breaks in the skin, the umbilical cord stump has fallen off and healed, and any circumcision site is fully healed.';
+export const PEDIATRICIAN_ACK = "I've talked with my pediatrician about the products and activities used in the session, and I know I can skip any part at any time.";
+export const SKIP_ACK = "I understand there's no refund or discount for skipping any part of the session.";
+/** The agreement version stored with each signature. Signed copies are not on the birth-date deletion schedule. */
+export const BOOKING_TERMS_VERSION = 'booking-waiver-esignature-draft-2026-11-04';
+export const WAIVER_RETENTION = 'attorney to set';
 const DRAFT_ACKS = {
   symptoms: SICK_SYMPTOMS_ACK,
   illness: SICK_ILLNESS_ACK,
@@ -75,6 +93,26 @@ export function fillRefundSummary(priceCents = SESSION_PRICE_CENTS, depositCents
 
 export function fillDepositAck(depositCents = DEPOSIT_CENTS) {
   return DEPOSIT_ACK.replaceAll('{deposit}', formatCents(depositCents));
+}
+
+/** Exact text shown for the waiver, the terms, and every box label. The stored hash is of this string. */
+export function signedDocumentText() {
+  return [
+    'Waiver',
+    WAIVER_RELEASE_TEXT,
+    FLORIDA_STATUTORY_NOTICE,
+    SIGNATURE_LEAD,
+    ESIGN_CONSENT,
+    AGE_ACK,
+    PEDIATRICIAN_ACK,
+    SKIP_ACK,
+    SICK_SYMPTOMS_ACK,
+    SICK_ILLNESS_ACK,
+    SICK_CHECKIN_ACK,
+    SICK_CONTACT_ACK,
+    fillDepositAck(),
+    fillRefundSummary(),
+  ].filter(part => part !== '').join('\n');
 }
 export const FACE_CREAM_CENTS = {signature: 0, gentle: 500, premium: 1000};
 export const BATH_BAG_CENTS = 1800;
@@ -383,6 +421,12 @@ export function applyDraftCopy(documentRef) {
   for (const node of documentRef.querySelectorAll('[data-refund-summary]')) node.textContent = fillRefundSummary();
   for (const node of documentRef.querySelectorAll('[data-deposit-ack]')) node.textContent = fillDepositAck();
   for (const node of documentRef.querySelectorAll('[data-ack]')) node.textContent = DRAFT_ACKS[node.getAttribute('data-ack')] || '';
+  for (const node of documentRef.querySelectorAll('[data-signature-lead]')) node.textContent = SIGNATURE_LEAD;
+  for (const node of documentRef.querySelectorAll('[data-waiver-release]')) {
+    node.textContent = WAIVER_RELEASE_TEXT;
+    node.hidden = !WAIVER_RELEASE_TEXT;
+  }
+  for (const node of documentRef.querySelectorAll('[data-florida-notice]')) node.textContent = FLORIDA_STATUTORY_NOTICE;
 }
 
 const previewReserved = [0, SEATS_PER_SESSION];
@@ -463,11 +507,38 @@ function checkoutReady() {
   return Boolean(SESSION?.date) && CHECKOUT_CONFIGURED && !bookingIsClosed(SESSION);
 }
 
+function signatureReady(form) {
+  const signature = form.querySelector('[name=signatureName]');
+  if (!signature) return true;
+  const value = signature.value.trim();
+  return value.length > 0 && /\p{L}/u.test(value);
+}
+
 function payReady(form) {
   const dob = form.querySelector('#baby-dob');
   const dobOk = Boolean(dob?.value) && !babyAgeMessage(dob.value, ageReference());
   const boxes = [...form.querySelectorAll('input[type=checkbox][required]')];
-  return dobOk && boxes.length > 0 && boxes.every(box => box.checked);
+  return dobOk && boxes.length > 0 && boxes.every(box => box.checked) && signatureReady(form);
+}
+
+function showSignature(form) {
+  const signature = form.querySelector('[name=signatureName]');
+  const error = form.querySelector('#signature-name-error');
+  if (!signature) return true;
+  const ready = signatureReady(form);
+  const message = signature.value.trim() && !ready ? 'Please type your full name.' : '';
+  signature.setAttribute('aria-invalid', message ? 'true' : 'false');
+  if (error) {
+    error.textContent = message;
+    error.hidden = !message;
+  }
+  return ready;
+}
+
+function fillSignatureDate(form) {
+  const input = form.querySelector('#signature-date');
+  if (!input || input.value) return;
+  input.value = new Intl.DateTimeFormat('en-US', {month: 'long', day: 'numeric', year: 'numeric'}).format(new Date());
 }
 
 function applyPayButton(documentRef) {
@@ -500,6 +571,8 @@ function bookingPayload(form) {
     allergyDetails: form.querySelector('[name=allergyDetails]')?.value || '',
     waiver: Boolean(form.querySelector('[name=waiver]')?.checked),
     photoRelease: Boolean(form.querySelector('[name=photoRelease]')?.checked),
+    signatureName: form.querySelector('[name=signatureName]')?.value || '',
+    esignConsent: Boolean(form.querySelector('[name=esignConsent]')?.checked),
   };
 }
 
@@ -525,7 +598,8 @@ async function startCheckout(form) {
       const dob = form.querySelector('#baby-dob');
       if (dob && fields.babyDob) showAge(dob);
       if (fields.confirmReady) showConfirmations(form);
-      show(fields.babyDob || fields.confirmReady || data.error || 'Checkout is not available yet.');
+      if (fields.signatureName) showSignature(form);
+      show(fields.babyDob || fields.signatureName || fields.confirmReady || data.error || 'Checkout is not available yet.');
       applyPayButton(form.ownerDocument || form);
       return;
     }
@@ -585,8 +659,15 @@ export function initBooking(documentRef = document) {
       applyPayButton(documentRef);
     }
   });
+  form.addEventListener('input', event => {
+    if (event.target?.name === 'signatureName' || event.target?.name === 'parentName') {
+      if (event.target?.name === 'signatureName') showSignature(form);
+      applyPayButton(documentRef);
+    }
+  });
   form.addEventListener('focusout', event => {
     if (event.target?.name === 'confirmReady' && !event.target.checked) showConfirmations(form);
+    if (event.target?.name === 'signatureName') showSignature(form);
   });
   form.addEventListener('submit', event => {
     event.preventDefault();
@@ -602,10 +683,12 @@ export function initBooking(documentRef = document) {
     if (dob) showAge(dob);
     const bathOk = showBath(form);
     const missing = showConfirmations(form);
-    if (ageMessage || !bathOk || missing.length) {
+    const signed = showSignature(form);
+    if (ageMessage || !bathOk || missing.length || !signed) {
       if (ageMessage && dob) dob.focus();
       else if (!bathOk) form.querySelector('[name=bath]')?.focus();
-      else missing[0]?.focus();
+      else if (missing.length) missing[0]?.focus();
+      else form.querySelector('[name=signatureName]')?.focus();
       return;
     }
     if (checkoutReady()) startCheckout(form);
@@ -615,6 +698,7 @@ export function initBooking(documentRef = document) {
     if (typeof form.requestSubmit === 'function') form.requestSubmit();
   });
   applyDraftCopy(documentRef);
+  fillSignatureDate(form);
   syncAllergies(form);
   syncBath(form);
   syncTotal(documentRef);

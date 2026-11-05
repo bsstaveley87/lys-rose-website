@@ -193,7 +193,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(html.includes('November 22'), false);
   assert.equal(html.includes('10:30 AM'), false);
   assert.equal(book.querySelector('#booking-dates [data-booking-card]'), null);
-  assert.deepEqual([...book.querySelectorAll('#booking-checkout input')].map(input => input.value), ['deposit']);
+  assert.deepEqual([...book.querySelectorAll('#booking-checkout input')].map(input => input.getAttribute('name')), ['confirmReady', 'esignConsent', 'signatureName', 'signatureDate']);
   assert.equal(book.querySelector('.card-mock'), null);
   assert.equal(book.querySelector('.booking-pay').getAttribute('type'), 'button');
   assert.equal(book.querySelector('.booking-intro').textContent, 'A session for you and your baby: a warm floral milk bath, infant massage and a parent-led baby facial.');
@@ -378,7 +378,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('.booking-pay').getAttribute('aria-disabled'), 'true');
   assert.equal(book.querySelector('#refund-policy').textContent, `Draft ${fillRefundSummary()} Full booking & refund policy`);
   assert.equal(book.querySelector('#refund-policy a').getAttribute('href'), '/book/policy/');
-  assert.deepEqual([...book.querySelectorAll('#booking-checkout input')].map(input => input.value), ['deposit']);
+  assert.deepEqual([...book.querySelectorAll('#booking-checkout input')].map(input => input.getAttribute('name')), ['confirmReady', 'esignConsent', 'signatureName', 'signatureDate']);
   assert.equal(html.toLowerCase().includes('stripe'), false);
   assert.equal(html.toLowerCase().includes('square'), false);
   const thanks = await documentFor('book/thank-you/index.html');
@@ -496,7 +496,7 @@ test('refund dollars come from the session price and the deposit', () => {
 test('the pay button stays off until the birth date is valid and every required box is ticked', () => {
   const values = ['age', 'pediatrician', 'price', 'symptoms', 'illness', 'checkin', 'contact', 'deposit'];
   const boxes = values.map(value => `<input type="checkbox" name="confirmReady" value="${value}" required/>`).join('') + '<input type="checkbox" name="waiver" required/>';
-  const {document: doc} = parseHTML(`<!doctype html><html><body><form id="booking-form"><input id="baby-dob" name="babyDob" type="date"/><span id="baby-dob-error" hidden></span>${boxes}<button class="booking-pay" type="button" disabled aria-disabled="true">Reserve and pay</button></form></body></html>`);
+  const {document: doc} = parseHTML(`<!doctype html><html><body><form id="booking-form"><input name="parentName" value="Alex Parent"/><input id="baby-dob" name="babyDob" type="date"/><span id="baby-dob-error" hidden></span>${boxes}<input type="checkbox" name="esignConsent" required/><input name="signatureName" type="text"/><button class="booking-pay" type="button" disabled aria-disabled="true">Sign and continue</button></form></body></html>`);
   initBooking(doc);
   const button = doc.querySelector('.booking-pay');
   const dob = doc.querySelector('#baby-dob');
@@ -509,6 +509,10 @@ test('the pay button stays off until the birth date is valid and every required 
     box.checked = true;
     box.dispatchEvent(new doc.defaultView.Event('change', {bubbles: true}));
   }
+  assert.equal(button.disabled, true);
+  const signature = doc.querySelector('[name=signatureName]');
+  signature.value = 'A different name';
+  signature.dispatchEvent(new doc.defaultView.Event('input', {bubbles: true}));
   assert.equal(button.disabled, false);
   assert.equal(button.getAttribute('aria-disabled'), 'false');
   const deposit = doc.querySelector('[value=deposit]');
@@ -528,6 +532,17 @@ test('the draft policy page keeps the refund terms and leaves out fees and discr
   assert.equal(lower.includes('card fee'), false);
   assert.equal(lower.includes('discretion'), false);
   assert.equal(policy.body.textContent.includes('one-time courtesy'), false);
+  const bookPage = await documentFor('book/index.html');
+  assert.equal(bookPage.querySelector('.booking-pay').textContent, 'Sign and continue');
+  assert.equal(bookPage.querySelector('[data-florida-notice]').textContent, '[Florida statutory notice: attorney to insert]');
+  assert.equal(bookPage.querySelector('[name=esignConsent]').hasAttribute('checked'), false);
+  assert.equal(bookPage.querySelector('[name=esignConsent]').closest('label').textContent, 'I agree to sign and receive these documents electronically. I can ask for a paper copy at any time by emailing hello@lysrosebabyspa.com.');
+  assert.equal(bookPage.querySelector('[name=signatureName]').getAttribute('autocomplete'), 'off');
+  assert.equal(bookPage.querySelector('[name=signatureName]').value, '');
+  const privacy = await documentFor('privacy/index.html');
+  assert.match(privacy.querySelector('.draft-banner').textContent, /Draft/);
+  assert.equal(privacy.body.textContent.includes('IP address and browser details when you sign your waiver'), true);
+  assert.equal(privacy.querySelector('meta[name=robots]').content, 'noindex,nofollow');
 });
 test('a set robe price replaces the coming soon row with the cutoff note', () => {
   const {document: doc} = parseHTML('<div id="book-addons"><ul class="addon-preview"><li id="robe-addon" data-robe-addon class="is-coming-soon" aria-disabled="true"></li><li id="bath-bag-addon"></li></ul></div>');

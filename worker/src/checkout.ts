@@ -1,4 +1,4 @@
-import {BOOKING_CONFIRMATIONS, SESSION, SESSION_PRICE_CENTS, SEATS_PER_SESSION, ageMonthsAtSession, babyAgeMessage, bookingClosesAt, bookingIsClosed, robeIsClosed} from '../../assets/booking.js';
+import {BOOKING_CONFIRMATIONS, BOOKING_TERMS_VERSION, SESSION, SESSION_PRICE_CENTS, SEATS_PER_SESSION, WAIVER_RETENTION, ageMonthsAtSession, babyAgeMessage, bookingClosesAt, bookingIsClosed, robeIsClosed, signedDocumentText} from '../../assets/booking.js';
 
 /**
  * Server-side prices in cents. The browser total is only a preview.
@@ -79,7 +79,18 @@ export type BookingRecord = {
   allergies: string;
   allergyDetails: string;
   ageMonthsAtSession: number;
-  acknowledgements: Record<string, {value: boolean; at: string | null}>;
+  acknowledgements: Record<string, {answer: 'yes' | 'no'; at: string | null}>;
+  signature_name: string;
+  signed_at: string;
+  terms_version: string;
+  user_agent: string;
+  ip_address: string;
+  booking_id: string;
+  square_payment_id: string | null;
+  text_sha256: string;
+  signed_text: string;
+  retention: string;
+  esign_consent: {answer: 'yes' | 'no'; at: string | null};
 };
 export type PreparedOrder = {
   lines: LineItem[];
@@ -121,7 +132,7 @@ export function taxesEnabled(env: CheckoutEnv = {}) {
   return TAX_ENABLED;
 }
 
-export function validateBooking(raw: unknown, options: {session?: SessionConfig; now?: Date; prices?: PriceTable} = {}) {
+export function validateBooking(raw: unknown, options: {session?: SessionConfig; now?: Date; prices?: PriceTable; userAgent?: string; ipAddress?: string} = {}) {
   const session = options.session === undefined ? SESSION : options.session;
   const now = options.now || new Date();
   const prices = options.prices || PRICES;
@@ -151,6 +162,10 @@ export function validateBooking(raw: unknown, options: {session?: SessionConfig;
   if (!CREME.has(creme)) errors.creme = 'Please choose a crème.';
   const confirmed = confirmationSet(data);
   if (CONFIRMATIONS.some(item => !confirmed.has(item))) errors.confirmReady = 'Please confirm each item before reserving.';
+  const signatureName = text(data.signatureName, 120);
+  if (!signatureName || !/\p{L}/u.test(signatureName)) errors.signatureName = 'Please type your full name.';
+  const esignConsent = flag(data.esignConsent);
+  if (!esignConsent) errors.esignConsent = 'Please agree to sign electronically.';
   const monthsAtSession = ageMonthsAtSession(babyDob, session.date);
   const robe = flag(data.robe);
   const bathBag = flag(data.bathBag);
@@ -168,9 +183,20 @@ export function validateBooking(raw: unknown, options: {session?: SessionConfig;
     allergyDetails: text(data.allergyDetails, 500),
     ageMonthsAtSession: monthsAtSession ?? 0,
     acknowledgements: Object.fromEntries(CONFIRMATIONS.map(key => {
-      const value = confirmed.has(key);
-      return [key, {value, at: value ? now.toISOString() : null}];
+      const answer = confirmed.has(key) ? 'yes' as const : 'no' as const;
+      return [key, {answer, at: answer === 'yes' ? now.toISOString() : null}];
     })),
+    esign_consent: {answer: esignConsent ? 'yes' as const : 'no' as const, at: esignConsent ? now.toISOString() : null},
+    signature_name: signatureName,
+    signed_at: now.toISOString(),
+    terms_version: BOOKING_TERMS_VERSION,
+    user_agent: text(options.userAgent, 500).replace(/[\r\n]/g, ' '),
+    ip_address: text(options.ipAddress, 80),
+    booking_id: crypto.randomUUID(),
+    square_payment_id: null,
+    text_sha256: '',
+    signed_text: signedDocumentText(),
+    retention: WAIVER_RETENTION,
   };
   return {ok: true as const, booking, session};
 }
@@ -264,7 +290,16 @@ export function squareOrderPayload(order: PreparedOrder, env: CheckoutEnv = {}) 
     reference_id: order.referenceId,
     line_items,
     // Kept for analysis. The booking record is not expired after the session.
-    metadata: {baby_date_of_birth: order.booking.babyDob},
+    metadata: {
+      baby_date_of_birth: order.booking.babyDob,
+      signature_name: order.booking.signature_name,
+      signed_at: order.booking.signed_at,
+      terms_version: order.booking.terms_version,
+      text_sha256: order.booking.text_sha256,
+      booking_id: order.booking.booking_id,
+      user_agent: order.booking.user_agent.slice(0, 255),
+      ip_address: order.booking.ip_address,
+    },
     pricing_options: {auto_apply_taxes: false},
   };
   if (line_items.some(line => line.applied_taxes)) {
@@ -383,8 +418,35 @@ function paymentLinkBody(order: PreparedOrder, env: CheckoutEnv, key: string, bu
 }
 
 function bookingIdentity(booking: BookingRecord) {
-  const acknowledgements = Object.fromEntries(Object.entries(booking.acknowledgements || {}).map(([key, item]) => [key, item.value]));
-  return {...booking, acknowledgements};
+  const acknowledgements = Object.fromEntries(Object.entries(booking.acknowledgements || {}).map(([key, item]) => [key, item.answer]));
+  const copy = {...booking, acknowledgements};
+  delete copy.signed_at;
+  delete copy.booking_id;
+  return copy;
+}
+
+export async function sha256Hex(value: string) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/** Signed waiver copies stay in KV. A second save does not replace the signed text. */
+export async function saveSignedWaiver(store: BookingStore, record: BookingRecord) {
+  const key = `waiver:${record.booking_id}`;
+  const existing = await store.get(key);
+  if (existing) return JSON.parse(existing) as BookingRecord;
+  await store.put(key, JSON.stringify(record));
+  console.log(JSON.stringify({
+    event: 'waiver_email_preview',
+    sent: false,
+    to: record.email,
+    subject: 'Your signed Lys Rose booking agreement',
+    signature_name: record.signature_name,
+    signed_at: record.signed_at,
+    terms_version: record.terms_version,
+    signed_text: record.signed_text,
+  }));
+  return record;
 }
 
 function pendingIdentity(record: {booking?: BookingRecord; sessionDate?: string; note?: string}) {
@@ -515,6 +577,17 @@ export async function recordCompletedPayment(store: BookingStore, payment: Payme
   };
   if (!refundFlag) await store.put(seatKey, String(reserved + 1));
   await store.put(`payment:${payment.id}`, JSON.stringify(record));
+  if (order?.booking?.booking_id) {
+    const waiverKey = `waiver:${order.booking.booking_id}`;
+    const waiverRaw = await store.get(waiverKey);
+    if (waiverRaw) {
+      const waiver = JSON.parse(waiverRaw) as BookingRecord;
+      if (!waiver.square_payment_id && payment.id) {
+        waiver.square_payment_id = payment.id;
+        await store.put(waiverKey, JSON.stringify(waiver));
+      }
+    }
+  }
   await store.put(`booking:${payment.id}`, JSON.stringify({
     ...(order?.booking || {}),
     email: order?.email || order?.booking?.email || '',
@@ -577,11 +650,18 @@ export async function handleCheckoutRequest(request: Request, env: CheckoutEnv, 
   if (rawText == null) return new Response(JSON.stringify({error: 'Please check the booking form.'}), {status: 413, headers});
   let raw: unknown;
   try { raw = JSON.parse(rawText); } catch { return new Response(JSON.stringify({error: 'Please check the booking form.'}), {status: 400, headers}); }
-  const checked = validateBooking(raw, {now, session});
+  const checked = validateBooking(raw, {
+    now,
+    session,
+    userAgent: request.headers.get('user-agent') || '',
+    ipAddress: request.headers.get('cf-connecting-ip') || '',
+  });
   if (!checked.ok) return new Response(JSON.stringify({error: 'Please check the booking form.', fields: checked.errors}), {status: checked.status, headers});
+  checked.booking.text_sha256 = await sha256Hex(checked.booking.signed_text);
   const order = buildOrder(checked.booking, PRICES, checked.session);
   const opened = await openCheckout(order, checked.booking.email, env, fetchImpl);
   if (!opened.ok) return new Response(JSON.stringify({error: opened.error}), {status: opened.status, headers});
+  if (env.BOOKINGS) await saveSignedWaiver(env.BOOKINGS, checked.booking);
   console.log(JSON.stringify({event: 'checkout_link_created'}));
   return new Response(JSON.stringify({url: opened.url}), {status: 200, headers});
 }

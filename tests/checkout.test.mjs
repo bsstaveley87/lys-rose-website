@@ -18,10 +18,13 @@ import {
   memoryStore,
   openCheckout,
   routeCheckout,
+  saveSignedWaiver,
+  sha256Hex,
   squareApiHost,
   squareSignature,
   validateBooking,
 } from '../worker/src/checkout.ts';
+import {signedDocumentText} from '../assets/booking.js';
 
 const session = {date: '2026-12-06', start: '10:30', end: '12:30'};
 const sessionLine = 'Lys Rose session · Sun Dec 6, 10:30 AM';
@@ -31,6 +34,8 @@ const closedNow = new Date('2026-12-04T15:30:00Z');
 function form(overrides = {}) {
   return {
     parentName: 'Christy Zemour',
+    signatureName: 'Christy Zemour',
+    esignConsent: true,
     email: 'parent@example.com',
     phone: '954-555-0100',
     babyName: 'Lily',
@@ -214,7 +219,7 @@ test('webhook verifies the signature, counts a seat once, and flags late or extr
     sessionDate: '2026-12-06',
     email: 'parent@example.com',
     total: SESSION_PRICE_CENTS,
-    booking: {babyName: 'Lily', email: 'parent@example.com', babyDob: '2026-09-01', ageMonthsAtSession: 3, acknowledgements: {age: {value: true, at: '2026-11-01T00:00:00.000Z'}}},
+    booking: {babyName: 'Lily', email: 'parent@example.com', babyDob: '2026-09-01', ageMonthsAtSession: 3, booking_id: 'book-1', acknowledgements: {age: {answer: 'yes', at: '2026-11-01T00:00:00.000Z'}}},
   }));
   const event = {
     type: 'payment.updated',
@@ -236,7 +241,7 @@ test('webhook verifies the signature, counts a seat once, and flags late or extr
   assert.equal(booking.babyName, 'Lily');
   assert.equal(booking.babyDob, '2026-09-01');
   assert.equal(booking.ageMonthsAtSession, 3);
-  assert.equal(booking.acknowledgements.age.value, true);
+  assert.equal(booking.acknowledgements.age.answer, 'yes');
   assert.equal(booking.acknowledgements.age.at, '2026-11-01T00:00:00.000Z');
   assert.equal(booking.status, 'confirmed');
   const again = await handleWebhookRequest(new Request(url, {method: 'POST', headers: {'x-square-hmacsha256-signature': signature}, body}), env(store));
@@ -450,7 +455,7 @@ test('birth date and health acknowledgements are required, recorded, and kept', 
   assert.equal(checked.booking.babyDob, '2026-09-01');
   assert.equal(checked.booking.ageMonthsAtSession, 3);
   for (const key of ['age', 'pediatrician', 'price', 'symptoms', 'illness', 'checkin', 'contact', 'deposit']) {
-    assert.equal(checked.booking.acknowledgements[key].value, true, key);
+    assert.equal(checked.booking.acknowledgements[key].answer, 'yes', key);
     assert.equal(checked.booking.acknowledgements[key].at, openNow.toISOString(), key);
   }
   const order = buildOrder(checked.booking, PRICES, session);
@@ -469,9 +474,63 @@ test('birth date and health acknowledgements are required, recorded, and kept', 
   const saved = JSON.parse(await store.get('order:ord_dob'));
   assert.equal(saved.booking.babyDob, '2026-09-01');
   assert.equal(saved.booking.ageMonthsAtSession, 3);
-  assert.equal(saved.booking.acknowledgements.symptoms.value, true);
+  assert.equal(saved.booking.acknowledgements.symptoms.answer, 'yes');
   assert.equal(saved.booking.acknowledgements.symptoms.at, openNow.toISOString());
   assert.equal(saved.booking.acknowledgements.deposit.at, openNow.toISOString());
+});
+
+test('a signed waiver is stored with its hash, IP and user agent, and is not rewritten', async () => {
+  const missing = validateBooking(form({signatureName: '', esignConsent: false}), {session, now: openNow});
+  assert.equal(missing.ok, false);
+  assert.match(missing.errors.signatureName, /full name/);
+  assert.match(missing.errors.esignConsent, /electronically/);
+  const otherName = validateBooking(form({
+    signatureName: 'Someone Else',
+    signed_at: '1999-01-01T00:00:00.000Z',
+    user_agent: 'spoofed',
+    ip_address: '1.2.3.4',
+  }), {session, now: openNow, userAgent: 'LysRoseTest/1.0', ipAddress: '203.0.113.8'});
+  assert.equal(otherName.ok, true);
+  assert.equal(otherName.booking.signature_name, 'Someone Else');
+  assert.equal(otherName.booking.signed_at, openNow.toISOString());
+  assert.equal(otherName.booking.terms_version, 'booking-waiver-esignature-draft-2026-11-04');
+  assert.equal(otherName.booking.user_agent, 'LysRoseTest/1.0');
+  assert.equal(otherName.booking.ip_address, '203.0.113.8');
+  assert.equal(otherName.booking.retention, 'attorney to set');
+  assert.equal(otherName.booking.esign_consent.answer, 'yes');
+  assert.equal(otherName.booking.signed_text, signedDocumentText());
+  otherName.booking.text_sha256 = await sha256Hex(otherName.booking.signed_text);
+  assert.match(otherName.booking.text_sha256, /^[0-9a-f]{64}$/);
+  const store = memoryStore();
+  const request = new Request('https://forms.lysrosebabyspa.com/api/checkout', {
+    method: 'POST',
+    headers: {Origin: 'https://lysrosebabyspa.com', 'Content-Type': 'application/json', 'user-agent': 'LysRoseTest/1.0', 'cf-connecting-ip': '203.0.113.8'},
+    body: JSON.stringify(form({signatureName: 'Someone Else'})),
+  });
+  let captured;
+  const response = await handleCheckoutRequest(request, env(store), async (_url, init) => {
+    captured = JSON.parse(init.body);
+    return new Response(JSON.stringify({payment_link: {url: 'https://sandbox.square.link/u/preview', order_id: 'ord_sign'}}), {status: 200});
+  }, openNow, session);
+  assert.equal(response.status, 200);
+  assert.equal(captured.order.metadata.signature_name, 'Someone Else');
+  assert.equal(captured.order.metadata.signed_at, openNow.toISOString());
+  assert.equal(captured.order.metadata.terms_version, 'booking-waiver-esignature-draft-2026-11-04');
+  assert.equal(captured.order.metadata.user_agent, 'LysRoseTest/1.0');
+  assert.equal(captured.order.metadata.ip_address, '203.0.113.8');
+  assert.equal(captured.order.metadata.text_sha256, await sha256Hex(signedDocumentText()));
+  const saved = JSON.parse(await store.get('order:ord_sign'));
+  assert.equal(saved.booking.signature_name, 'Someone Else');
+  assert.equal(saved.booking.ip_address, '203.0.113.8');
+  const waiver = JSON.parse(await store.get(`waiver:${saved.booking.booking_id}`));
+  assert.equal(waiver.signed_text, signedDocumentText());
+  assert.equal(waiver.square_payment_id, null);
+  assert.equal(waiver.retention, 'attorney to set');
+  const replaced = {...waiver, signed_text: 'changed', signature_name: 'Changed'};
+  await saveSignedWaiver(store, replaced);
+  const kept = JSON.parse(await store.get(`waiver:${saved.booking.booking_id}`));
+  assert.equal(kept.signed_text, signedDocumentText());
+  assert.equal(kept.signature_name, 'Someone Else');
 });
 
 test('retries once when Square rejects the buyer email', async () => {

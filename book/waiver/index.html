@@ -43,6 +43,13 @@
 <p><strong data-clause-label="petals"></strong> <span data-clause-body="petals"></span></p>
 <p><strong data-clause-label="d"></strong> <span data-clause-body="d"></span></p>
 <p class="waiver-release"><strong data-waiver-heading></strong> <span data-waiver-body></span></p>
+<div id="waiver-section-8">
+<p><strong data-clause-label="emergency"></strong> <span data-clause-body="emergency"></span></p>
+<p><strong data-clause-label="indemnify"></strong><span data-clause-body="indemnify"></span></p>
+<p><strong data-clause-label="severability"></strong> <span data-clause-body="severability"></span></p>
+<p><strong data-clause-label="florida"></strong> <span data-clause-body="florida"></span></p>
+<p><strong data-clause-label="voluntary"></strong> <span data-clause-body="voluntary"></span></p>
+</div>
 <p data-florida-notice></p>
 </section>
 <form class="booking-form" id="waiver-form" method="post" action="#" novalidate>
@@ -57,6 +64,12 @@
 <label class="field" for="parent-name"><span class="field-label">Full name</span><input class="input" id="parent-name" name="signatureName" type="text" autocomplete="off" maxlength="120"/></label>
 <label class="field" for="parent-relationship"><span class="field-label">Relationship</span><select class="input" id="parent-relationship" name="relationship"><option value="">Choose one</option><option value="mother">mother</option><option value="father">father</option><option value="legal guardian">legal guardian</option></select></label>
 <label class="field" for="parent-email"><span class="field-label">Email</span><input class="input" id="parent-email" name="signatureEmail" type="email" autocomplete="email" maxlength="254"/></label>
+<fieldset class="booking-choice" id="parent-emergency">
+<legend>Emergency contact</legend>
+<label class="field" for="parent-emergency-name"><span class="field-label">Name</span><input class="input" id="parent-emergency-name" name="emergencyName" type="text" autocomplete="name" maxlength="120"/></label>
+<label class="field" for="parent-emergency-phone"><span class="field-label">Phone</span><input class="input" id="parent-emergency-phone" name="emergencyPhone" type="tel" autocomplete="tel" maxlength="30"/></label>
+<label class="field" for="parent-emergency-relationship"><span class="field-label">Relationship</span><input class="input" id="parent-emergency-relationship" name="emergencyRelationship" type="text" maxlength="80"/></label>
+</fieldset>
 <label class="choice-row"><input type="checkbox" name="adult18" value="yes"/><span data-adult-18></span></label>
 <label class="choice-row"><input type="checkbox" name="esignConsent" value="yes"/><span>I agree to sign and receive these documents electronically. I can ask for a paper copy at any time by emailing hello@lysrosebabyspa.com.</span></label>
 <label class="field" for="parent-date"><span class="field-label">Signing date</span><input class="input" id="parent-date" name="signatureDate" type="text" readonly tabindex="-1"/></label>
@@ -68,6 +81,12 @@
 <label class="field" for="second-parent-name"><span class="field-label">Full name</span><input class="input" id="second-parent-name" name="signatureName" type="text" autocomplete="off" maxlength="120"/></label>
 <label class="field" for="second-parent-relationship"><span class="field-label">Relationship</span><select class="input" id="second-parent-relationship" name="relationship"><option value="">Choose one</option><option value="mother">mother</option><option value="father">father</option><option value="legal guardian">legal guardian</option></select></label>
 <label class="field" for="second-parent-email"><span class="field-label">Email</span><input class="input" id="second-parent-email" name="signatureEmail" type="email" autocomplete="email" maxlength="254"/></label>
+<fieldset class="booking-choice">
+<legend>Emergency contact</legend>
+<label class="field" for="second-emergency-name"><span class="field-label">Name</span><input class="input" id="second-emergency-name" name="emergencyName" type="text" autocomplete="name" maxlength="120"/></label>
+<label class="field" for="second-emergency-phone"><span class="field-label">Phone</span><input class="input" id="second-emergency-phone" name="emergencyPhone" type="tel" autocomplete="tel" maxlength="30"/></label>
+<label class="field" for="second-emergency-relationship"><span class="field-label">Relationship</span><input class="input" id="second-emergency-relationship" name="emergencyRelationship" type="text" maxlength="80"/></label>
+</fieldset>
 <label class="choice-row"><input type="checkbox" name="adult18" value="yes"/><span data-adult-18></span></label>
 <label class="choice-row"><input type="checkbox" name="esignConsent" value="yes"/><span>I agree to sign and receive these documents electronically. I can ask for a paper copy at any time by emailing hello@lysrosebabyspa.com.</span></label>
 <label class="field" for="second-parent-date"><span class="field-label">Signing date</span><input class="input" id="second-parent-date" name="signatureDate" type="text" readonly tabindex="-1"/></label>
@@ -82,6 +101,12 @@
 <label class="field" for="adult-name"><span class="field-label">Full name</span><input class="input" id="adult-name" name="signatureName" type="text" autocomplete="off" maxlength="120"/></label>
 <label class="field" for="adult-relationship"><span class="field-label">Relationship to the family</span><input class="input" id="adult-relationship" name="relationship" type="text" maxlength="80"/></label>
 <label class="field" for="adult-email"><span class="field-label">Email</span><input class="input" id="adult-email" name="signatureEmail" type="email" autocomplete="email" maxlength="254"/></label>
+<fieldset class="booking-choice" id="adult-emergency">
+<legend>Emergency contact <span class="field-optional">Optional</span></legend>
+<label class="field" for="adult-emergency-name"><span class="field-label">Name</span><input class="input" id="adult-emergency-name" name="emergencyName" type="text" autocomplete="name" maxlength="120"/></label>
+<label class="field" for="adult-emergency-phone"><span class="field-label">Phone</span><input class="input" id="adult-emergency-phone" name="emergencyPhone" type="tel" autocomplete="tel" maxlength="30"/></label>
+<label class="field" for="adult-emergency-relationship"><span class="field-label">Relationship</span><input class="input" id="adult-emergency-relationship" name="emergencyRelationship" type="text" maxlength="80"/></label>
+</fieldset>
 <label class="choice-row"><input type="checkbox" name="adult18" value="yes"/><span data-adult-18></span></label>
 <label class="choice-row"><input type="checkbox" name="esignConsent" value="yes"/><span>I agree to sign and receive these documents electronically. I can ask for a paper copy at any time by emailing hello@lysrosebabyspa.com.</span></label>
 <label class="field" for="adult-date"><span class="field-label">Signing date</span><input class="input" id="adult-date" name="signatureDate" type="text" readonly tabindex="-1"/></label>

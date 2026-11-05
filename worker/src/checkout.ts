@@ -781,8 +781,30 @@ type SignatureFields = {
   adult18?: boolean;
   esignConsent?: boolean;
   part?: 'parent' | 'additional';
+  emergencyName?: string;
+  emergencyPhone?: string;
+  emergencyRelationship?: string;
   secondParent?: SignatureFields | null;
 };
+
+function emergencyContact(fields: SignatureFields) {
+  const name = (fields.emergencyName || '').trim();
+  const phone = (fields.emergencyPhone || '').trim();
+  const relationship = (fields.emergencyRelationship || '').trim();
+  if (!name && !phone && !relationship) return null;
+  return {name, phone, relationship};
+}
+
+function emergencyProblem(fields: SignatureFields, required: boolean) {
+  const contact = emergencyContact(fields);
+  if (!contact) return required ? 'Please enter an emergency contact name, phone and relationship.' : '';
+  if (!/\p{L}/u.test(contact.name) || contact.phone.replace(/\D/g, '').length < 7 || !/\p{L}/u.test(contact.relationship)) {
+    return required
+      ? 'Please enter an emergency contact name, phone and relationship.'
+      : 'Please complete the emergency contact name, phone and relationship, or leave them blank.';
+  }
+  return '';
+}
 
 function waiverShownText(booking: BookingRecord, part: 'parent' | 'additional') {
   const session = {date: booking.sessionDate, start: booking.sessionStart, end: booking.sessionEnd};
@@ -808,7 +830,7 @@ function signatureProblems(fields: SignatureFields, part: 'parent' | 'additional
   const relationship = (fields.relationship || '').trim();
   if (part === 'parent' && !['mother', 'father', 'legal guardian'].includes(relationship)) return 'Please choose mother, father or legal guardian.';
   if (part === 'additional' && !relationship) return 'Please enter your relationship to the family.';
-  return '';
+  return emergencyProblem(fields, part === 'parent');
 }
 
 async function storeSignature(store: BookingStore, booking: BookingRecord, invite: {role: BookingRecord['waiver_status'][number]['role']; email: string}, fields: SignatureFields, part: 'parent' | 'additional', now: Date, userAgent: string, ipAddress: string) {
@@ -827,6 +849,7 @@ async function storeSignature(store: BookingStore, booking: BookingRecord, invit
     part,
     email,
     relationship: (fields.relationship || '').trim(),
+    emergency_contact: emergencyContact(fields),
     signature_name: (fields.signatureName || '').trim(),
     signed_at: signedAt,
     signing_date_et: new Intl.DateTimeFormat('en-US', {month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York'}).format(now),

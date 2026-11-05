@@ -62,11 +62,16 @@ export const CLAUSE_B = "Products and skipping. I have read the list of products
 export const CLAUSE_C = "Bring your own breastmilk. If I choose BYOB, I will bring my own breastmilk for my own baby, cold (liquid) or frozen. I am solely responsible for the milk, including its storage, warming, and adding it to my baby's bath. Lys Rose does not provide, inspect, store, handle, or test breastmilk; it provides only a cup of warm water I can use to warm my sealed milk myself.";
 export const ROSE_PETAL_CLAUSE = "Rose petals. I understand that the bath for my baby includes whole rose petals floating on the water for appearance only. The petals are not food. I will not let my baby eat or mouth the petals, and I will not place petals in my baby's mouth. I understand that petals can be a choking or breathing hazard if they get into a baby's mouth and that some babies react to flowers or pollen. I agree that my baby will stay under my direct supervision and within my arm's reach at all times during the session, including whenever my baby is near the water or the petals. I understand that I may choose a petal-free bath for my baby by ticking the box on the booking form or by telling the instructor at check-in, and that I may ask for the petals to be removed at any time. I will tell Lys Rose at least 48 hours before my session about any allergy or sensitivity my baby has, including to flowers or pollen.";
 export const CLAUSE_D = "Sick baby. I confirm that in the 24 hours before the session my baby has had no fever, vomiting or diarrhea, has no green nasal mucus, and has no other signs of illness (such as a rash or cough) and no breaks in the skin. If I sign this more than 24 hours before the session, I promise these will be true at the session, and I will tell Lys Rose before the session if my baby becomes unwell. I understand the instructor may ask us not to join if my baby seems unwell at check-in. What happens to my payment then is set out in the booking policy.";
+export const EMERGENCY_CLAUSE = "Emergency. If there's an emergency, Lys Rose may call 911. I'm responsible for decisions about my baby's care and for any medical costs. If I can't be reached in an emergency, Lys Rose may contact my emergency contact.";
+export const INDEMNIFICATION_CLAUSE = '[Indemnification: attorney to decide whether to include, and its scope.]';
+export const SEVERABILITY_CLAUSE = 'Severability. If any part of this waiver is found unenforceable, the rest still applies.';
+export const FLORIDA_LAW_CLAUSE = 'Florida law. This waiver is governed by Florida law.';
+export const VOLUNTARY_CLAUSE = "Voluntary. I've read this waiver, I understand it, and I'm signing it voluntarily.";
 export const PARENT_SIGNATURE_SENTENCE = 'I am the parent or legal guardian of the baby named above. I sign this waiver for myself and on behalf of my baby.';
 export const ADULT_18_ACK = "I'm at least 18";
 export const PARENT_ROUTE_LABEL = "I'm the baby's parent or legal guardian";
 /** The agreement version stored with each signature. Signed copies are not on the birth-date deletion schedule. */
-export const BOOKING_TERMS_VERSION = 'booking-waiver-esignature-draft-2026-11-04';
+export const BOOKING_TERMS_VERSION = 'booking-waiver-esignature-draft-2026-11-05';
 export const WAIVER_RETENTION = 'attorney to set';
 const DRAFT_ACKS = {
   join: JOIN_RULE_ACK,
@@ -80,6 +85,11 @@ const CLAUSE_LABELS = {
   c: 'Bring your own breastmilk.',
   d: 'Sick baby.',
   petals: 'Rose petals.',
+  emergency: 'Emergency.',
+  indemnify: '[Indemnification: attorney to decide whether to include, and its scope.]',
+  severability: 'Severability.',
+  florida: 'Florida law.',
+  voluntary: 'Voluntary.',
 };
 const CLAUSE_BODIES = {
   a: CLAUSE_A.slice(CLAUSE_LABELS.a.length).trim(),
@@ -87,6 +97,11 @@ const CLAUSE_BODIES = {
   c: CLAUSE_C.slice(CLAUSE_LABELS.c.length).trim(),
   d: CLAUSE_D.slice(CLAUSE_LABELS.d.length).trim(),
   petals: ROSE_PETAL_CLAUSE.slice(CLAUSE_LABELS.petals.length).trim(),
+  emergency: EMERGENCY_CLAUSE.slice(CLAUSE_LABELS.emergency.length).trim(),
+  indemnify: '',
+  severability: SEVERABILITY_CLAUSE.slice(CLAUSE_LABELS.severability.length).trim(),
+  florida: FLORIDA_LAW_CLAUSE.slice(CLAUSE_LABELS.florida.length).trim(),
+  voluntary: VOLUNTARY_CLAUSE.slice(CLAUSE_LABELS.voluntary.length).trim(),
 };
 
 export function waiverIntro(babyName = "[baby's name]", sessionDate = '[date]') {
@@ -165,6 +180,11 @@ export function signedDocumentText(details = {}) {
     ROSE_PETAL_CLAUSE,
     CLAUSE_D,
     WAIVER_RELEASE_TEXT,
+    EMERGENCY_CLAUSE,
+    INDEMNIFICATION_CLAUSE,
+    SEVERABILITY_CLAUSE,
+    FLORIDA_LAW_CLAUSE,
+    VOLUNTARY_CLAUSE,
     FLORIDA_STATUTORY_NOTICE,
     signatureLead(part),
     ESIGN_CONSENT,
@@ -633,6 +653,9 @@ function signerPayload(root) {
     signatureName: root.querySelector('[name=signatureName]')?.value || '',
     email: root.querySelector('[name=signatureEmail]')?.value || '',
     relationship: root.querySelector('[name=relationship]')?.value || '',
+    emergencyName: root.querySelector('[name=emergencyName]')?.value || '',
+    emergencyPhone: root.querySelector('[name=emergencyPhone]')?.value || '',
+    emergencyRelationship: root.querySelector('[name=emergencyRelationship]')?.value || '',
     adult18: Boolean(root.querySelector('[name=adult18]')?.checked),
     esignConsent: Boolean(root.querySelector('[name=esignConsent]')?.checked),
   };
@@ -814,20 +837,29 @@ export function initBooking(documentRef = document) {
   applyPayButton(documentRef);
 }
 
-function signerComplete(root) {
+function emergencyReady(root, required) {
+  const name = root.querySelector('[name=emergencyName]')?.value.trim() || '';
+  const phone = root.querySelector('[name=emergencyPhone]')?.value.trim() || '';
+  const relationship = root.querySelector('[name=emergencyRelationship]')?.value.trim() || '';
+  const started = Boolean(name || phone || relationship);
+  if (!required && !started) return true;
+  return /\p{L}/u.test(name) && phone.replace(/\D/g, '').length >= 7 && /\p{L}/u.test(relationship);
+}
+
+function signerComplete(root, emergency = 'required') {
   if (!root || root.hidden) return true;
   const name = root.querySelector('[name=signatureName]')?.value.trim() || '';
   const email = root.querySelector('[name=signatureEmail]')?.value.trim() || '';
   const relationship = root.querySelector('[name=relationship]')?.value.trim() || '';
   const adult = Boolean(root.querySelector('[name=adult18]')?.checked);
   const consent = Boolean(root.querySelector('[name=esignConsent]')?.checked);
-  return /\p{L}/u.test(name) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && relationship.length > 0 && adult && consent;
+  return /\p{L}/u.test(name) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && relationship.length > 0 && adult && consent && emergencyReady(root, emergency === 'required');
 }
 
 function waiverReady(form) {
   const part = form.querySelector('[name=signPart]')?.value === 'additional' ? 'additional' : 'parent';
   const primary = form.querySelector(part === 'additional' ? '#waiver-part-4-fields' : '#waiver-part-3-fields');
-  if (!signerComplete(primary)) return false;
+  if (!signerComplete(primary, part === 'parent' ? 'required' : 'optional')) return false;
   const second = form.querySelector('#second-parent-fields');
   if (second && !second.hidden) {
     const started = ['signatureName', 'signatureEmail', 'relationship'].some(name => (second.querySelector(`[name=${name}]`)?.value || '').trim());

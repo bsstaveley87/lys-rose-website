@@ -58,6 +58,9 @@ function signature(overrides = {}) {
     relationship: 'mother',
     adult18: true,
     esignConsent: true,
+    emergencyName: 'Pat Contact',
+    emergencyPhone: '954-555-0199',
+    emergencyRelationship: 'aunt',
     part: 'parent',
     ...overrides,
   };
@@ -537,6 +540,8 @@ test('a signed waiver is stored with its hash, IP and user agent, and is not rew
     bookingId,
     byob: false,
   });
+  const noContact = await signWaiverRequest(store, token, signature({emergencyName: '', emergencyPhone: '', emergencyRelationship: ''}), openNow, 'LysRoseTest/1.0', '203.0.113.8');
+  assert.equal(noContact.ok, false);
   const signed = await signWaiverRequest(store, token, signature(), openNow, 'LysRoseTest/1.0', '203.0.113.8');
   assert.equal(signed.ok, true);
   assert.equal(signed.parent_cleared, true);
@@ -549,7 +554,14 @@ test('a signed waiver is stored with its hash, IP and user agent, and is not rew
   assert.equal(waiver.relationship, 'mother');
   assert.equal(waiver.signature_name, 'Someone Else');
   assert.equal(waiver.signed_at, openNow.toISOString());
-  assert.equal(waiver.terms_version, 'booking-waiver-esignature-draft-2026-11-04');
+  assert.equal(waiver.terms_version, 'booking-waiver-esignature-draft-2026-11-05');
+  assert.deepEqual(waiver.emergency_contact, {name: 'Pat Contact', phone: '954-555-0199', relationship: 'aunt'});
+  assert.equal(waiver.signed_text.includes("Emergency. If there's an emergency, Lys Rose may call 911."), true);
+  assert.equal(waiver.signed_text.indexOf('Emergency.') < waiver.signed_text.indexOf('[Indemnification:'), true);
+  assert.equal(waiver.signed_text.indexOf('[Indemnification:') < waiver.signed_text.indexOf('Severability.'), true);
+  assert.equal(waiver.signed_text.indexOf('Severability.') < waiver.signed_text.indexOf('Florida law.'), true);
+  assert.equal(waiver.signed_text.indexOf('Florida law.') < waiver.signed_text.indexOf('Voluntary.'), true);
+  assert.equal(waiver.signed_text.indexOf('Voluntary.') < waiver.signed_text.indexOf('[Florida statutory notice'), true);
   assert.equal(waiver.user_agent, 'LysRoseTest/1.0');
   assert.equal(waiver.ip_address, '203.0.113.8');
   assert.equal(waiver.babyName, 'Lily');
@@ -578,6 +590,9 @@ test('a signed waiver is stored with its hash, IP and user agent, and is not rew
     email: 'jordan@example.com',
     relationship: 'grandparent',
     part: 'additional',
+    emergencyName: '',
+    emergencyPhone: '',
+    emergencyRelationship: '',
   }), openNow, 'LysRoseTest/1.0', '203.0.113.9');
   assert.equal(secondSigned.ok, true);
   assert.equal(secondSigned.can_add, false);
@@ -585,6 +600,7 @@ test('a signed waiver is stored with its hash, IP and user agent, and is not rew
   assert.equal(secondRecord.role, 'additional_adult');
   assert.equal(secondRecord.part, 'additional');
   assert.equal(secondRecord.signature_name, 'Jordan Lee');
+  assert.equal(secondRecord.emergency_contact, null);
   assert.equal(secondRecord.signed_text.includes('Additional adult.'), true);
 });
 

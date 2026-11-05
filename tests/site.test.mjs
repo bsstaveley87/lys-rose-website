@@ -546,6 +546,17 @@ test('the draft policy page keeps the refund terms and leaves out fees and discr
   assert.equal(waiverPage.querySelector('.booking-pay').textContent, 'Sign and continue');
   assert.equal(waiverPage.querySelector('[data-waiver-heading]').textContent, WAIVER_HEADING);
   assert.equal(waiverPage.querySelector('[data-waiver-body]').textContent, WAIVER_RELEASE_TEXT.slice(WAIVER_HEADING.length).trim());
+  assert.equal(waiverPage.querySelector('[data-clause-label=emergency]').textContent, 'Emergency.');
+  assert.equal(waiverPage.querySelector('[data-clause-body=emergency]').textContent, "If there's an emergency, Lys Rose may call 911. I'm responsible for decisions about my baby's care and for any medical costs. If I can't be reached in an emergency, Lys Rose may contact my emergency contact.");
+  assert.equal(waiverPage.querySelector('[data-clause-label=indemnify]').textContent, '[Indemnification: attorney to decide whether to include, and its scope.]');
+  assert.equal(waiverPage.querySelector('[data-clause-label=severability]').textContent, 'Severability.');
+  assert.equal(waiverPage.querySelector('[data-clause-label=florida]').textContent, 'Florida law.');
+  assert.equal(waiverPage.querySelector('[data-clause-label=voluntary]').textContent, 'Voluntary.');
+  assert.equal(waiverPage.querySelector('#parent-emergency legend').textContent, 'Emergency contact');
+  assert.equal(waiverPage.querySelector('#adult-emergency legend').textContent.includes('Optional'), true);
+  const part2 = waiverPage.querySelector('#waiver-part-2').innerHTML;
+  assert.ok(part2.indexOf('data-clause-label="emergency"') < part2.indexOf('data-florida-notice'));
+  assert.ok(part2.indexOf('data-clause-label="voluntary"') < part2.indexOf('data-florida-notice'));
   assert.equal(waiverPage.querySelector('[data-florida-notice]').textContent, FLORIDA_STATUTORY_NOTICE);
   assert.equal(waiverPage.querySelector('[data-signature-heading]').textContent, SIGNATURE_HEADING);
   assert.equal(waiverPage.querySelector('[data-signature-rest]').textContent, SIGNATURE_LEAD.slice(SIGNATURE_HEADING.length).trim());
@@ -576,6 +587,7 @@ test('the draft policy page keeps the refund terms and leaves out fees and discr
   const privacy = await documentFor('privacy/index.html');
   assert.match(privacy.querySelector('.draft-banner').textContent, /Draft/);
   assert.equal(privacy.body.textContent.includes('IP address and browser details when you sign your waiver'), true);
+  assert.equal(privacy.body.textContent.includes('emergency contact name and phone, used only to reach them in an emergency'), true);
   assert.equal(privacy.body.textContent.includes("Your baby's birth date. We collect it at booking to confirm your baby meets our age rule (at least 4 weeks old and no older than 12 months on the session date), to plan age-appropriate sessions, and to understand our customers (business analysis, looked at in aggregate). We keep it, together with your booking record, for 3 years after your family's last booking, store it securely with access limited to Lys Rose, and never sell it. After that, we delete the full birth date and keep only your baby's age in months at each session, for business analysis. You can ask us to delete it at any time."), true);
   assert.equal(privacy.body.textContent.includes("Health confirmations. The booking form asks you to tick boxes confirming, for example, that in the 24 hours before the session your baby has had no fever, vomiting or diarrhea. We store only whether each box was ticked (yes/no). We don't collect any health details."), true);
   assert.equal(privacy.body.textContent.includes('We keep waitlist information for up to [24 – TO CONFIRM] months after our last contact with you, or until you ask us to delete it, whichever comes first. We keep records of text-message consent and opt-outs for [4 – TO CONFIRM] years so we can show we respected your choices. Booking and payment records are kept as long as tax and business laws require. Your baby\'s birth date is kept with the booking record for 3 years after your family\'s last booking, unless you ask us to delete it sooner. After that, we keep only your baby\'s age in months at each session.'), true);

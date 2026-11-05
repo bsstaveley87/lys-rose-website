@@ -4,7 +4,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
 import {validateFields, interestOptions, limits} from '../assets/validation.js';
-import {AGE_TOO_OLD_MESSAGE, AGE_TOO_YOUNG_MESSAGE, BATH_BAG_CENTS, BOOKING_LEAD_HOURS, DEPOSIT_ACK, DEPOSIT_CENTS, MAX_BABY_AGE_MONTHS, MIN_BABY_AGE_DAYS, REFUND_SUMMARY, ROBE_CENTS, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SESSION, SESSION_PRICE_CENTS, SICK_CHECKIN_ACK, SICK_CONTACT_ACK, SICK_ILLNESS_ACK, SICK_SYMPTOMS_ACK, ageMonthsAtSession, applyRobeCutoff, babyAgeMessage, bookingIsClosed, fillDepositAck, fillRefundSummary, formatCents, initBooking, mountRobeAddon, previewTotal, refundBalanceCents, refundHalfBalanceCents, robeIsClosed, robeNote, sessionDateLabel, sessionPriceLabel, sessionPriceLine, sessionPriceOffer, sessionStatus, sessionTimeLabel} from '../assets/booking.js';
+import {AGE_TOO_OLD_MESSAGE, AGE_TOO_YOUNG_MESSAGE, BATH_BAG_CENTS, BOOKING_LEAD_HOURS, DEPOSIT_ACK, DEPOSIT_CENTS, MAX_BABY_AGE_MONTHS, MIN_BABY_AGE_DAYS, REFUND_SUMMARY, ROBE_CENTS, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SESSION, SESSION_PRICE_CENTS, SICK_CHECKIN_ACK, SICK_CONTACT_ACK, SICK_ILLNESS_ACK, SICK_SYMPTOMS_ACK, ageMonthsAtSession, applyRobeCutoff, babyAgeMessage, bookingIsClosed, fillDepositAck, fillRefundSummary, formatCents, initBooking, mountRobeAddon, previewTotal, refundBalanceCents, refundHalfBalanceCents, robeIsClosed, robeNote, sessionDateLabel, sessionPriceLabel, sessionPriceLine, sessionPriceOffer, sessionStatus, sessionTimeLabel, signingDateLabel} from '../assets/booking.js';
 const approved = {
   '/': {
     title: 'Lys Rose Baby Spa · Fort Lauderdale',
@@ -492,6 +492,8 @@ test('refund dollars come from the session price and the deposit', () => {
   assert.equal(ageMonthsAtSession('2026-09-01', '2026-12-06'), 3);
   assert.equal(ageMonthsAtSession('2025-12-06', '2026-12-06'), 12);
   assert.equal(ageMonthsAtSession('2026-11-08', '2026-12-06'), 0);
+  assert.equal(signingDateLabel(new Date('2026-11-05T02:00:00.000Z')), 'November 4, 2026');
+  assert.equal(signingDateLabel(new Date('2026-11-05T05:00:00.000Z')), 'November 5, 2026');
 });
 test('the pay button stays off until the birth date is valid and every required box is ticked', () => {
   const values = ['age', 'pediatrician', 'price', 'symptoms', 'illness', 'checkin', 'contact', 'deposit'];

@@ -43,7 +43,7 @@ export const AGE_ACK = 'My baby is at least 4 weeks old, has no breaks in the sk
 export const PEDIATRICIAN_ACK = "I've talked with my pediatrician about the products and activities used in the session, and I know I can skip any part at any time.";
 export const SKIP_ACK = "I understand there's no refund or discount for skipping any part of the session.";
 /** The agreement version stored with each signature. Signed copies are not on the birth-date deletion schedule. */
-export const BOOKING_TERMS_VERSION = 'booking-waiver-esignature-draft-2026-11-05';
+export const BOOKING_TERMS_VERSION = 'booking-waiver-esignature-draft-2026-11-04';
 export const WAIVER_RETENTION = 'attorney to set';
 const DRAFT_ACKS = {
   symptoms: SICK_SYMPTOMS_ACK,
@@ -532,10 +532,20 @@ function showSignature(form) {
   return ready;
 }
 
+/** Visible signing date. The stored signed_at stays UTC. */
+export function signingDateLabel(now = new Date()) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'America/New_York',
+  }).format(now);
+}
+
 function fillSignatureDate(form) {
   const input = form.querySelector('#signature-date');
   if (!input || input.value) return;
-  input.value = new Intl.DateTimeFormat('en-US', {month: 'long', day: 'numeric', year: 'numeric'}).format(new Date());
+  input.value = signingDateLabel();
 }
 
 function applyPayButton(documentRef) {

@@ -493,7 +493,7 @@ test('a signed waiver is stored with its hash, IP and user agent, and is not rew
   assert.equal(otherName.ok, true);
   assert.equal(otherName.booking.signature_name, 'Someone Else');
   assert.equal(otherName.booking.signed_at, openNow.toISOString());
-  assert.equal(otherName.booking.terms_version, 'booking-waiver-esignature-draft-2026-11-05');
+  assert.equal(otherName.booking.terms_version, 'booking-waiver-esignature-draft-2026-11-04');
   assert.equal(otherName.booking.user_agent, 'LysRoseTest/1.0');
   assert.equal(otherName.booking.ip_address, '203.0.113.8');
   assert.equal(otherName.booking.retention, 'attorney to set');
@@ -515,7 +515,7 @@ test('a signed waiver is stored with its hash, IP and user agent, and is not rew
   assert.equal(response.status, 200);
   assert.equal(captured.order.metadata.signature_name, 'Someone Else');
   assert.equal(captured.order.metadata.signed_at, openNow.toISOString());
-  assert.equal(captured.order.metadata.terms_version, 'booking-waiver-esignature-draft-2026-11-05');
+  assert.equal(captured.order.metadata.terms_version, 'booking-waiver-esignature-draft-2026-11-04');
   assert.equal(captured.order.metadata.user_agent, 'LysRoseTest/1.0');
   assert.equal(captured.order.metadata.ip_address, '203.0.113.8');
   assert.equal(captured.order.metadata.text_sha256, await sha256Hex(signedDocumentText()));

@@ -542,7 +542,10 @@ test('a signed waiver is stored with its hash, IP and user agent, and is not rew
   });
   const noContact = await signWaiverRequest(store, token, signature({emergencyName: '', emergencyPhone: '', emergencyRelationship: ''}), openNow, 'LysRoseTest/1.0', '203.0.113.8');
   assert.equal(noContact.ok, false);
-  const signed = await signWaiverRequest(store, token, signature(), openNow, 'LysRoseTest/1.0', '203.0.113.8');
+  const badImage = await signWaiverRequest(store, token, signature({signatureImage: 'not-a-png'}), openNow, 'LysRoseTest/1.0', '203.0.113.8');
+  assert.equal(badImage.ok, false);
+  const drawn = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  const signed = await signWaiverRequest(store, token, signature({signatureImage: drawn}), openNow, 'LysRoseTest/1.0', '203.0.113.8');
   assert.equal(signed.ok, true);
   assert.equal(signed.parent_cleared, true);
   assert.equal(signed.can_add, true);
@@ -569,6 +572,8 @@ test('a signed waiver is stored with its hash, IP and user agent, and is not rew
   assert.equal(waiver.retention, 'attorney to set');
   assert.equal(waiver.esign_consent.answer, 'yes');
   assert.equal(waiver.adult18.answer, 'yes');
+  assert.equal(waiver.signature_image, drawn);
+  assert.equal(waiver.signature_image_sha256, await sha256Hex(drawn));
   assert.equal(waiver.signed_text, shown);
   assert.equal(waiver.signed_text.includes('Bring your own breastmilk.'), false);
   assert.match(waiver.text_sha256, /^[0-9a-f]{64}$/);
@@ -601,6 +606,7 @@ test('a signed waiver is stored with its hash, IP and user agent, and is not rew
   assert.equal(secondRecord.part, 'additional');
   assert.equal(secondRecord.signature_name, 'Jordan Lee');
   assert.equal(secondRecord.emergency_contact, null);
+  assert.equal(secondRecord.signature_image, null);
   assert.equal(secondRecord.signed_text.includes('Additional adult.'), true);
 });
 

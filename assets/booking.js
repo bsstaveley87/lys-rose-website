@@ -648,7 +648,59 @@ function fillSignatureDate(form) {
   }
 }
 
+const signaturePads = new WeakMap();
+
+function bindSignaturePad(canvas) {
+  const context = canvas.getContext('2d');
+  let drawing = false;
+  let drawn = false;
+  function size() {
+    const rect = canvas.getBoundingClientRect();
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.floor(rect.width * ratio));
+    canvas.height = Math.max(1, Math.floor((rect.height || 120) * ratio));
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    context.lineWidth = 1.75;
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+    context.strokeStyle = '#504B49';
+  }
+  function point(event) {
+    const rect = canvas.getBoundingClientRect();
+    return {x: event.clientX - rect.left, y: event.clientY - rect.top};
+  }
+  canvas.addEventListener('pointerdown', event => {
+    if (!drawn) size();
+    drawing = true;
+    drawn = true;
+    const here = point(event);
+    context.beginPath();
+    context.moveTo(here.x, here.y);
+    canvas.setPointerCapture(event.pointerId);
+  });
+  canvas.addEventListener('pointermove', event => {
+    if (!drawing) return;
+    const here = point(event);
+    context.lineTo(here.x, here.y);
+    context.stroke();
+  });
+  canvas.addEventListener('pointerup', () => { drawing = false; });
+  canvas.addEventListener('pointercancel', () => { drawing = false; });
+  return {
+    clear() {
+      drawn = false;
+      drawing = false;
+      context.save();
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.restore();
+    },
+    image() { return drawn ? canvas.toDataURL('image/png') : ''; },
+  };
+}
+
 function signerPayload(root) {
+  const pad = signaturePads.get(root);
   return {
     signatureName: root.querySelector('[name=signatureName]')?.value || '',
     email: root.querySelector('[name=signatureEmail]')?.value || '',
@@ -658,6 +710,7 @@ function signerPayload(root) {
     emergencyRelationship: root.querySelector('[name=emergencyRelationship]')?.value || '',
     adult18: Boolean(root.querySelector('[name=adult18]')?.checked),
     esignConsent: Boolean(root.querySelector('[name=esignConsent]')?.checked),
+    signatureImage: pad ? pad.image() : '',
   };
 }
 
@@ -877,15 +930,21 @@ function applyWaiverButton(form) {
 }
 
 function showWaiverPart(documentRef, part) {
-  const parent = documentRef.querySelector('#waiver-part-3');
-  const adult = documentRef.querySelector('#waiver-part-4');
-  const adultFields = documentRef.querySelector('#waiver-part-4-fields');
+  const parent = documentRef.querySelector('#signer-parent');
+  const adult = documentRef.querySelector('#signer-adult');
+  const route = documentRef.querySelector('#parent-route');
+  const addParent = documentRef.querySelector('#add-second-parent');
   const invite = documentRef.querySelector('[name=invitePart]')?.value || 'parent';
   const partInput = documentRef.querySelector('[name=signPart]');
   if (partInput) partInput.value = part;
+  if (route) route.hidden = invite !== 'additional';
   if (parent) parent.hidden = part !== 'parent';
-  if (adult) adult.hidden = invite !== 'additional';
-  if (adultFields) adultFields.hidden = part !== 'additional';
+  if (adult) adult.hidden = part !== 'additional';
+  if (addParent) addParent.hidden = part !== 'parent';
+  if (part !== 'parent') {
+    const second = documentRef.querySelector('#second-signer');
+    if (second) second.hidden = true;
+  }
   for (const lead of documentRef.querySelectorAll('[data-signature-rest]')) {
     const which = lead.getAttribute('data-signature-rest') === 'additional' ? 'additional' : 'parent';
     lead.textContent = signatureLead(which).slice(SIGNATURE_HEADING.length).trim();
@@ -903,8 +962,11 @@ function fillWaiverDetails(documentRef, details) {
     byob: details.byob ? 'Yes' : 'No',
   };
   for (const [key, value] of Object.entries(map)) {
-    const node = documentRef.querySelector(`[data-part1=${key}]`);
-    if (node && value) node.textContent = value;
+    if (!value) continue;
+    for (const node of documentRef.querySelectorAll(`[data-part1=${key}]`)) {
+      if (node.tagName === 'INPUT') node.value = value;
+      else node.textContent = value;
+    }
   }
   const intro = documentRef.querySelector('[data-waiver-intro]');
   if (intro) intro.textContent = waiverIntro(details.babyName, details.sessionDate);
@@ -919,6 +981,17 @@ export function initWaiver(documentRef = document) {
   if (!form) return;
   applyDraftCopy(documentRef);
   fillSignatureDate(form);
+  for (const canvas of form.querySelectorAll('.signature-pad')) {
+    const root = canvas.closest('[data-signer]');
+    if (root) signaturePads.set(root, bindSignaturePad(canvas));
+  }
+  form.addEventListener('click', event => {
+    const id = event.target?.getAttribute?.('data-clear-pad');
+    if (!id) return;
+    const canvas = form.querySelector(`#${id}`);
+    const root = canvas?.closest('[data-signer]');
+    signaturePads.get(root)?.clear();
+  });
   const params = new URLSearchParams(documentRef.defaultView?.location?.search || '');
   const token = params.get('token') || '';
   const tokenInput = form.querySelector('[name=waiverToken]');
@@ -947,7 +1020,13 @@ export function initWaiver(documentRef = document) {
     }
     applyWaiverButton(form);
   });
-  form.addEventListener('input', () => applyWaiverButton(form));
+  form.addEventListener('input', event => {
+    if (event.target?.name === 'signatureName') {
+      const preview = event.target.closest('[data-signer]')?.querySelector('[data-signed-name]');
+      if (preview) preview.textContent = event.target.value;
+    }
+    applyWaiverButton(form);
+  });
   documentRef.querySelector('#add-second-parent')?.addEventListener('click', () => {
     const fields = documentRef.querySelector('#second-parent-fields');
     if (fields) fields.hidden = false;
@@ -1025,9 +1104,40 @@ export function initWaiver(documentRef = document) {
   applyWaiverButton(form);
 }
 
+function signedBlock(root) {
+  const name = root.querySelector('[name=signatureName]')?.value.trim() || '';
+  const date = root.querySelector('[name=signatureDate]')?.value || '';
+  const image = signaturePads.get(root)?.image() || '';
+  const block = root.ownerDocument.createElement('div');
+  block.className = 'signed-block';
+  const nameLine = root.ownerDocument.createElement('p');
+  nameLine.className = 'signature-script';
+  nameLine.textContent = name;
+  block.append(nameLine);
+  if (image) {
+    const picture = root.ownerDocument.createElement('img');
+    picture.alt = `Drawn signature for ${name}`;
+    picture.src = image;
+    block.append(picture);
+  }
+  const dateLine = root.ownerDocument.createElement('p');
+  dateLine.textContent = date;
+  block.append(dateLine);
+  return block;
+}
+
 function showWaiverConfirmation(documentRef, token, canAdd) {
   const form = documentRef.querySelector('#waiver-form');
   const done = documentRef.querySelector('#waiver-confirmation');
+  const lines = documentRef.querySelector('#signed-lines');
+  if (lines && form) {
+    lines.replaceChildren();
+    for (const root of form.querySelectorAll('[data-signer]')) {
+      if (root.hidden) continue;
+      if (!(root.querySelector('[name=signatureName]')?.value || '').trim()) continue;
+      lines.append(signedBlock(root));
+    }
+  }
   if (form) form.hidden = true;
   if (!done) return;
   done.hidden = false;

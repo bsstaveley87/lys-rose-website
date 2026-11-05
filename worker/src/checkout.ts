@@ -784,8 +784,18 @@ type SignatureFields = {
   emergencyName?: string;
   emergencyPhone?: string;
   emergencyRelationship?: string;
+  signatureImage?: string;
   secondParent?: SignatureFields | null;
 };
+
+function drawnSignature(fields: SignatureFields) {
+  const value = (fields.signatureImage || '').trim();
+  if (!value) return {ok: true as const, image: null};
+  if (!value.startsWith('data:image/png;base64,') || value.length > 200000) {
+    return {ok: false as const, error: 'The drawn signature could not be saved.'};
+  }
+  return {ok: true as const, image: value};
+}
 
 function emergencyContact(fields: SignatureFields) {
   const name = (fields.emergencyName || '').trim();
@@ -830,6 +840,8 @@ function signatureProblems(fields: SignatureFields, part: 'parent' | 'additional
   const relationship = (fields.relationship || '').trim();
   if (part === 'parent' && !['mother', 'father', 'legal guardian'].includes(relationship)) return 'Please choose mother, father or legal guardian.';
   if (part === 'additional' && !relationship) return 'Please enter your relationship to the family.';
+  const drawn = drawnSignature(fields);
+  if (!drawn.ok) return drawn.error;
   return emergencyProblem(fields, part === 'parent');
 }
 
@@ -840,6 +852,7 @@ async function storeSignature(store: BookingStore, booking: BookingRecord, invit
   if (existing) return {already: true as const, key};
   const signedText = waiverShownText(booking, part);
   const signedAt = now.toISOString();
+  const drawn = drawnSignature(fields);
   const record = {
     booking_id: booking.booking_id,
     booking_email: booking.email,
@@ -850,6 +863,8 @@ async function storeSignature(store: BookingStore, booking: BookingRecord, invit
     email,
     relationship: (fields.relationship || '').trim(),
     emergency_contact: emergencyContact(fields),
+    signature_image: drawn.ok ? drawn.image : null,
+    signature_image_sha256: drawn.ok && drawn.image ? await sha256Hex(drawn.image) : null,
     signature_name: (fields.signatureName || '').trim(),
     signed_at: signedAt,
     signing_date_et: new Intl.DateTimeFormat('en-US', {month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York'}).format(now),

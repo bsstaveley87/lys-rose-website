@@ -4,7 +4,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
 import {validateFields, interestOptions, limits} from '../assets/validation.js';
-import {AGE_TOO_OLD_MESSAGE, AGE_TOO_YOUNG_MESSAGE, BATH_BAG_CENTS, BOOKING_LEAD_HOURS, DEPOSIT_ACK, DEPOSIT_CENTS, MAX_BABY_AGE_MONTHS, MIN_BABY_AGE_DAYS, REFUND_SUMMARY, ROBE_CENTS, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SESSION, SESSION_PRICE_CENTS, SICK_CHECKIN_ACK, SICK_CONTACT_ACK, SICK_ILLNESS_ACK, SICK_SYMPTOMS_ACK, ageMonthsAtSession, applyRobeCutoff, babyAgeMessage, bookingIsClosed, fillDepositAck, fillRefundSummary, formatCents, initBooking, mountRobeAddon, previewTotal, refundBalanceCents, refundHalfBalanceCents, robeIsClosed, robeNote, sessionDateLabel, sessionPriceLabel, sessionPriceLine, sessionPriceOffer, sessionStatus, sessionTimeLabel, signingDateLabel} from '../assets/booking.js';
+import {AGE_TOO_OLD_MESSAGE, AGE_TOO_YOUNG_MESSAGE, BATH_BAG_CENTS, BOOKING_LEAD_HOURS, CHECKOUT_WAIVER_NOTE, DEPOSIT_ACK, DEPOSIT_CENTS, FLORIDA_STATUTORY_NOTICE, MAX_BABY_AGE_MONTHS, MAX_EXTRA_ADULTS, MIN_BABY_AGE_DAYS, REFUND_SUMMARY, ROBE_CENTS, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SECOND_ADULT_WAIVER_NOTE, SESSION, SESSION_PRICE_CENTS, SICK_CHECKIN_ACK, SICK_CONTACT_ACK, SICK_ILLNESS_ACK, SICK_SYMPTOMS_ACK, SIGNATURE_HEADING, SIGNATURE_LEAD, WAIVER_HEADING, WAIVER_RELEASE_TEXT, ageMonthsAtSession, applyRobeCutoff, babyAgeMessage, bookingIsClosed, fillDepositAck, fillRefundSummary, formatCents, initBooking, mountRobeAddon, previewTotal, refundBalanceCents, refundHalfBalanceCents, robeIsClosed, robeNote, sessionDateLabel, sessionPriceLabel, sessionPriceLine, sessionPriceOffer, sessionStatus, sessionTimeLabel, signingDateLabel} from '../assets/booking.js';
 const approved = {
   '/': {
     title: 'Lys Rose Baby Spa · Fort Lauderdale',
@@ -193,7 +193,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(html.includes('November 22'), false);
   assert.equal(html.includes('10:30 AM'), false);
   assert.equal(book.querySelector('#booking-dates [data-booking-card]'), null);
-  assert.deepEqual([...book.querySelectorAll('#booking-checkout input')].map(input => input.getAttribute('name')), ['confirmReady', 'esignConsent', 'signatureName', 'signatureDate']);
+  assert.deepEqual([...book.querySelectorAll('#booking-checkout input')].map(input => input.getAttribute('name')), ['confirmReady']);
   assert.equal(book.querySelector('.card-mock'), null);
   assert.equal(book.querySelector('.booking-pay').getAttribute('type'), 'button');
   assert.equal(book.querySelector('.booking-intro').textContent, 'A session for you and your baby: a warm floral milk bath, infant massage and a parent-led baby facial.');
@@ -376,9 +376,15 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('[name=photoRelease]').hasAttribute('required'), false);
   assert.equal(book.querySelector('.booking-pay').hasAttribute('disabled'), true);
   assert.equal(book.querySelector('.booking-pay').getAttribute('aria-disabled'), 'true');
-  assert.equal(book.querySelector('#refund-policy').textContent, `Draft ${fillRefundSummary()} Full booking & refund policy`);
+  assert.equal(book.querySelector('#refund-policy').textContent, `Draft ${fillRefundSummary()} Full booking & refund policy Read the waiver`);
   assert.equal(book.querySelector('#refund-policy a').getAttribute('href'), '/book/policy/');
-  assert.deepEqual([...book.querySelectorAll('#booking-checkout input')].map(input => input.getAttribute('name')), ['confirmReady', 'esignConsent', 'signatureName', 'signatureDate']);
+  assert.equal(book.querySelector('[data-read-waiver]').getAttribute('href'), '/book/waiver/read/');
+  assert.equal(book.querySelector('[data-read-waiver]').textContent, 'Read the waiver');
+  assert.equal(book.querySelector('[data-checkout-waiver-note]').textContent, CHECKOUT_WAIVER_NOTE);
+  assert.equal(book.querySelector('.booking-pay').textContent, 'Reserve and pay');
+  assert.equal(book.querySelector('#second-adult-fields').hasAttribute('hidden'), true);
+  assert.equal(book.querySelector('[data-second-adult-waiver-note]').textContent, SECOND_ADULT_WAIVER_NOTE);
+  assert.deepEqual([...book.querySelectorAll('#booking-checkout input')].map(input => input.getAttribute('name')), ['confirmReady']);
   assert.equal(html.toLowerCase().includes('stripe'), false);
   assert.equal(html.toLowerCase().includes('square'), false);
   const thanks = await documentFor('book/thank-you/index.html');
@@ -498,7 +504,7 @@ test('refund dollars come from the session price and the deposit', () => {
 test('the pay button stays off until the birth date is valid and every required box is ticked', () => {
   const values = ['age', 'pediatrician', 'price', 'symptoms', 'illness', 'checkin', 'contact', 'deposit'];
   const boxes = values.map(value => `<input type="checkbox" name="confirmReady" value="${value}" required/>`).join('') + '<input type="checkbox" name="waiver" required/>';
-  const {document: doc} = parseHTML(`<!doctype html><html><body><form id="booking-form"><input name="parentName" value="Alex Parent"/><input id="baby-dob" name="babyDob" type="date"/><span id="baby-dob-error" hidden></span>${boxes}<input type="checkbox" name="esignConsent" required/><input name="signatureName" type="text"/><button class="booking-pay" type="button" disabled aria-disabled="true">Sign and continue</button></form></body></html>`);
+  const {document: doc} = parseHTML(`<!doctype html><html><body><form id="booking-form"><input name="parentName" value="Alex Parent"/><input id="baby-dob" name="babyDob" type="date"/><span id="baby-dob-error" hidden></span>${boxes}<button class="booking-pay" type="button" disabled aria-disabled="true">Reserve and pay</button></form><div id="second-adult-fields" hidden><input name="secondAdultName" form="booking-form"/><input name="secondAdultEmail" form="booking-form"/></div></body></html>`);
   initBooking(doc);
   const button = doc.querySelector('.booking-pay');
   const dob = doc.querySelector('#baby-dob');
@@ -511,10 +517,6 @@ test('the pay button stays off until the birth date is valid and every required 
     box.checked = true;
     box.dispatchEvent(new doc.defaultView.Event('change', {bubbles: true}));
   }
-  assert.equal(button.disabled, true);
-  const signature = doc.querySelector('[name=signatureName]');
-  signature.value = 'A different name';
-  signature.dispatchEvent(new doc.defaultView.Event('input', {bubbles: true}));
   assert.equal(button.disabled, false);
   assert.equal(button.getAttribute('aria-disabled'), 'false');
   const deposit = doc.querySelector('[value=deposit]');
@@ -534,16 +536,29 @@ test('the draft policy page keeps the refund terms and leaves out fees and discr
   assert.equal(lower.includes('card fee'), false);
   assert.equal(lower.includes('discretion'), false);
   assert.equal(policy.body.textContent.includes('one-time courtesy'), false);
-  const bookPage = await documentFor('book/index.html');
-  assert.equal(bookPage.querySelector('.booking-pay').textContent, 'Sign and continue');
-  assert.equal(bookPage.querySelector('[data-waiver-body]').textContent, "I am the parent or legal guardian of the baby named in this booking. I understand that a Lys Rose session is an educational, parent-led group class. I provide all hands-on care for my baby, and the instructor guides. Lys Rose doesn't offer facials, medical treatments, physical therapy or massage therapy. I understand the session has inherent risks, including: handling a wet, slippery baby in and around warm water; water that may be too warm or too cool; slips and falls on wet floors; a skin reaction or allergy to the products used (including the milk soak, oils, creams and floating rose petals); a baby mouthing or swallowing a petal or other small item; contact with shared, sanitized tools; and exposure to common illnesses in a group setting. I agree to keep my baby under my direct supervision and within my reach at all times. I voluntarily accept these risks for myself and my baby. To the fullest extent the law allows, I release Lys Rose LLC (doing business as Lys Rose Baby Spa), its owner, instructors and contractors from claims for injury or loss arising from these inherent risks.");
-  assert.equal(bookPage.querySelector('[data-florida-notice]').textContent, '[Florida statutory notice: attorney to insert]');
-  assert.equal(bookPage.querySelector('[data-signature-heading]').textContent, 'Sign your waiver.');
-  assert.equal(bookPage.querySelector('[data-signature-rest]').textContent, 'Please read the waiver and booking terms above. By typing your full name and selecting "Sign and continue," you are signing electronically. Your typed name is your legal signature, just as if you\'d signed on paper, and it applies to the waiver and the booking terms shown on this page. You confirm you\'re the baby\'s parent or legal guardian and at least 18. We\'ll email you a copy of what you signed.');
-  assert.equal(bookPage.querySelector('[name=esignConsent]').hasAttribute('checked'), false);
-  assert.equal(bookPage.querySelector('[name=esignConsent]').closest('label').textContent, 'I agree to sign and receive these documents electronically. I can ask for a paper copy at any time by emailing hello@lysrosebabyspa.com.');
-  assert.equal(bookPage.querySelector('[name=signatureName]').getAttribute('autocomplete'), 'off');
-  assert.equal(bookPage.querySelector('[name=signatureName]').value, '');
+  assert.match(policy.body.textContent, /Every adult attending \(the booking parent and any second adult\) must sign the Lys Rose waiver before taking part/);
+  assert.equal(policy.querySelector('a[href="/book/waiver/read/"]').textContent, 'Read the waiver');
+  const waiverPage = await documentFor('book/waiver/index.html');
+  assert.equal(waiverPage.querySelector('meta[name=robots]').content, 'noindex,nofollow');
+  assert.equal(waiverPage.querySelector('.booking-pay').textContent, 'Sign and continue');
+  assert.equal(waiverPage.querySelector('[data-waiver-heading]').textContent, WAIVER_HEADING);
+  assert.equal(waiverPage.querySelector('[data-waiver-body]').textContent, WAIVER_RELEASE_TEXT.slice(WAIVER_HEADING.length).trim());
+  assert.equal(waiverPage.querySelector('[data-florida-notice]').textContent, FLORIDA_STATUTORY_NOTICE);
+  assert.equal(waiverPage.querySelector('[data-signature-heading]').textContent, SIGNATURE_HEADING);
+  assert.equal(waiverPage.querySelector('[data-signature-rest]').textContent, SIGNATURE_LEAD.slice(SIGNATURE_HEADING.length).trim());
+  assert.equal(waiverPage.querySelector('[name=esignConsent]').hasAttribute('checked'), false);
+  assert.equal(waiverPage.querySelector('[name=esignConsent]').closest('label').textContent, 'I agree to sign and receive these documents electronically. I can ask for a paper copy at any time by emailing hello@lysrosebabyspa.com.');
+  assert.equal(waiverPage.querySelector('[name=signatureName]').getAttribute('autocomplete'), 'off');
+  assert.equal(waiverPage.querySelector('[name=signatureName]').value, '');
+  assert.equal(waiverPage.querySelector('#waiver-confirmation').hasAttribute('hidden'), true);
+  assert.equal(waiverPage.querySelector('#waiver-add h3').textContent, 'Add the second adult attending');
+  assert.equal(waiverPage.querySelector('#waiver-add-form button').textContent, 'Send their waiver');
+  assert.equal(MAX_EXTRA_ADULTS, 1);
+  const readPage = await documentFor('book/waiver/read/index.html');
+  assert.equal(readPage.querySelector('meta[name=robots]').content, 'noindex,nofollow');
+  assert.equal(readPage.querySelector('form'), null);
+  assert.equal(readPage.querySelector('[data-waiver-body]').textContent, WAIVER_RELEASE_TEXT.slice(WAIVER_HEADING.length).trim());
+  assert.equal(readPage.querySelector('[data-florida-notice]').textContent, FLORIDA_STATUTORY_NOTICE);
   const privacy = await documentFor('privacy/index.html');
   assert.match(privacy.querySelector('.draft-banner').textContent, /Draft/);
   assert.equal(privacy.body.textContent.includes('IP address and browser details when you sign your waiver'), true);

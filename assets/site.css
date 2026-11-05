@@ -238,6 +238,10 @@ body.menu-open { overflow:hidden; }
 .addon-preview input[type=checkbox]:checked { background:#504B49; box-shadow:inset 0 0 0 2px #FFFBFA; }
 .addon-heading { display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
 .addon-preview .addon-copy { display:flex; flex-direction:column; gap:4px; }
+#second-adult-fields { display:flex; flex-direction:column; gap:12px; margin-top:12px; }
+#second-adult-fields[hidden] { display:none; }
+#second-adult-fields .field { display:flex; flex-direction:column; gap:8px; }
+#second-adult-fields .field-label { font-size:12px; font-weight:500; letter-spacing:.14em; text-transform:uppercase; }
 .face-cream { margin:0; padding:0; border:0; min-inline-size:0; display:flex; flex-direction:column; gap:2px; }
 .face-cream legend { display:block; margin:0 0 8px; padding:0; }
 .face-cream-option { display:flex; align-items:center; gap:12px; min-height:44px; margin:0; font-size:16px; letter-spacing:0; text-transform:none; }

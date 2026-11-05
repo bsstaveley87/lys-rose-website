@@ -16,4 +16,6 @@ export const pages = [
   {path:'/book/',file:'book/index.html',name:'Reserve',title:'Reserve a session · Lys Rose Baby Spa',description:"A session for parents and their babies in Fort Lauderdale: a warm floral milk bath, infant massage and a parent-led baby facial.",robots:'noindex,nofollow'},
   {path:'/book/policy/',file:'book/policy/index.html',name:'Booking policy',title:'Booking and refund policy · Lys Rose Baby Spa',description:'Draft booking, cancellation and refund terms for Lys Rose sessions.',robots:'noindex,nofollow'},
   {path:'/book/thank-you/',file:'book/thank-you/index.html',name:'Thank you',title:'Thank you · Lys Rose Baby Spa',description:'Your Lys Rose booking is being confirmed. An email is coming.',robots:'noindex,nofollow'},
+  {path:'/book/waiver/',file:'book/waiver/index.html',name:'Sign your waiver',title:'Sign your waiver · Lys Rose Baby Spa',description:'Read and sign the Lys Rose waiver.',robots:'noindex,nofollow'},
+  {path:'/book/waiver/read/',file:'book/waiver/read/index.html',name:'Read the waiver',title:'Read the waiver · Lys Rose Baby Spa',description:'Read the Lys Rose waiver before you book.',robots:'noindex,nofollow'},
 ];

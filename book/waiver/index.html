@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Lys Rose Baby Spa</title>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="site">
+<header class="site-header"></header>
+<noscript></noscript>
+<dialog id="site-menu"></dialog>
+<main id="main">
+<section class="page-heading">
+<div class="editorial-wrap">
+<p class="eyebrow">LYS ROSE BABY SPA</p>
+<h1>Sign your waiver</h1>
+</div>
+</section>
+<section class="editorial-section">
+<div class="editorial-wrap policy-copy">
+<p class="draft-banner" role="note"><span class="placeholder-mark">Draft</span> Pending CFO. Not yet in effect.</p>
+<p id="waiver-token-missing" hidden>This signing link is missing. Use the link in your email, or sign at check-in.</p>
+<section class="booking-waiver" id="booking-waiver" aria-labelledby="waiver-heading">
+<h2 id="waiver-heading">Waiver</h2>
+<p class="waiver-release"><span class="placeholder-mark">Draft</span> <strong data-waiver-heading></strong> <span data-waiver-body></span></p>
+<p data-florida-notice></p>
+</section>
+<form class="booking-form" id="waiver-form" method="post" action="#" novalidate>
+<input type="hidden" name="waiverToken" value=""/>
+<div class="booking-signature" id="booking-signature">
+<p class="signature-lead"><span class="placeholder-mark">Draft</span> <strong data-signature-heading></strong> <span data-signature-rest></span></p>
+<label class="choice-row"><input type="checkbox" name="esignConsent" value="yes" required/><span>I agree to sign and receive these documents electronically. I can ask for a paper copy at any time by emailing hello@lysrosebabyspa.com.</span></label>
+<label class="field" for="signature-name"><span class="field-label" id="signature-name-label">Full legal name</span><input class="input" id="signature-name" name="signatureName" type="text" autocomplete="off" required maxlength="120" enterkeyhint="done" aria-labelledby="signature-name-label"/></label>
+<label class="field" for="signature-date"><span class="field-label" id="signature-date-label">Signing date</span><input class="input" id="signature-date" name="signatureDate" type="text" readonly tabindex="-1" aria-labelledby="signature-date-label"/></label>
+</div>
+<p class="field-error" id="waiver-error" hidden></p>
+<button class="submit-button booking-pay" type="submit" disabled aria-disabled="true">Sign and continue</button>
+</form>
+<section id="waiver-confirmation" hidden>
+<h2>Waiver signed</h2>
+<p>We'll email you a copy of what you signed. If you haven't received it, you can also sign at check-in.</p>
+<div id="waiver-add">
+<h3>Add the second adult attending</h3>
+<form id="waiver-add-form" method="post" action="#" novalidate>
+<input type="hidden" name="inviteToken" value=""/>
+<label class="field" for="additional-name"><span class="field-label">Their full name</span><input class="input" id="additional-name" name="additionalName" type="text" autocomplete="name" maxlength="120"/></label>
+<label class="field" for="additional-email"><span class="field-label">Their email</span><input class="input" id="additional-email" name="additionalEmail" type="email" autocomplete="email" maxlength="254"/></label>
+<button class="submit-button booking-pay" type="submit">Send their waiver</button>
+<p id="waiver-add-status" hidden></p>
+</form>
+</div>
+</section>
+</div>
+</section>
+</main>
+<footer class="site-footer"></footer>
+</div>
+<script type="module" src="../../assets/booking.js"></script>
+</body>
+</html>

@@ -36,7 +36,15 @@ export const WAIVER_RELEASE_TEXT = `${WAIVER_HEADING} I am the parent or legal g
 export const FLORIDA_STATUTORY_NOTICE = '[Florida statutory notice: attorney to insert]';
 /** DRAFT pending CFO. Lead-in from the waiver e-signature draft. */
 export const SIGNATURE_HEADING = 'Sign your waiver.';
-export const SIGNATURE_LEAD = `${SIGNATURE_HEADING} Please read the waiver and booking terms above. By typing your full name and selecting "Sign and continue," you are signing electronically. Your typed name is your legal signature, just as if you'd signed on paper, and it applies to the waiver and the booking terms shown on this page. You confirm you're the baby's parent or legal guardian and at least 18. We'll email you a copy of what you signed.`;
+export const SIGNATURE_LEAD = `${SIGNATURE_HEADING} Please read the waiver above. By typing your full name and selecting "Sign and continue," you are signing electronically. Your typed name is your legal signature, just as if you'd signed on paper, and it applies to the waiver shown on this page. You confirm you're at least 18 and the baby's parent or legal guardian, or attending with them. We'll email you a copy of what you signed.`;
+/** DRAFT pending Christy. */
+export const CHECKOUT_WAIVER_NOTE = "After booking, we'll email you a waiver to sign online before your session.";
+/** DRAFT pending Christy. */
+export const SECOND_ADULT_WAIVER_NOTE = "Your second adult will receive their own waiver by email to sign before the session.";
+/** Extra adults besides the booking parent. The $25 second adult is the only one. */
+export const MAX_EXTRA_ADULTS = 1;
+export const WAIVER_SIGN_URL = 'https://forms.lysrosebabyspa.com/api/waiver';
+export const WAIVER_ADD_URL = 'https://forms.lysrosebabyspa.com/api/waiver-adult';
 /** DRAFT pending CFO. */
 export const ESIGN_CONSENT = 'I agree to sign and receive these documents electronically. I can ask for a paper copy at any time by emailing hello@lysrosebabyspa.com.';
 export const AGE_ACK = 'My baby is at least 4 weeks old, has no breaks in the skin, the umbilical cord stump has fallen off and healed, and any circumcision site is fully healed.';
@@ -383,7 +391,8 @@ function dayStamp(value) {
   return null;
 }
 
-/** Age is measured on the session date. A Date argument is that calendar day. */
+/** Age is measured on the session date. A Date argument is that calendar day. A string is an ISO day. */
+/** @param {string} iso @param {string | Date} [sessionDate] */
 export function babyAgeMessage(iso, sessionDate = new Date()) {
   if (!iso) return "Please enter your baby's date of birth.";
   const dob = parseIsoDay(iso);
@@ -424,6 +433,8 @@ export function applyDraftCopy(documentRef) {
   for (const node of documentRef.querySelectorAll('[data-waiver-heading]')) node.textContent = WAIVER_HEADING;
   for (const node of documentRef.querySelectorAll('[data-waiver-body]')) node.textContent = WAIVER_RELEASE_TEXT.slice(WAIVER_HEADING.length).trim();
   for (const node of documentRef.querySelectorAll('[data-florida-notice]')) node.textContent = FLORIDA_STATUTORY_NOTICE;
+  for (const node of documentRef.querySelectorAll('[data-checkout-waiver-note]')) node.textContent = CHECKOUT_WAIVER_NOTE;
+  for (const node of documentRef.querySelectorAll('[data-second-adult-waiver-note]')) node.textContent = SECOND_ADULT_WAIVER_NOTE;
 }
 
 const previewReserved = [0, SEATS_PER_SESSION];
@@ -504,32 +515,32 @@ function checkoutReady() {
   return Boolean(SESSION?.date) && CHECKOUT_CONFIGURED && !bookingIsClosed(SESSION);
 }
 
-function signatureReady(form) {
-  const signature = form.querySelector('[name=signatureName]');
-  if (!signature) return true;
-  const value = signature.value.trim();
-  return value.length > 0 && /\p{L}/u.test(value);
+function pageOf(form) {
+  return form.ownerDocument || form;
+}
+
+function secondAdultReady(form) {
+  const page = pageOf(form);
+  const selected = Boolean(page.querySelector('[name=secondAdult]')?.checked);
+  if (!selected) return true;
+  const name = page.querySelector('[name=secondAdultName]')?.value.trim() || '';
+  const email = page.querySelector('[name=secondAdultEmail]')?.value.trim() || '';
+  return /\p{L}/u.test(name) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function payReady(form) {
   const dob = form.querySelector('#baby-dob');
   const dobOk = Boolean(dob?.value) && !babyAgeMessage(dob.value, ageReference());
   const boxes = [...form.querySelectorAll('input[type=checkbox][required]')];
-  return dobOk && boxes.length > 0 && boxes.every(box => box.checked) && signatureReady(form);
+  return dobOk && boxes.length > 0 && boxes.every(box => box.checked) && secondAdultReady(form);
 }
 
-function showSignature(form) {
-  const signature = form.querySelector('[name=signatureName]');
-  const error = form.querySelector('#signature-name-error');
-  if (!signature) return true;
-  const ready = signatureReady(form);
-  const message = signature.value.trim() && !ready ? 'Please type your full name.' : '';
-  signature.setAttribute('aria-invalid', message ? 'true' : 'false');
-  if (error) {
-    error.textContent = message;
-    error.hidden = !message;
-  }
-  return ready;
+function syncSecondAdult(form) {
+  const page = pageOf(form);
+  const selected = Boolean(page.querySelector('[name=secondAdult]')?.checked);
+  const fields = page.querySelector('#second-adult-fields');
+  if (fields) fields.hidden = !selected;
+  for (const input of (fields ? fields.querySelectorAll('input') : [])) input.required = selected;
 }
 
 /** Visible signing date. The stored signed_at stays UTC. */
@@ -574,12 +585,12 @@ function bookingPayload(form) {
     robeName: page.querySelector('[name=robeName]')?.value || '',
     bathBag: Boolean(page.querySelector('[name=bathBag]')?.checked),
     secondAdult: Boolean(page.querySelector('[name=secondAdult]')?.checked),
+    secondAdultName: page.querySelector('[name=secondAdultName]')?.value || '',
+    secondAdultEmail: page.querySelector('[name=secondAdultEmail]')?.value || '',
     allergies: form.querySelector('[name=allergies]:checked')?.value || '',
     allergyDetails: form.querySelector('[name=allergyDetails]')?.value || '',
     waiver: Boolean(form.querySelector('[name=waiver]')?.checked),
     photoRelease: Boolean(form.querySelector('[name=photoRelease]')?.checked),
-    signatureName: form.querySelector('[name=signatureName]')?.value || '',
-    esignConsent: Boolean(form.querySelector('[name=esignConsent]')?.checked),
   };
 }
 
@@ -605,8 +616,7 @@ async function startCheckout(form) {
       const dob = form.querySelector('#baby-dob');
       if (dob && fields.babyDob) showAge(dob);
       if (fields.confirmReady) showConfirmations(form);
-      if (fields.signatureName) showSignature(form);
-      show(fields.babyDob || fields.signatureName || fields.confirmReady || data.error || 'Checkout is not available yet.');
+      show(fields.babyDob || fields.secondAdultName || fields.secondAdultEmail || fields.confirmReady || data.error || 'Checkout is not available yet.');
       applyPayButton(form.ownerDocument || form);
       return;
     }
@@ -657,6 +667,10 @@ export function initBooking(documentRef = document) {
   }
   documentRef.addEventListener('change', event => {
     if (event.target?.name === 'faceCream' || event.target?.name === 'bathBag' || event.target?.name === 'secondAdult') syncTotal(documentRef);
+    if (event.target?.name === 'secondAdult') {
+      syncSecondAdult(form);
+      applyPayButton(documentRef);
+    }
     if (event.target?.name === 'bath') syncBath(form);
   });
   form.addEventListener('change', event => {
@@ -666,15 +680,11 @@ export function initBooking(documentRef = document) {
       applyPayButton(documentRef);
     }
   });
-  form.addEventListener('input', event => {
-    if (event.target?.name === 'signatureName' || event.target?.name === 'parentName') {
-      if (event.target?.name === 'signatureName') showSignature(form);
-      applyPayButton(documentRef);
-    }
+  documentRef.addEventListener('input', event => {
+    if (event.target?.name === 'secondAdultName' || event.target?.name === 'secondAdultEmail') applyPayButton(documentRef);
   });
   form.addEventListener('focusout', event => {
     if (event.target?.name === 'confirmReady' && !event.target.checked) showConfirmations(form);
-    if (event.target?.name === 'signatureName') showSignature(form);
   });
   form.addEventListener('submit', event => {
     event.preventDefault();
@@ -690,12 +700,11 @@ export function initBooking(documentRef = document) {
     if (dob) showAge(dob);
     const bathOk = showBath(form);
     const missing = showConfirmations(form);
-    const signed = showSignature(form);
-    if (ageMessage || !bathOk || missing.length || !signed) {
+    if (ageMessage || !bathOk || missing.length || !secondAdultReady(form)) {
       if (ageMessage && dob) dob.focus();
       else if (!bathOk) form.querySelector('[name=bath]')?.focus();
       else if (missing.length) missing[0]?.focus();
-      else form.querySelector('[name=signatureName]')?.focus();
+      else (form.ownerDocument || document).querySelector('[name=secondAdultName]')?.focus();
       return;
     }
     if (checkoutReady()) startCheckout(form);
@@ -705,7 +714,7 @@ export function initBooking(documentRef = document) {
     if (typeof form.requestSubmit === 'function') form.requestSubmit();
   });
   applyDraftCopy(documentRef);
-  fillSignatureDate(form);
+  syncSecondAdult(form);
   syncAllergies(form);
   syncBath(form);
   syncTotal(documentRef);
@@ -715,4 +724,122 @@ export function initBooking(documentRef = document) {
   applyPayButton(documentRef);
 }
 
-if (typeof document !== 'undefined') initBooking(document);
+function waiverReady(form) {
+  const name = form.querySelector('[name=signatureName]')?.value.trim() || '';
+  const consent = Boolean(form.querySelector('[name=esignConsent]')?.checked);
+  return consent && /\p{L}/u.test(name);
+}
+
+function applyWaiverButton(form) {
+  const button = form.querySelector('.booking-pay');
+  if (!button) return;
+  const ready = waiverReady(form);
+  button.disabled = !ready;
+  button.setAttribute('aria-disabled', ready ? 'false' : 'true');
+}
+
+export function initWaiver(documentRef = document) {
+  const form = documentRef.querySelector('#waiver-form');
+  if (!form) return;
+  applyDraftCopy(documentRef);
+  fillSignatureDate(form);
+  const params = new URLSearchParams(documentRef.defaultView?.location?.search || '');
+  const token = params.get('token') || '';
+  const tokenInput = form.querySelector('[name=waiverToken]');
+  if (tokenInput) tokenInput.value = token;
+  const missing = documentRef.querySelector('#waiver-token-missing');
+  if (missing) missing.hidden = Boolean(token);
+  form.addEventListener('change', () => applyWaiverButton(form));
+  form.addEventListener('input', () => applyWaiverButton(form));
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!waiverReady(form)) return;
+    const error = form.querySelector('#waiver-error');
+    const show = message => {
+      if (!error) return;
+      error.textContent = message;
+      error.hidden = !message;
+    };
+    show('');
+    try {
+      const response = await fetch(WAIVER_SIGN_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', Accept: 'application/json'},
+        body: JSON.stringify({
+          token,
+          signatureName: form.querySelector('[name=signatureName]')?.value || '',
+          esignConsent: true,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        show(data.error || 'This signing link is not valid.');
+        return;
+      }
+      showWaiverConfirmation(documentRef, token, data.can_add !== false);
+    } catch {
+      show('This signing link is not available yet.');
+    }
+  });
+  const add = documentRef.querySelector('#waiver-add-form');
+  add?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const status = documentRef.querySelector('#waiver-add-status');
+    const name = add.querySelector('[name=additionalName]')?.value.trim() || '';
+    const email = add.querySelector('[name=additionalEmail]')?.value.trim() || '';
+    if (!/\p{L}/u.test(name) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (status) {
+        status.hidden = false;
+        status.textContent = 'Please enter their name and email.';
+      }
+      return;
+    }
+    try {
+      const response = await fetch(WAIVER_ADD_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', Accept: 'application/json'},
+        body: JSON.stringify({token, name, email}),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        if (status) {
+          status.hidden = false;
+          status.textContent = data.error || 'Their waiver could not be sent.';
+        }
+        return;
+      }
+      if (status) {
+        status.hidden = false;
+        status.textContent = `A waiver link was prepared for ${name}.`;
+      }
+      add.reset();
+      if (data.can_add === false) {
+        const wrap = documentRef.querySelector('#waiver-add');
+        if (wrap) wrap.hidden = true;
+      }
+    } catch {
+      if (status) {
+        status.hidden = false;
+        status.textContent = 'Their waiver could not be sent yet.';
+      }
+    }
+  });
+  applyWaiverButton(form);
+}
+
+function showWaiverConfirmation(documentRef, token, canAdd) {
+  const form = documentRef.querySelector('#waiver-form');
+  const done = documentRef.querySelector('#waiver-confirmation');
+  if (form) form.hidden = true;
+  if (!done) return;
+  done.hidden = false;
+  const add = done.querySelector('#waiver-add');
+  if (add) add.hidden = !canAdd;
+  const holder = done.querySelector('[name=inviteToken]');
+  if (holder) holder.value = token;
+}
+
+if (typeof document !== 'undefined') {
+  if (document.querySelector('#waiver-form')) initWaiver(document);
+  else initBooking(document);
+}

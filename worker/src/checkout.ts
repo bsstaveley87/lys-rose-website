@@ -1,4 +1,4 @@
-import {BOOKING_CONFIRMATIONS, BOOKING_TERMS_VERSION, SESSION, SESSION_PRICE_CENTS, SEATS_PER_SESSION, WAIVER_RETENTION, ageMonthsAtSession, babyAgeMessage, bookingClosesAt, bookingIsClosed, robeIsClosed, signedDocumentText} from '../../assets/booking.js';
+import {BOOKING_CONFIRMATIONS, BOOKING_TERMS_VERSION, MAX_EXTRA_ADULTS, SESSION, SESSION_PRICE_CENTS, SEATS_PER_SESSION, WAIVER_RETENTION, ageMonthsAtSession, babyAgeMessage, bookingClosesAt, bookingIsClosed, robeIsClosed, signedDocumentText} from '../../assets/booking.js';
 
 /**
  * Server-side prices in cents. The browser total is only a preview.
@@ -76,21 +76,26 @@ export type BookingRecord = {
   robeName: string;
   bathBag: boolean;
   secondAdult: boolean;
+  secondAdultName: string;
+  secondAdultEmail: string;
+  waiver_status: Array<{role: 'primary' | 'second_adult' | 'additional_adult'; name: string; email: string; status: 'pending' | 'signed'}>;
+  role?: 'primary' | 'second_adult' | 'additional_adult';
   allergies: string;
   allergyDetails: string;
   ageMonthsAtSession: number;
   acknowledgements: Record<string, {answer: 'yes' | 'no'; at: string | null}>;
-  signature_name: string;
-  signed_at: string;
-  terms_version: string;
-  user_agent: string;
-  ip_address: string;
+  signature_name?: string;
+  signed_at?: string;
+  terms_version?: string;
+  user_agent?: string;
+  ip_address?: string;
   booking_id: string;
+  order_id?: string;
   square_payment_id: string | null;
-  text_sha256: string;
-  signed_text: string;
-  retention: string;
-  esign_consent: {answer: 'yes' | 'no'; at: string | null};
+  text_sha256?: string;
+  signed_text?: string;
+  retention?: string;
+  esign_consent?: {answer: 'yes' | 'no'; at: string | null};
 };
 export type PreparedOrder = {
   lines: LineItem[];
@@ -162,14 +167,14 @@ export function validateBooking(raw: unknown, options: {session?: SessionConfig;
   if (!CREME.has(creme)) errors.creme = 'Please choose a crème.';
   const confirmed = confirmationSet(data);
   if (CONFIRMATIONS.some(item => !confirmed.has(item))) errors.confirmReady = 'Please confirm each item before reserving.';
-  const signatureName = text(data.signatureName, 120);
-  if (!signatureName || !/\p{L}/u.test(signatureName)) errors.signatureName = 'Please type your full name.';
-  const esignConsent = flag(data.esignConsent);
-  if (!esignConsent) errors.esignConsent = 'Please agree to sign electronically.';
   const monthsAtSession = ageMonthsAtSession(babyDob, session.date);
   const robe = flag(data.robe);
   const bathBag = flag(data.bathBag);
   const secondAdult = flag(data.secondAdult);
+  const secondAdultName = text(data.secondAdultName, 120);
+  const secondAdultEmail = text(data.secondAdultEmail, 254);
+  if (secondAdult && (!/\p{L}/u.test(secondAdultName))) errors.secondAdultName = "Please enter your second adult's name.";
+  if (secondAdult && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(secondAdultEmail)) errors.secondAdultEmail = "Please enter your second adult's email.";
   const petals = bath === 'byob' && flag(data.petals ?? data.rosePetals);
   if (robe && prices.robe.amount == null) errors.robe = "That extra isn't available.";
   if (robe && prices.robe.amount != null && robeIsClosed(session.date, now)) errors.robe = 'The embroidered robe option has closed for this session.';
@@ -178,6 +183,12 @@ export function validateBooking(raw: unknown, options: {session?: SessionConfig;
   if (Object.keys(errors).length) return {ok: false as const, status: 400, errors};
   const booking: BookingRecord = {
     parentName, email, phone, babyName, babyDob, bath, creme, petals, robe, bathBag, secondAdult,
+    secondAdultName: secondAdult ? secondAdultName : '',
+    secondAdultEmail: secondAdult ? secondAdultEmail : '',
+    waiver_status: [
+      {role: 'primary' as const, name: parentName, email, status: 'pending' as const},
+      ...(secondAdult ? [{role: 'second_adult' as const, name: secondAdultName, email: secondAdultEmail, status: 'pending' as const}] : []),
+    ],
     robeName: robe ? text(data.robeName, 40) : '',
     allergies: text(data.allergies, 40),
     allergyDetails: text(data.allergyDetails, 500),
@@ -186,16 +197,8 @@ export function validateBooking(raw: unknown, options: {session?: SessionConfig;
       const answer = confirmed.has(key) ? 'yes' as const : 'no' as const;
       return [key, {answer, at: answer === 'yes' ? now.toISOString() : null}];
     })),
-    esign_consent: {answer: esignConsent ? 'yes' as const : 'no' as const, at: esignConsent ? now.toISOString() : null},
-    signature_name: signatureName,
-    signed_at: now.toISOString(),
-    terms_version: BOOKING_TERMS_VERSION,
-    user_agent: text(options.userAgent, 500).replace(/[\r\n]/g, ' '),
-    ip_address: text(options.ipAddress, 80),
     booking_id: crypto.randomUUID(),
     square_payment_id: null,
-    text_sha256: '',
-    signed_text: signedDocumentText(),
     retention: WAIVER_RETENTION,
   };
   return {ok: true as const, booking, session};
@@ -292,13 +295,8 @@ export function squareOrderPayload(order: PreparedOrder, env: CheckoutEnv = {}) 
     // Kept for analysis. The booking record is not expired after the session.
     metadata: {
       baby_date_of_birth: order.booking.babyDob,
-      signature_name: order.booking.signature_name,
-      signed_at: order.booking.signed_at,
-      terms_version: order.booking.terms_version,
-      text_sha256: order.booking.text_sha256,
       booking_id: order.booking.booking_id,
-      user_agent: order.booking.user_agent.slice(0, 255),
-      ip_address: order.booking.ip_address,
+      waiver_status: order.booking.waiver_status.map(adult => `${adult.role}:${adult.status}`).join(','),
     },
     pricing_options: {auto_apply_taxes: false},
   };
@@ -419,10 +417,8 @@ function paymentLinkBody(order: PreparedOrder, env: CheckoutEnv, key: string, bu
 
 function bookingIdentity(booking: BookingRecord) {
   const acknowledgements = Object.fromEntries(Object.entries(booking.acknowledgements || {}).map(([key, item]) => [key, item.answer]));
-  const copy = {...booking, acknowledgements};
-  delete copy.signed_at;
-  delete copy.booking_id;
-  return copy;
+  const {signed_at: _signedAt, booking_id: _bookingId, ...rest} = booking;
+  return {...rest, acknowledgements};
 }
 
 export async function sha256Hex(value: string) {
@@ -577,14 +573,14 @@ export async function recordCompletedPayment(store: BookingStore, payment: Payme
   };
   if (!refundFlag) await store.put(seatKey, String(reserved + 1));
   await store.put(`payment:${payment.id}`, JSON.stringify(record));
-  if (order?.booking?.booking_id) {
-    const waiverKey = `waiver:${order.booking.booking_id}`;
-    const waiverRaw = await store.get(waiverKey);
-    if (waiverRaw) {
-      const waiver = JSON.parse(waiverRaw) as BookingRecord;
-      if (!waiver.square_payment_id && payment.id) {
-        waiver.square_payment_id = payment.id;
-        await store.put(waiverKey, JSON.stringify(waiver));
+  if (order?.booking?.booking_id && payment.id) {
+    const recordKey = `booking-record:${order.booking.booking_id}`;
+    const recordRaw = await store.get(recordKey);
+    if (recordRaw) {
+      const record = JSON.parse(recordRaw) as BookingRecord;
+      if (!record.square_payment_id) {
+        record.square_payment_id = payment.id;
+        await store.put(recordKey, JSON.stringify(record));
       }
     }
   }
@@ -657,11 +653,14 @@ export async function handleCheckoutRequest(request: Request, env: CheckoutEnv, 
     ipAddress: request.headers.get('cf-connecting-ip') || '',
   });
   if (!checked.ok) return new Response(JSON.stringify({error: 'Please check the booking form.', fields: checked.errors}), {status: checked.status, headers});
-  checked.booking.text_sha256 = await sha256Hex(checked.booking.signed_text);
   const order = buildOrder(checked.booking, PRICES, checked.session);
   const opened = await openCheckout(order, checked.booking.email, env, fetchImpl);
   if (!opened.ok) return new Response(JSON.stringify({error: opened.error}), {status: opened.status, headers});
-  if (env.BOOKINGS) await saveSignedWaiver(env.BOOKINGS, checked.booking);
+  if (env.BOOKINGS) {
+    checked.booking.order_id = opened.orderId;
+    await env.BOOKINGS.put(`booking-record:${checked.booking.booking_id}`, JSON.stringify(checked.booking));
+    await sendWaiverInvites(env.BOOKINGS, checked.booking);
+  }
   console.log(JSON.stringify({event: 'checkout_link_created'}));
   return new Response(JSON.stringify({url: opened.url}), {status: 200, headers});
 }
@@ -682,9 +681,188 @@ export async function handleWebhookRequest(request: Request, env: CheckoutEnv) {
   return new Response(JSON.stringify({ok: true, status: result.status, duplicate: result.duplicate, refundFlag: result.refundFlag}), {status: 200, headers: {'Content-Type': 'application/json'}});
 }
 
+function base64urlEncode(value: string) {
+  const bytes = new TextEncoder().encode(value);
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/g, '');
+}
+
+function base64urlDecode(value: string) {
+  const pad = value.length % 4 === 0 ? '' : '='.repeat(4 - (value.length % 4));
+  const binary = atob(value.replaceAll('-', '+').replaceAll('_', '/') + pad);
+  const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
+async function hmacHex(secret: string, value: string) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), {name: 'HMAC', hash: 'SHA-256'}, false, ['sign']);
+  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(value));
+  return [...new Uint8Array(mac)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function bookingSecret(store: BookingStore, bookingId: string) {
+  const existing = await store.get(`waiver-secret:${bookingId}`);
+  if (existing) return existing;
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  const secret = [...bytes].map(byte => byte.toString(16).padStart(2, '0')).join('');
+  await store.put(`waiver-secret:${bookingId}`, secret);
+  return secret;
+}
+
+export async function waiverLink(store: BookingStore, bookingId: string, role: 'primary' | 'second_adult' | 'additional_adult', email: string, name: string) {
+  const secret = await bookingSecret(store, bookingId);
+  const payload = JSON.stringify({booking_id: bookingId, role, email: email.trim().toLowerCase(), name});
+  const token = `${base64urlEncode(payload)}.${await hmacHex(secret, payload)}`;
+  return `${CHECKOUT_ORIGIN}/book/waiver/?token=${encodeURIComponent(token)}`;
+}
+
+export async function readWaiverToken(store: BookingStore, token: string) {
+  const [encoded, mac] = token.split('.');
+  if (!encoded || !mac) return null;
+  let payload = '';
+  try { payload = base64urlDecode(encoded); } catch { return null; }
+  let data: {booking_id?: string; role?: 'primary' | 'second_adult' | 'additional_adult'; email?: string; name?: string};
+  try { data = JSON.parse(payload); } catch { return null; }
+  if (!data.booking_id || !data.role || !data.email) return null;
+  const secret = await store.get(`waiver-secret:${data.booking_id}`);
+  if (!secret || !timingSafeEqual(await hmacHex(secret, payload), mac)) return null;
+  return {booking_id: data.booking_id, role: data.role, email: data.email, name: data.name || ''};
+}
+
+function logWaiverInvite(email: string, role: string, link: string) {
+  console.log(JSON.stringify({event: 'waiver_invite_email_preview', sent: false, to: email, role, link}));
+}
+
+export async function sendWaiverInvites(store: BookingStore, booking: BookingRecord) {
+  for (const adult of booking.waiver_status) {
+    const link = await waiverLink(store, booking.booking_id, adult.role, adult.email, adult.name);
+    logWaiverInvite(adult.email, adult.role, link);
+  }
+}
+
+async function loadBookingRecord(store: BookingStore, bookingId: string) {
+  const raw = await store.get(`booking-record:${bookingId}`);
+  return raw ? JSON.parse(raw) as BookingRecord : null;
+}
+
+async function saveBookingRecord(store: BookingStore, booking: BookingRecord) {
+  await store.put(`booking-record:${booking.booking_id}`, JSON.stringify(booking));
+  if (!booking.order_id) return;
+  const orderRaw = await store.get(`order:${booking.order_id}`);
+  if (!orderRaw) return;
+  const order = JSON.parse(orderRaw) as {booking?: BookingRecord};
+  order.booking = booking;
+  await store.put(`order:${booking.order_id}`, JSON.stringify(order));
+}
+
+function extraAdultCount(booking: BookingRecord) {
+  return booking.waiver_status.filter(adult => adult.role !== 'primary').length;
+}
+
+export async function signWaiverRequest(store: BookingStore, token: string, signatureName: string, esignConsent: boolean, now: Date, userAgent: string, ipAddress: string) {
+  const invite = await readWaiverToken(store, token);
+  if (!invite) return {ok: false as const, status: 403, error: 'This signing link is not valid.'};
+  if (!esignConsent) return {ok: false as const, status: 400, error: 'Please agree to sign electronically.'};
+  const name = signatureName.trim();
+  if (!/\p{L}/u.test(name)) return {ok: false as const, status: 400, error: 'Please type your full name.'};
+  const key = `waiver:${invite.booking_id}:${invite.role}:${invite.email}`;
+  const existing = await store.get(key);
+  const booking = await loadBookingRecord(store, invite.booking_id);
+  if (!booking) return {ok: false as const, status: 404, error: 'This signing link is not valid.'};
+  if (existing) {
+    return {ok: true as const, already: true, can_add: extraAdultCount(booking) < MAX_EXTRA_ADULTS, limit: MAX_EXTRA_ADULTS};
+  }
+  const signedText = signedDocumentText();
+  const record: BookingRecord = {
+    ...booking,
+    role: invite.role,
+    email: invite.email,
+    signature_name: name,
+    signed_at: now.toISOString(),
+    terms_version: BOOKING_TERMS_VERSION,
+    signed_text: signedText,
+    text_sha256: await sha256Hex(signedText),
+    user_agent: userAgent.replace(/[\r\n]/g, ' ').slice(0, 500),
+    ip_address: ipAddress.slice(0, 80),
+    esign_consent: {answer: 'yes', at: now.toISOString()},
+    retention: WAIVER_RETENTION,
+    square_payment_id: booking.square_payment_id,
+  };
+  await store.put(key, JSON.stringify(record));
+  const adult = booking.waiver_status.find(item => item.role === invite.role && item.email.toLowerCase() === invite.email);
+  if (adult) adult.status = 'signed';
+  await saveBookingRecord(store, booking);
+  console.log(JSON.stringify({
+    event: 'waiver_email_preview',
+    sent: false,
+    to: invite.email,
+    role: invite.role,
+    signature_name: name,
+    signed_at: record.signed_at,
+    terms_version: BOOKING_TERMS_VERSION,
+    signed_text: signedText,
+  }));
+  return {ok: true as const, already: false, can_add: extraAdultCount(booking) < MAX_EXTRA_ADULTS, limit: MAX_EXTRA_ADULTS};
+}
+
+export async function addWaiverAdult(store: BookingStore, token: string, name: string, email: string) {
+  const invite = await readWaiverToken(store, token);
+  if (!invite) return {ok: false as const, status: 403, error: 'This signing link is not valid.'};
+  const adultName = name.trim();
+  const adultEmail = email.trim();
+  if (!/\p{L}/u.test(adultName) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adultEmail)) {
+    return {ok: false as const, status: 400, error: 'Please enter their name and email.'};
+  }
+  const booking = await loadBookingRecord(store, invite.booking_id);
+  if (!booking) return {ok: false as const, status: 404, error: 'This signing link is not valid.'};
+  if (extraAdultCount(booking) >= MAX_EXTRA_ADULTS) {
+    return {ok: false as const, status: 409, error: 'This booking already has the maximum number of extra adults.', can_add: false, limit: MAX_EXTRA_ADULTS};
+  }
+  if (booking.waiver_status.some(item => item.email.toLowerCase() === adultEmail.toLowerCase())) {
+    return {ok: false as const, status: 400, error: 'That adult is already on this booking.'};
+  }
+  booking.waiver_status.push({role: 'additional_adult', name: adultName, email: adultEmail, status: 'pending'});
+  await saveBookingRecord(store, booking);
+  const link = await waiverLink(store, booking.booking_id, 'additional_adult', adultEmail, adultName);
+  logWaiverInvite(adultEmail, 'additional_adult', link);
+  return {ok: true as const, can_add: extraAdultCount(booking) < MAX_EXTRA_ADULTS, limit: MAX_EXTRA_ADULTS};
+}
+
+export async function handleWaiverSignRequest(request: Request, env: CheckoutEnv, now = new Date()) {
+  const origin = request.headers.get('Origin') || '';
+  const headers = checkoutHeaders(origin);
+  if (request.method === 'OPTIONS') return new Response(null, {status: 204, headers});
+  if (!checkoutOrigins.has(origin)) return new Response(JSON.stringify({error: 'Origin not allowed.'}), {status: 403, headers});
+  if (request.method !== 'POST') return new Response(JSON.stringify({error: 'Method not allowed.'}), {status: 405, headers});
+  if (!env.BOOKINGS) return new Response(JSON.stringify({error: 'This signing link is not available yet.'}), {status: 503, headers});
+  const rawText = await readLimited(request);
+  if (rawText == null) return new Response(JSON.stringify({error: 'Please check the form.'}), {status: 413, headers});
+  let raw: {token?: string; signatureName?: string; esignConsent?: boolean; name?: string; email?: string};
+  try { raw = JSON.parse(rawText); } catch { return new Response(JSON.stringify({error: 'Please check the form.'}), {status: 400, headers}); }
+  const path = new URL(request.url).pathname;
+  if (path === '/api/waiver-adult') {
+    const added = await addWaiverAdult(env.BOOKINGS, raw.token || '', raw.name || '', raw.email || '');
+    if (!added.ok) return new Response(JSON.stringify({error: added.error, can_add: added.can_add}), {status: added.status, headers});
+    return new Response(JSON.stringify({ok: true, can_add: added.can_add, limit: added.limit}), {status: 200, headers});
+  }
+  const signed = await signWaiverRequest(
+    env.BOOKINGS,
+    raw.token || '',
+    raw.signatureName || '',
+    raw.esignConsent === true,
+    now,
+    request.headers.get('user-agent') || '',
+    request.headers.get('cf-connecting-ip') || '',
+  );
+  if (!signed.ok) return new Response(JSON.stringify({error: signed.error}), {status: signed.status, headers});
+  return new Response(JSON.stringify({ok: true, can_add: signed.can_add, limit: signed.limit}), {status: 200, headers});
+}
+
 export async function routeCheckout(request: Request, env: CheckoutEnv, fetchImpl: typeof fetch = fetch, now = new Date(), session: SessionConfig | undefined = undefined) {
   const path = new URL(request.url).pathname;
   if (path === '/api/checkout') return handleCheckoutRequest(request, env, fetchImpl, now, session);
+  if (path === '/api/waiver' || path === '/api/waiver-adult') return handleWaiverSignRequest(request, env, now);
   if (path === '/api/square-webhook') return handleWebhookRequest(request, env);
   return null;
 }

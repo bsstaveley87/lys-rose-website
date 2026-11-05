@@ -26,7 +26,7 @@ import {
   squareSignature,
   validateBooking,
 } from '../worker/src/checkout.ts';
-import {signedDocumentText} from '../assets/booking.js';
+import {sessionDateLabel, sessionTimeLabel, signedDocumentText} from '../assets/booking.js';
 
 const session = {date: '2026-12-06', start: '10:30', end: '12:30'};
 const sessionLine = 'Lys Rose session · Sun Dec 6, 10:30 AM';
@@ -34,7 +34,7 @@ const openNow = new Date(2026, 10, 1);
 const closedNow = new Date('2026-12-04T15:30:00Z');
 
 function form(overrides = {}) {
-  return {
+  const body = {
     parentName: 'Christy Zemour',
     signatureName: 'Christy Zemour',
     esignConsent: true,
@@ -44,7 +44,21 @@ function form(overrides = {}) {
     babyDob: '2026-09-01',
     bath: 'floral-milk-soak',
     creme: 'signature',
-    confirmReady: ['age', 'pediatrician', 'price', 'symptoms', 'illness', 'checkin', 'contact', 'deposit'],
+    confirmReady: ['age', 'price', 'join', 'checkin', 'contact', 'deposit'],
+    ...overrides,
+  };
+  if (!Object.hasOwn(overrides, 'confirmReady') && body.bath === 'byob') body.confirmReady = [...body.confirmReady, 'byob'];
+  return body;
+}
+
+function signature(overrides = {}) {
+  return {
+    signatureName: 'Someone Else',
+    email: 'parent@example.com',
+    relationship: 'mother',
+    adult18: true,
+    esignConsent: true,
+    part: 'parent',
     ...overrides,
   };
 }
@@ -451,14 +465,16 @@ test('a stored order is not replaced by a different booking', async () => {
 test('birth date and health acknowledgements are required, recorded, and kept', async () => {
   const source = await readFile(new URL('../worker/src/checkout.ts', import.meta.url), 'utf8');
   assert.equal(source.includes('expirationTtl'), false);
-  const noHealth = validateBooking(form({confirmReady: ['age', 'pediatrician', 'price', 'deposit']}), {session, now: openNow});
+  const noHealth = validateBooking(form({confirmReady: ['age', 'price', 'deposit']}), {session, now: openNow});
   assert.equal(noHealth.ok, false);
   assert.match(noHealth.errors.confirmReady, /confirm/);
+  const needsByob = validateBooking(form({bath: 'byob', confirmReady: ['age', 'price', 'join', 'checkin', 'contact', 'deposit']}), {session, now: openNow});
+  assert.equal(needsByob.ok, false);
   const checked = validateBooking(form(), {session, now: openNow});
   assert.equal(checked.ok, true);
   assert.equal(checked.booking.babyDob, '2026-09-01');
   assert.equal(checked.booking.ageMonthsAtSession, 3);
-  for (const key of ['age', 'pediatrician', 'price', 'symptoms', 'illness', 'checkin', 'contact', 'deposit']) {
+  for (const key of ['age', 'price', 'join', 'checkin', 'contact', 'deposit']) {
     assert.equal(checked.booking.acknowledgements[key].answer, 'yes', key);
     assert.equal(checked.booking.acknowledgements[key].at, openNow.toISOString(), key);
   }
@@ -478,8 +494,8 @@ test('birth date and health acknowledgements are required, recorded, and kept', 
   const saved = JSON.parse(await store.get('order:ord_dob'));
   assert.equal(saved.booking.babyDob, '2026-09-01');
   assert.equal(saved.booking.ageMonthsAtSession, 3);
-  assert.equal(saved.booking.acknowledgements.symptoms.answer, 'yes');
-  assert.equal(saved.booking.acknowledgements.symptoms.at, openNow.toISOString());
+  assert.equal(saved.booking.acknowledgements.join.answer, 'yes');
+  assert.equal(saved.booking.acknowledgements.join.at, openNow.toISOString());
   assert.equal(saved.booking.acknowledgements.deposit.at, openNow.toISOString());
 });
 
@@ -505,54 +521,76 @@ test('a signed waiver is stored with its hash, IP and user agent, and is not rew
   const saved = JSON.parse(await store.get('order:ord_sign'));
   const bookingId = saved.booking.booking_id;
   const record = JSON.parse(await store.get(`booking-record:${bookingId}`));
-  assert.deepEqual(record.waiver_status, [{role: 'primary', name: 'Christy Zemour', email: 'parent@example.com', status: 'pending'}]);
+  assert.deepEqual(record.waiver_status, [{role: 'primary', part: 'parent', name: 'Christy Zemour', email: 'parent@example.com', status: 'pending'}]);
   assert.equal(await store.get(`waiver:${bookingId}`), null);
   const link = await waiverLink(store, bookingId, 'primary', 'parent@example.com', 'Christy Zemour');
   const token = new URL(link).searchParams.get('token');
-  const unsigned = await signWaiverRequest(store, token, '', false, openNow, 'LysRoseTest/1.0', '203.0.113.8');
+  const unsigned = await signWaiverRequest(store, token, {signatureName: '', esignConsent: false, adult18: false}, openNow, 'LysRoseTest/1.0', '203.0.113.8');
   assert.equal(unsigned.ok, false);
-  const signed = await signWaiverRequest(store, token, 'Someone Else', true, openNow, 'LysRoseTest/1.0', '203.0.113.8');
+  const shown = signedDocumentText({
+    part: 'parent',
+    babyName: 'Lily',
+    babyDob: '2026-09-01',
+    sessionDate: sessionDateLabel(session),
+    sessionTime: sessionTimeLabel(session),
+    location: 'Fort Lauderdale',
+    bookingId,
+    byob: false,
+  });
+  const signed = await signWaiverRequest(store, token, signature(), openNow, 'LysRoseTest/1.0', '203.0.113.8');
   assert.equal(signed.ok, true);
+  assert.equal(signed.parent_cleared, true);
   assert.equal(signed.can_add, true);
-  assert.equal(signed.limit, 1);
-  const key = `waiver:${bookingId}:primary:parent@example.com`;
+  assert.equal(signed.limit, 2);
+  const key = `waiver:${bookingId}:parent:parent@example.com`;
   const waiver = JSON.parse(await store.get(key));
   assert.equal(waiver.role, 'primary');
+  assert.equal(waiver.part, 'parent');
+  assert.equal(waiver.relationship, 'mother');
   assert.equal(waiver.signature_name, 'Someone Else');
   assert.equal(waiver.signed_at, openNow.toISOString());
   assert.equal(waiver.terms_version, 'booking-waiver-esignature-draft-2026-11-04');
   assert.equal(waiver.user_agent, 'LysRoseTest/1.0');
   assert.equal(waiver.ip_address, '203.0.113.8');
+  assert.equal(waiver.babyName, 'Lily');
+  assert.equal(waiver.babyDob, '2026-09-01');
   assert.equal(waiver.retention, 'attorney to set');
   assert.equal(waiver.esign_consent.answer, 'yes');
-  assert.equal(waiver.signed_text, signedDocumentText());
+  assert.equal(waiver.adult18.answer, 'yes');
+  assert.equal(waiver.signed_text, shown);
+  assert.equal(waiver.signed_text.includes('Bring your own breastmilk.'), false);
   assert.match(waiver.text_sha256, /^[0-9a-f]{64}$/);
-  assert.equal(waiver.text_sha256, await sha256Hex(signedDocumentText()));
-  const again = await signWaiverRequest(store, token, 'Changed', true, openNow, 'other', '1.2.3.4');
+  assert.equal(waiver.text_sha256, await sha256Hex(shown));
+  const again = await signWaiverRequest(store, token, signature({signatureName: 'Changed'}), openNow, 'other', '1.2.3.4');
   assert.equal(again.already, true);
   const kept = JSON.parse(await store.get(key));
-  assert.equal(kept.signed_text, signedDocumentText());
   assert.equal(kept.signature_name, 'Someone Else');
   const added = await addWaiverAdult(store, token, 'Jordan Lee', 'jordan@example.com');
   assert.equal(added.ok, true);
-  assert.equal(added.can_add, false);
-  const afterAdd = JSON.parse(await store.get(`booking-record:${bookingId}`));
-  assert.equal(afterAdd.waiver_status[1].role, 'additional_adult');
-  assert.equal(afterAdd.waiver_status[1].status, 'pending');
+  assert.equal(added.can_add, true);
+  const second = await addWaiverAdult(store, token, 'Aunt May', 'may@example.com');
+  assert.equal(second.ok, true);
+  assert.equal(second.can_add, false);
   const blocked = await addWaiverAdult(store, token, 'A Third', 'third@example.com');
-  assert.equal(blocked.ok, false);
   assert.equal(blocked.status, 409);
   const secondLink = await waiverLink(store, bookingId, 'additional_adult', 'jordan@example.com', 'Jordan Lee');
   const secondToken = new URL(secondLink).searchParams.get('token');
-  const secondSigned = await signWaiverRequest(store, secondToken, 'Jordan Lee', true, openNow, 'LysRoseTest/1.0', '203.0.113.9');
+  const secondSigned = await signWaiverRequest(store, secondToken, signature({
+    signatureName: 'Jordan Lee',
+    email: 'jordan@example.com',
+    relationship: 'grandparent',
+    part: 'additional',
+  }), openNow, 'LysRoseTest/1.0', '203.0.113.9');
   assert.equal(secondSigned.ok, true);
   assert.equal(secondSigned.can_add, false);
-  const secondRecord = JSON.parse(await store.get(`waiver:${bookingId}:additional_adult:jordan@example.com`));
+  const secondRecord = JSON.parse(await store.get(`waiver:${bookingId}:additional:jordan@example.com`));
   assert.equal(secondRecord.role, 'additional_adult');
+  assert.equal(secondRecord.part, 'additional');
   assert.equal(secondRecord.signature_name, 'Jordan Lee');
+  assert.equal(secondRecord.signed_text.includes('Additional adult.'), true);
 });
 
-test('a booking that already has a second adult does not offer another', async () => {
+test('a paid second adult still leaves room for one more additional adult', async () => {
   const store = memoryStore();
   const response = await handleCheckoutRequest(checkoutRequest(form({
     secondAdult: true,
@@ -563,11 +601,14 @@ test('a booking that already has a second adult does not offer another', async (
   const saved = JSON.parse(await store.get('order:ord_two'));
   const bookingId = saved.booking.booking_id;
   assert.equal(saved.booking.waiver_status[1].role, 'second_adult');
-  assert.equal(saved.booking.waiver_status[1].email, 'jordan@example.com');
+  assert.equal(saved.booking.waiver_status[1].part, 'additional');
   const link = await waiverLink(store, bookingId, 'primary', 'parent@example.com', 'Christy Zemour');
   const token = new URL(link).searchParams.get('token');
-  const signed = await signWaiverRequest(store, token, 'Christy Zemour', true, openNow, 'LysRoseTest/1.0', '203.0.113.8');
-  assert.equal(signed.can_add, false);
+  const signed = await signWaiverRequest(store, token, signature({signatureName: 'Christy Zemour'}), openNow, 'LysRoseTest/1.0', '203.0.113.8');
+  assert.equal(signed.can_add, true);
+  assert.equal(signed.parent_cleared, true);
+  const added = await addWaiverAdult(store, token, 'Aunt May', 'may@example.com');
+  assert.equal(added.can_add, false);
   const blocked = await addWaiverAdult(store, token, 'A Third', 'third@example.com');
   assert.equal(blocked.status, 409);
 });

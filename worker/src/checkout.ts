@@ -1,4 +1,4 @@
-import {BOOKING_CONFIRMATIONS, BOOKING_TERMS_VERSION, MAX_EXTRA_ADULTS, SESSION, SESSION_PRICE_CENTS, SEATS_PER_SESSION, WAIVER_RETENTION, ageMonthsAtSession, babyAgeMessage, bookingClosesAt, bookingIsClosed, robeIsClosed, signedDocumentText} from '../../assets/booking.js';
+import {BOOKING_CONFIRMATIONS, BOOKING_TERMS_VERSION, MAX_EXTRA_ADULTS, SESSION, SESSION_PRICE_CENTS, SEATS_PER_SESSION, WAIVER_RETENTION, ageMonthsAtSession, babyAgeMessage, bookingClosesAt, bookingIsClosed, robeIsClosed, sessionDateLabel, sessionTimeLabel, signedDocumentText} from '../../assets/booking.js';
 
 /**
  * Server-side prices in cents. The browser total is only a preview.
@@ -78,7 +78,11 @@ export type BookingRecord = {
   secondAdult: boolean;
   secondAdultName: string;
   secondAdultEmail: string;
-  waiver_status: Array<{role: 'primary' | 'second_adult' | 'additional_adult'; name: string; email: string; status: 'pending' | 'signed'}>;
+  sessionDate?: string;
+  sessionStart?: string;
+  sessionEnd?: string;
+  location?: string;
+  waiver_status: Array<{role: 'primary' | 'second_parent' | 'second_adult' | 'additional_adult'; part: 'parent' | 'additional'; name: string; email: string; status: 'pending' | 'signed'; relationship?: string}>;
   role?: 'primary' | 'second_adult' | 'additional_adult';
   allergies: string;
   allergyDetails: string;
@@ -166,7 +170,7 @@ export function validateBooking(raw: unknown, options: {session?: SessionConfig;
   const creme = text(data.creme, 20) || text(data.faceCream, 20);
   if (!CREME.has(creme)) errors.creme = 'Please choose a crème.';
   const confirmed = confirmationSet(data);
-  if (CONFIRMATIONS.some(item => !confirmed.has(item))) errors.confirmReady = 'Please confirm each item before reserving.';
+  if (CONFIRMATIONS.some(item => !confirmed.has(item)) || (bath === 'byob' && !confirmed.has('byob'))) errors.confirmReady = 'Please confirm each item before reserving.';
   const monthsAtSession = ageMonthsAtSession(babyDob, session.date);
   const robe = flag(data.robe);
   const bathBag = flag(data.bathBag);
@@ -185,15 +189,19 @@ export function validateBooking(raw: unknown, options: {session?: SessionConfig;
     parentName, email, phone, babyName, babyDob, bath, creme, petals, robe, bathBag, secondAdult,
     secondAdultName: secondAdult ? secondAdultName : '',
     secondAdultEmail: secondAdult ? secondAdultEmail : '',
+    sessionDate: session.date,
+    sessionStart: session.start || '',
+    sessionEnd: session.end || '',
+    location: 'Fort Lauderdale',
     waiver_status: [
-      {role: 'primary' as const, name: parentName, email, status: 'pending' as const},
-      ...(secondAdult ? [{role: 'second_adult' as const, name: secondAdultName, email: secondAdultEmail, status: 'pending' as const}] : []),
+      {role: 'primary' as const, part: 'parent' as const, name: parentName, email, status: 'pending' as const},
+      ...(secondAdult ? [{role: 'second_adult' as const, part: 'additional' as const, name: secondAdultName, email: secondAdultEmail, status: 'pending' as const}] : []),
     ],
     robeName: robe ? text(data.robeName, 40) : '',
     allergies: text(data.allergies, 40),
     allergyDetails: text(data.allergyDetails, 500),
     ageMonthsAtSession: monthsAtSession ?? 0,
-    acknowledgements: Object.fromEntries(CONFIRMATIONS.map(key => {
+    acknowledgements: Object.fromEntries([...CONFIRMATIONS, 'byob'].map(key => {
       const answer = confirmed.has(key) ? 'yes' as const : 'no' as const;
       return [key, {answer, at: answer === 'yes' ? now.toISOString() : null}];
     })),
@@ -736,6 +744,8 @@ function logWaiverInvite(email: string, role: string, link: string) {
 
 export async function sendWaiverInvites(store: BookingStore, booking: BookingRecord) {
   for (const adult of booking.waiver_status) {
+    if (adult.role !== 'primary' && adult.role !== 'second_adult' && adult.role !== 'additional_adult') continue;
+    if (adult.status === 'signed') continue;
     const link = await waiverLink(store, booking.booking_id, adult.role, adult.email, adult.name);
     logWaiverInvite(adult.email, adult.role, link);
   }
@@ -757,53 +767,155 @@ async function saveBookingRecord(store: BookingStore, booking: BookingRecord) {
 }
 
 function extraAdultCount(booking: BookingRecord) {
-  return booking.waiver_status.filter(adult => adult.role !== 'primary').length;
+  return booking.waiver_status.filter(adult => adult.role === 'second_adult' || adult.role === 'additional_adult').length;
 }
 
-export async function signWaiverRequest(store: BookingStore, token: string, signatureName: string, esignConsent: boolean, now: Date, userAgent: string, ipAddress: string) {
-  const invite = await readWaiverToken(store, token);
-  if (!invite) return {ok: false as const, status: 403, error: 'This signing link is not valid.'};
-  if (!esignConsent) return {ok: false as const, status: 400, error: 'Please agree to sign electronically.'};
-  const name = signatureName.trim();
-  if (!/\p{L}/u.test(name)) return {ok: false as const, status: 400, error: 'Please type your full name.'};
-  const key = `waiver:${invite.booking_id}:${invite.role}:${invite.email}`;
+function parentCleared(booking: BookingRecord) {
+  return booking.waiver_status.some(adult => adult.part === 'parent' && adult.status === 'signed');
+}
+
+type SignatureFields = {
+  signatureName?: string;
+  email?: string;
+  relationship?: string;
+  adult18?: boolean;
+  esignConsent?: boolean;
+  part?: 'parent' | 'additional';
+  secondParent?: SignatureFields | null;
+};
+
+function waiverShownText(booking: BookingRecord, part: 'parent' | 'additional') {
+  const session = {date: booking.sessionDate, start: booking.sessionStart, end: booking.sessionEnd};
+  return signedDocumentText({
+    part,
+    babyName: booking.babyName,
+    babyDob: booking.babyDob,
+    sessionDate: sessionDateLabel(session),
+    sessionTime: sessionTimeLabel(session),
+    location: booking.location || 'Fort Lauderdale',
+    bookingId: booking.booking_id,
+    byob: booking.bath === 'byob',
+  });
+}
+
+function signatureProblems(fields: SignatureFields, part: 'parent' | 'additional') {
+  if (fields.esignConsent !== true) return 'Please agree to sign electronically.';
+  if (fields.adult18 !== true) return "Please confirm you're at least 18.";
+  const name = (fields.signatureName || '').trim();
+  if (!/\p{L}/u.test(name)) return 'Please type your full name.';
+  const email = (fields.email || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Please enter your email.';
+  const relationship = (fields.relationship || '').trim();
+  if (part === 'parent' && !['mother', 'father', 'legal guardian'].includes(relationship)) return 'Please choose mother, father or legal guardian.';
+  if (part === 'additional' && !relationship) return 'Please enter your relationship to the family.';
+  return '';
+}
+
+async function storeSignature(store: BookingStore, booking: BookingRecord, invite: {role: BookingRecord['waiver_status'][number]['role']; email: string}, fields: SignatureFields, part: 'parent' | 'additional', now: Date, userAgent: string, ipAddress: string) {
+  const email = (fields.email || '').trim();
+  const key = `waiver:${booking.booking_id}:${part}:${email.toLowerCase()}`;
   const existing = await store.get(key);
-  const booking = await loadBookingRecord(store, invite.booking_id);
-  if (!booking) return {ok: false as const, status: 404, error: 'This signing link is not valid.'};
-  if (existing) {
-    return {ok: true as const, already: true, can_add: extraAdultCount(booking) < MAX_EXTRA_ADULTS, limit: MAX_EXTRA_ADULTS};
-  }
-  const signedText = signedDocumentText();
-  const record: BookingRecord = {
-    ...booking,
+  if (existing) return {already: true as const, key};
+  const signedText = waiverShownText(booking, part);
+  const signedAt = now.toISOString();
+  const record = {
+    booking_id: booking.booking_id,
+    booking_email: booking.email,
+    babyName: booking.babyName,
+    babyDob: booking.babyDob,
     role: invite.role,
-    email: invite.email,
-    signature_name: name,
-    signed_at: now.toISOString(),
+    part,
+    email,
+    relationship: (fields.relationship || '').trim(),
+    signature_name: (fields.signatureName || '').trim(),
+    signed_at: signedAt,
+    signing_date_et: new Intl.DateTimeFormat('en-US', {month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York'}).format(now),
     terms_version: BOOKING_TERMS_VERSION,
     signed_text: signedText,
     text_sha256: await sha256Hex(signedText),
+    adult18: {answer: 'yes' as const, at: signedAt},
+    esign_consent: {answer: 'yes' as const, at: signedAt},
     user_agent: userAgent.replace(/[\r\n]/g, ' ').slice(0, 500),
     ip_address: ipAddress.slice(0, 80),
-    esign_consent: {answer: 'yes', at: now.toISOString()},
-    retention: WAIVER_RETENTION,
     square_payment_id: booking.square_payment_id,
+    retention: WAIVER_RETENTION,
   };
   await store.put(key, JSON.stringify(record));
-  const adult = booking.waiver_status.find(item => item.role === invite.role && item.email.toLowerCase() === invite.email);
-  if (adult) adult.status = 'signed';
-  await saveBookingRecord(store, booking);
   console.log(JSON.stringify({
     event: 'waiver_email_preview',
     sent: false,
-    to: invite.email,
+    to: email,
     role: invite.role,
-    signature_name: name,
-    signed_at: record.signed_at,
+    part,
+    signature_name: record.signature_name,
+    signed_at: signedAt,
     terms_version: BOOKING_TERMS_VERSION,
     signed_text: signedText,
   }));
-  return {ok: true as const, already: false, can_add: extraAdultCount(booking) < MAX_EXTRA_ADULTS, limit: MAX_EXTRA_ADULTS};
+  return {already: false as const, key, record};
+}
+
+export async function signWaiverRequest(store: BookingStore, token: string, fields: SignatureFields, now: Date, userAgent: string, ipAddress: string) {
+  const invite = await readWaiverToken(store, token);
+  if (!invite) return {ok: false as const, status: 403, error: 'This signing link is not valid.'};
+  const booking = await loadBookingRecord(store, invite.booking_id);
+  if (!booking) return {ok: false as const, status: 404, error: 'This signing link is not valid.'};
+  const invitePart = invite.role === 'primary' ? 'parent' : 'additional';
+  const part = fields.part === 'parent' || fields.part === 'additional' ? fields.part : invitePart;
+  if (invite.role === 'primary' && part !== 'parent') return {ok: false as const, status: 400, error: 'Please sign as the baby\'s parent or legal guardian.'};
+  const problem = signatureProblems(fields, part);
+  if (problem) return {ok: false as const, status: 400, error: problem};
+  if (part === 'parent' && fields.secondParent) {
+    const secondProblem = signatureProblems(fields.secondParent, 'parent');
+    if (secondProblem) return {ok: false as const, status: 400, error: secondProblem};
+    const secondEmail = (fields.secondParent.email || '').trim().toLowerCase();
+    if (secondEmail === (fields.email || '').trim().toLowerCase() || booking.waiver_status.some(item => item.email.toLowerCase() === secondEmail)) {
+      return {ok: false as const, status: 400, error: 'That adult is already on this booking.'};
+    }
+  }
+  const stored = await storeSignature(store, booking, {role: invite.role, email: invite.email}, fields, part, now, userAgent, ipAddress);
+  const adult = booking.waiver_status.find(item => item.role === invite.role && item.email.toLowerCase() === invite.email);
+  if (adult && !stored.already) {
+    adult.status = 'signed';
+    adult.part = part;
+    adult.relationship = (fields.relationship || '').trim();
+    if ((fields.email || '').trim()) adult.email = (fields.email || '').trim();
+  }
+  if (part === 'parent' && fields.secondParent) {
+    const secondEmail = (fields.secondParent.email || '').trim().toLowerCase();
+    await storeSignature(store, booking, {role: 'second_parent', email: secondEmail}, fields.secondParent, 'parent', now, userAgent, ipAddress);
+    booking.waiver_status.push({
+      role: 'second_parent',
+      part: 'parent',
+      name: (fields.secondParent.signatureName || '').trim(),
+      email: (fields.secondParent.email || '').trim(),
+      relationship: (fields.secondParent.relationship || '').trim(),
+      status: 'signed',
+    });
+  }
+  await saveBookingRecord(store, booking);
+  return {
+    ok: true as const,
+    already: stored.already,
+    can_add: extraAdultCount(booking) < MAX_EXTRA_ADULTS,
+    limit: MAX_EXTRA_ADULTS,
+    parent_cleared: parentCleared(booking),
+  };
+}
+
+export function waiverPreview(booking: BookingRecord, part: 'parent' | 'additional') {
+  const session = {date: booking.sessionDate, start: booking.sessionStart, end: booking.sessionEnd};
+  return {
+    babyName: booking.babyName,
+    babyDob: booking.babyDob,
+    sessionDate: sessionDateLabel(session),
+    sessionTime: sessionTimeLabel(session),
+    location: booking.location || 'Fort Lauderdale',
+    bookingId: booking.booking_id,
+    byob: booking.bath === 'byob',
+    part,
+    parent_cleared: parentCleared(booking),
+  };
 }
 
 export async function addWaiverAdult(store: BookingStore, token: string, name: string, email: string) {
@@ -822,7 +934,7 @@ export async function addWaiverAdult(store: BookingStore, token: string, name: s
   if (booking.waiver_status.some(item => item.email.toLowerCase() === adultEmail.toLowerCase())) {
     return {ok: false as const, status: 400, error: 'That adult is already on this booking.'};
   }
-  booking.waiver_status.push({role: 'additional_adult', name: adultName, email: adultEmail, status: 'pending'});
+  booking.waiver_status.push({role: 'additional_adult', part: 'additional', name: adultName, email: adultEmail, status: 'pending'});
   await saveBookingRecord(store, booking);
   const link = await waiverLink(store, booking.booking_id, 'additional_adult', adultEmail, adultName);
   logWaiverInvite(adultEmail, 'additional_adult', link);
@@ -832,15 +944,24 @@ export async function addWaiverAdult(store: BookingStore, token: string, name: s
 export async function handleWaiverSignRequest(request: Request, env: CheckoutEnv, now = new Date()) {
   const origin = request.headers.get('Origin') || '';
   const headers = checkoutHeaders(origin);
+  const path = new URL(request.url).pathname;
   if (request.method === 'OPTIONS') return new Response(null, {status: 204, headers});
   if (!checkoutOrigins.has(origin)) return new Response(JSON.stringify({error: 'Origin not allowed.'}), {status: 403, headers});
+  if (request.method === 'GET' && path === '/api/waiver') {
+    if (!env.BOOKINGS) return new Response(JSON.stringify({error: 'This signing link is not available yet.'}), {status: 503, headers});
+    const token = new URL(request.url).searchParams.get('token') || '';
+    const invite = await readWaiverToken(env.BOOKINGS, token);
+    if (!invite) return new Response(JSON.stringify({error: 'This signing link is not valid.'}), {status: 403, headers});
+    const booking = await loadBookingRecord(env.BOOKINGS, invite.booking_id);
+    if (!booking) return new Response(JSON.stringify({error: 'This signing link is not valid.'}), {status: 404, headers});
+    return new Response(JSON.stringify(waiverPreview(booking, invite.role === 'primary' ? 'parent' : 'additional')), {status: 200, headers});
+  }
   if (request.method !== 'POST') return new Response(JSON.stringify({error: 'Method not allowed.'}), {status: 405, headers});
   if (!env.BOOKINGS) return new Response(JSON.stringify({error: 'This signing link is not available yet.'}), {status: 503, headers});
   const rawText = await readLimited(request);
   if (rawText == null) return new Response(JSON.stringify({error: 'Please check the form.'}), {status: 413, headers});
-  let raw: {token?: string; signatureName?: string; esignConsent?: boolean; name?: string; email?: string};
+  let raw: SignatureFields & {token?: string; name?: string};
   try { raw = JSON.parse(rawText); } catch { return new Response(JSON.stringify({error: 'Please check the form.'}), {status: 400, headers}); }
-  const path = new URL(request.url).pathname;
   if (path === '/api/waiver-adult') {
     const added = await addWaiverAdult(env.BOOKINGS, raw.token || '', raw.name || '', raw.email || '');
     if (!added.ok) return new Response(JSON.stringify({error: added.error, can_add: added.can_add}), {status: added.status, headers});
@@ -849,14 +970,13 @@ export async function handleWaiverSignRequest(request: Request, env: CheckoutEnv
   const signed = await signWaiverRequest(
     env.BOOKINGS,
     raw.token || '',
-    raw.signatureName || '',
-    raw.esignConsent === true,
+    raw,
     now,
     request.headers.get('user-agent') || '',
     request.headers.get('cf-connecting-ip') || '',
   );
   if (!signed.ok) return new Response(JSON.stringify({error: signed.error}), {status: signed.status, headers});
-  return new Response(JSON.stringify({ok: true, can_add: signed.can_add, limit: signed.limit}), {status: 200, headers});
+  return new Response(JSON.stringify({ok: true, can_add: signed.can_add, limit: signed.limit, parent_cleared: signed.parent_cleared}), {status: 200, headers});
 }
 
 export async function routeCheckout(request: Request, env: CheckoutEnv, fetchImpl: typeof fetch = fetch, now = new Date(), session: SessionConfig | undefined = undefined) {

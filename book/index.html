@@ -97,18 +97,17 @@
 <div id="byob-details" hidden>
 <p class="field-hint" id="byob-note">Bring your breastmilk cold or frozen. We can warm it for you on site. You'll add it to your baby's bath yourself.</p>
 <label class="choice-row"><input type="checkbox" name="rosePetals" value="yes"/><span>Add complimentary rose petals</span></label>
+<label class="choice-row"><input type="checkbox" name="confirmReady" value="byob"/><span data-ack="byob"></span></label>
 <p class="field-hint" id="rose-petals-note">Choose now if you'd like them; petals can't be added later.</p>
 </div>
 <span class="field-error" id="bath-error" hidden></span>
 </fieldset>
 <div class="booking-confirm" id="booking-confirm" role="group" aria-labelledby="booking-confirm-heading">
 <h3 id="booking-confirm-heading">Before you book, please confirm:</h3>
-<label class="choice-row"><input type="checkbox" name="confirmReady" value="age" required aria-describedby="booking-confirm-error"/><span>My baby is at least 4 weeks old, has no breaks in the skin, the umbilical cord stump has fallen off and healed, and any circumcision site is fully healed.</span></label>
-<label class="choice-row"><input type="checkbox" name="confirmReady" value="pediatrician" required aria-describedby="booking-confirm-error"/><span>I've talked with my pediatrician about the products and activities used in the session, and I know I can skip any part at any time.</span></label>
+<label class="choice-row"><input type="checkbox" name="confirmReady" value="age" required aria-describedby="booking-confirm-error"/><span>My baby will be at least 4 weeks old and no older than 12 months on the session date, and my baby's umbilical cord stump has fallen off and the area is fully healed, my baby's skin has no breaks, and if my baby has been circumcised, the circumcision site is fully healed.</span></label>
 <label class="choice-row"><input type="checkbox" name="confirmReady" value="price" required aria-describedby="booking-confirm-error"/><span>I understand there's no refund or discount for skipping any part of the session.</span></label>
-<!-- DRAFT pending Christy. Sentences are SICK_*_ACK in assets/booking.js. -->
-<label class="choice-row"><input type="checkbox" name="confirmReady" value="symptoms" required aria-describedby="booking-confirm-error"/><span><span class="placeholder-mark">Draft</span> <span data-ack="symptoms"></span></span></label>
-<label class="choice-row"><input type="checkbox" name="confirmReady" value="illness" required aria-describedby="booking-confirm-error"/><span><span class="placeholder-mark">Draft</span> <span data-ack="illness"></span></span></label>
+<!-- DRAFT pending Christy. The join sentence is JOIN_RULE_ACK in assets/booking.js. -->
+<label class="choice-row"><input type="checkbox" name="confirmReady" value="join" required aria-describedby="booking-confirm-error"/><span><span class="placeholder-mark">Draft</span> <span data-ack="join"></span></span></label>
 <label class="choice-row"><input type="checkbox" name="confirmReady" value="checkin" required aria-describedby="booking-confirm-error"/><span><span class="placeholder-mark">Draft</span> <span data-ack="checkin"></span></span></label>
 <label class="choice-row"><input type="checkbox" name="confirmReady" value="contact" required aria-describedby="booking-confirm-error"/><span><span class="placeholder-mark">Draft</span> <span data-ack="contact"></span></span></label>
 <span class="field-error" id="booking-confirm-error" hidden></span>

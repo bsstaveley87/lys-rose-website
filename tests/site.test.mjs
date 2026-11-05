@@ -4,7 +4,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
 import {validateFields, interestOptions, limits} from '../assets/validation.js';
-import {AGE_TOO_OLD_MESSAGE, AGE_TOO_YOUNG_MESSAGE, BATH_BAG_CENTS, BOOKING_LEAD_HOURS, CHECKOUT_WAIVER_NOTE, DEPOSIT_ACK, DEPOSIT_CENTS, FLORIDA_STATUTORY_NOTICE, MAX_BABY_AGE_MONTHS, MAX_EXTRA_ADULTS, MIN_BABY_AGE_DAYS, REFUND_SUMMARY, ROBE_CENTS, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SECOND_ADULT_WAIVER_NOTE, SESSION, SESSION_PRICE_CENTS, SICK_CHECKIN_ACK, SICK_CONTACT_ACK, SICK_ILLNESS_ACK, SICK_SYMPTOMS_ACK, SIGNATURE_HEADING, SIGNATURE_LEAD, WAIVER_HEADING, WAIVER_RELEASE_TEXT, ageMonthsAtSession, applyRobeCutoff, babyAgeMessage, bookingIsClosed, fillDepositAck, fillRefundSummary, formatCents, initBooking, mountRobeAddon, previewTotal, refundBalanceCents, refundHalfBalanceCents, robeIsClosed, robeNote, sessionDateLabel, sessionPriceLabel, sessionPriceLine, sessionPriceOffer, sessionStatus, sessionTimeLabel, signingDateLabel} from '../assets/booking.js';
+import {ADULT_18_ACK, AGE_TOO_OLD_MESSAGE, AGE_TOO_YOUNG_MESSAGE, BATH_BAG_CENTS, BOOKING_LEAD_HOURS, CHECKOUT_WAIVER_NOTE, CLAUSE_A, CLAUSE_B, CLAUSE_C, CLAUSE_D, DEPOSIT_ACK, DEPOSIT_CENTS, FLORIDA_STATUTORY_NOTICE, JOIN_RULE_ACK, MAX_BABY_AGE_MONTHS, MAX_EXTRA_ADULTS, MIN_BABY_AGE_DAYS, PARENT_SIGNATURE_SENTENCE, REFUND_SUMMARY, ROBE_CENTS, ROSE_PETAL_CLAUSE, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SECOND_ADULT_WAIVER_NOTE, SESSION, SESSION_PRICE_CENTS, SICK_CHECKIN_ACK, SICK_CONTACT_ACK, SIGNATURE_HEADING, SIGNATURE_LEAD, WAIVER_DISCLAIMER, WAIVER_HEADING, WAIVER_RELEASE_TEXT, ageMonthsAtSession, applyRobeCutoff, babyAgeMessage, bookingIsClosed, fillDepositAck, fillRefundSummary, formatCents, initBooking, mountRobeAddon, previewTotal, refundBalanceCents, refundHalfBalanceCents, robeIsClosed, robeNote, sessionDateLabel, sessionPriceLabel, sessionPriceLine, sessionPriceOffer, sessionStatus, sessionTimeLabel, signingDateLabel} from '../assets/booking.js';
 const approved = {
   '/': {
     title: 'Lys Rose Baby Spa · Fort Lauderdale',
@@ -425,15 +425,18 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(html.includes('Skip any of these'), false);
   assert.equal(book.querySelector('#booking-confirm-heading').textContent, 'Before you book, please confirm:');
   const confirmations = [
-    "My baby is at least 4 weeks old, has no breaks in the skin, the umbilical cord stump has fallen off and healed, and any circumcision site is fully healed.",
-    "I've talked with my pediatrician about the products and activities used in the session, and I know I can skip any part at any time.",
+    "My baby will be at least 4 weeks old and no older than 12 months on the session date, and my baby's umbilical cord stump has fallen off and the area is fully healed, my baby's skin has no breaks, and if my baby has been circumcised, the circumcision site is fully healed.",
     "I understand there's no refund or discount for skipping any part of the session.",
   ];
   const confirmBoxes = [...book.querySelectorAll('[name=confirmReady]')];
-  const approvedValues = new Set(['age', 'pediatrician', 'price']);
+  const approvedValues = new Set(['age', 'price']);
+  assert.equal(book.querySelector('[name=confirmReady][value=pediatrician]'), null);
+  assert.equal(book.querySelector('[name=confirmReady][value=symptoms]'), null);
+  assert.equal(book.querySelector('[name=confirmReady][value=illness]'), null);
   assert.deepEqual(confirmBoxes.filter(input => approvedValues.has(input.value)).map(input => input.closest('label').textContent), confirmations);
-  for (const input of confirmBoxes) assert.equal(input.hasAttribute('required'), true);
-  const draftAcks = {symptoms: SICK_SYMPTOMS_ACK, illness: SICK_ILLNESS_ACK, checkin: SICK_CHECKIN_ACK, contact: SICK_CONTACT_ACK};
+  for (const input of confirmBoxes.filter(input => input.value !== 'byob')) assert.equal(input.hasAttribute('required'), true, input.value);
+  assert.equal(book.querySelector('[name=confirmReady][value=byob]').hasAttribute('required'), false);
+  const draftAcks = {join: JOIN_RULE_ACK, checkin: SICK_CHECKIN_ACK, contact: SICK_CONTACT_ACK};
   for (const [value, sentence] of Object.entries(draftAcks)) {
     const box = book.querySelector(`[name=confirmReady][value=${value}]`);
     assert.equal(box.hasAttribute('required'), true, value);
@@ -463,7 +466,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(babyAgeMessage('2026-02-31', sessionDay), 'Please enter a valid date of birth.');
 });
 test('the booking form shows both age limits before checkout', () => {
-  const {document: doc} = parseHTML(`<!doctype html><html><body><form id="booking-form"><label><input id="baby-dob" name="babyDob" type="date" required/></label><span id="baby-dob-error" hidden></span><span data-refund-summary></span><span data-deposit-ack></span><span data-ack="symptoms"></span><button class="booking-pay" type="button" disabled aria-disabled="true"></button></form></body></html>`);
+  const {document: doc} = parseHTML(`<!doctype html><html><body><form id="booking-form"><label><input id="baby-dob" name="babyDob" type="date" required/></label><span id="baby-dob-error" hidden></span><span data-refund-summary></span><span data-deposit-ack></span><span data-ack="join"></span><button class="booking-pay" type="button" disabled aria-disabled="true"></button></form></body></html>`);
   initBooking(doc);
   const dob = doc.querySelector('#baby-dob');
   const error = doc.querySelector('#baby-dob-error');
@@ -482,7 +485,7 @@ test('the booking form shows both age limits before checkout', () => {
   assert.equal(error.textContent, '');
   assert.equal(doc.querySelector('[data-refund-summary]').textContent, fillRefundSummary());
   assert.equal(doc.querySelector('[data-deposit-ack]').textContent, fillDepositAck());
-  assert.equal(doc.querySelector('[data-ack=symptoms]').textContent, SICK_SYMPTOMS_ACK);
+  assert.equal(doc.querySelector('[data-ack=join]').textContent, JOIN_RULE_ACK);
   assert.match(dob.max, /^\d{4}-\d{2}-\d{2}$/);
   assert.match(dob.min, /^\d{4}-\d{2}-\d{2}$/);
 });
@@ -502,7 +505,7 @@ test('refund dollars come from the session price and the deposit', () => {
   assert.equal(signingDateLabel(new Date('2026-11-05T05:00:00.000Z')), 'November 5, 2026');
 });
 test('the pay button stays off until the birth date is valid and every required box is ticked', () => {
-  const values = ['age', 'pediatrician', 'price', 'symptoms', 'illness', 'checkin', 'contact', 'deposit'];
+  const values = ['age', 'price', 'join', 'checkin', 'contact', 'deposit'];
   const boxes = values.map(value => `<input type="checkbox" name="confirmReady" value="${value}" required/>`).join('') + '<input type="checkbox" name="waiver" required/>';
   const {document: doc} = parseHTML(`<!doctype html><html><body><form id="booking-form"><input name="parentName" value="Alex Parent"/><input id="baby-dob" name="babyDob" type="date"/><span id="baby-dob-error" hidden></span>${boxes}<button class="booking-pay" type="button" disabled aria-disabled="true">Reserve and pay</button></form><div id="second-adult-fields" hidden><input name="secondAdultName" form="booking-form"/><input name="secondAdultEmail" form="booking-form"/></div></body></html>`);
   initBooking(doc);
@@ -551,12 +554,23 @@ test('the draft policy page keeps the refund terms and leaves out fees and discr
   assert.equal(waiverPage.querySelector('[name=signatureName]').getAttribute('autocomplete'), 'off');
   assert.equal(waiverPage.querySelector('[name=signatureName]').value, '');
   assert.equal(waiverPage.querySelector('#waiver-confirmation').hasAttribute('hidden'), true);
-  assert.equal(waiverPage.querySelector('#waiver-add h3').textContent, 'Add the second adult attending');
+  assert.equal(waiverPage.querySelector('#waiver-part-4').hasAttribute('hidden'), true);
+  assert.equal(waiverPage.querySelector('#waiver-add h3').textContent, 'Add another adult');
   assert.equal(waiverPage.querySelector('#waiver-add-form button').textContent, 'Send their waiver');
-  assert.equal(MAX_EXTRA_ADULTS, 1);
+  assert.equal(waiverPage.querySelector('[data-parent-sentence]').textContent, PARENT_SIGNATURE_SENTENCE);
+  assert.equal(waiverPage.querySelector('[data-adult-18]').textContent, ADULT_18_ACK);
+  assert.equal(waiverPage.querySelector('[data-clause-body=a]').textContent, CLAUSE_A.slice('Age and health.'.length).trim());
+  assert.equal(waiverPage.querySelector('[data-clause-body=b]').textContent, CLAUSE_B.slice('Products and skipping.'.length).trim());
+  assert.equal(waiverPage.querySelector('[data-clause-body=d]').textContent, CLAUSE_D.slice('Sick baby.'.length).trim());
+  assert.equal(waiverPage.querySelector('[data-clause-body=petals]').textContent, ROSE_PETAL_CLAUSE.slice('Rose petals.'.length).trim());
+  assert.equal(waiverPage.querySelector('[data-waiver-disclaimer]').textContent, WAIVER_DISCLAIMER);
+  assert.equal(waiverPage.querySelector('#waiver-clause-c').hasAttribute('hidden'), true);
+  assert.equal(MAX_EXTRA_ADULTS, 2);
   const readPage = await documentFor('book/waiver/read/index.html');
   assert.equal(readPage.querySelector('meta[name=robots]').content, 'noindex,nofollow');
   assert.equal(readPage.querySelector('form'), null);
+  assert.equal(readPage.querySelector('#waiver-part-1').textContent.includes("[baby's name]"), true);
+  assert.equal(readPage.querySelector('[data-clause-body=c]').textContent, CLAUSE_C.slice('Bring your own breastmilk.'.length).trim());
   assert.equal(readPage.querySelector('[data-waiver-body]').textContent, WAIVER_RELEASE_TEXT.slice(WAIVER_HEADING.length).trim());
   assert.equal(readPage.querySelector('[data-florida-notice]').textContent, FLORIDA_STATUTORY_NOTICE);
   const privacy = await documentFor('privacy/index.html');

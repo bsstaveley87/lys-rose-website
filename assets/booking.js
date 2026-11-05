@@ -28,37 +28,78 @@ export const SICK_ILLNESS_ACK = 'My baby has no other signs of illness (such as 
 export const SICK_CHECKIN_ACK = "I understand that if my baby seems unwell at check-in, the instructor may ask us not to join. In that case I'll be offered a free reschedule within 60 days, or store credit if no new date works, not a cash refund.";
 /** DRAFT pending Christy. */
 export const SICK_CONTACT_ACK = "I'll contact Lys Rose before the session if my baby becomes unwell.";
-export const BOOKING_CONFIRMATIONS = ['age', 'pediatrician', 'price', 'symptoms', 'illness', 'checkin', 'contact', 'deposit'];
+export const BOOKING_CONFIRMATIONS = ['age', 'price', 'join', 'checkin', 'contact', 'deposit'];
+/** Required only when the parent chooses BYOB. */
+export const BYOB_CONFIRMATION = 'byob';
 /** DRAFT pending CFO. Section 2 of the waiver e-signature draft, without the attorney note. */
 export const WAIVER_HEADING = 'Assumption of risk and release (DRAFT).';
 export const WAIVER_RELEASE_TEXT = `${WAIVER_HEADING} I am the parent or legal guardian of the baby named in this booking. I understand that a Lys Rose session is an educational, parent-led group class. I provide all hands-on care for my baby, and the instructor guides. Lys Rose doesn't offer facials, medical treatments, physical therapy or massage therapy. I understand the session has inherent risks, including: handling a wet, slippery baby in and around warm water; water that may be too warm or too cool; slips and falls on wet floors; a skin reaction or allergy to the products used (including the milk soak, oils, creams and floating rose petals); a baby mouthing or swallowing a petal or other small item; contact with shared, sanitized tools; and exposure to common illnesses in a group setting. I agree to keep my baby under my direct supervision and within my reach at all times. I voluntarily accept these risks for myself and my baby. To the fullest extent the law allows, I release Lys Rose LLC (doing business as Lys Rose Baby Spa), its owner, instructors and contractors from claims for injury or loss arising from these inherent risks.`;
-/** Placeholder only. Do not replace this with drafted statutory language. */
-export const FLORIDA_STATUTORY_NOTICE = '[Florida statutory notice: attorney to insert]';
-/** DRAFT pending CFO. Lead-in from the waiver e-signature draft. */
+/** Placeholder only. Do not replace this with drafted statutory language. Section 7.2. */
+export const FLORIDA_STATUTORY_NOTICE = '[Florida statutory notice under Fla. Stat. 744.301(3): attorney to insert verbatim, in the required type.]';
+/** DRAFT pending CFO. Lead-in from section 3, as amended in section 6. */
 export const SIGNATURE_HEADING = 'Sign your waiver.';
-export const SIGNATURE_LEAD = `${SIGNATURE_HEADING} Please read the waiver above. By typing your full name and selecting "Sign and continue," you are signing electronically. Your typed name is your legal signature, just as if you'd signed on paper, and it applies to the waiver shown on this page. You confirm you're at least 18 and the baby's parent or legal guardian, or attending with them. We'll email you a copy of what you signed.`;
+export const SIGNATURE_LEAD_PARENT = `${SIGNATURE_HEADING} Please read the waiver above. By typing your full name and selecting "Sign and continue," you are signing electronically. Your typed name is your legal signature, just as if you'd signed on paper, and it applies to the waiver shown on this page. You confirm you're at least 18 and the baby's parent or legal guardian. We'll email you a copy of what you signed.`;
+export const SIGNATURE_LEAD_ADULT = `${SIGNATURE_HEADING} Please read the waiver above. By typing your full name and selecting "Sign and continue," you are signing electronically. Your typed name is your legal signature, just as if you'd signed on paper, and it applies to the waiver shown on this page. You confirm you're at least 18 and attending with the baby's parent. We'll email you a copy of what you signed.`;
+export const SIGNATURE_LEAD = SIGNATURE_LEAD_PARENT;
 /** DRAFT pending Christy. */
 export const CHECKOUT_WAIVER_NOTE = "After booking, we'll email you a waiver to sign online before your session.";
 /** DRAFT pending Christy. */
 export const SECOND_ADULT_WAIVER_NOTE = "Your second adult will receive their own waiver by email to sign before the session.";
-/** Extra adults besides the booking parent. The $25 second adult is the only one. */
-export const MAX_EXTRA_ADULTS = 1;
+/** Additional adults besides the booking parent. The paid second adult counts toward this. */
+export const MAX_EXTRA_ADULTS = 2;
 export const WAIVER_SIGN_URL = 'https://forms.lysrosebabyspa.com/api/waiver';
 export const WAIVER_ADD_URL = 'https://forms.lysrosebabyspa.com/api/waiver-adult';
 /** DRAFT pending CFO. */
 export const ESIGN_CONSENT = 'I agree to sign and receive these documents electronically. I can ask for a paper copy at any time by emailing hello@lysrosebabyspa.com.';
-export const AGE_ACK = 'My baby is at least 4 weeks old, has no breaks in the skin, the umbilical cord stump has fallen off and healed, and any circumcision site is fully healed.';
+export const AGE_ACK = "My baby will be at least 4 weeks old and no older than 12 months on the session date, and my baby's umbilical cord stump has fallen off and the area is fully healed, my baby's skin has no breaks, and if my baby has been circumcised, the circumcision site is fully healed.";
 export const PEDIATRICIAN_ACK = "I've talked with my pediatrician about the products and activities used in the session, and I know I can skip any part at any time.";
 export const SKIP_ACK = "I understand there's no refund or discount for skipping any part of the session.";
+export const JOIN_RULE_ACK = 'I understand my baby can only join if, in the 24 hours before the session, my baby has had no fever, vomiting or diarrhea, has no green nasal mucus, has no other signs of illness (such as a rash or cough), and has no breaks in the skin.';
+export const BYOB_ACK = "I'm bringing my own breastmilk for my own baby. I will handle and add it myself, and Lys Rose does not store or handle it.";
+export const WAIVER_DISCLAIMER = "Parents provide all hands-on care while our instructor guides. Lys Rose doesn't offer facials, medical treatments, physical therapy or massage therapy. Our sessions are educational.";
+export const CLAUSE_A = "Age and health. I confirm that: (a) my baby will be at least 4 weeks old and no older than 12 months on the date of the session; (b) my baby's umbilical cord stump has fallen off and the area is fully healed; (c) my baby's skin has no breaks (no cuts, scrapes or open areas); (d) if my baby has been circumcised, the circumcision site is fully healed; and (e) my baby is healthy on the day of the session. I will tell the instructor at check-in if any of this changes before the session starts. I have talked with my baby's pediatrician about the products and activities used in the session, and I know I can skip any part of the session at any time. I understand that Lys Rose may ask for my baby's birth date, and that if the age (4 weeks to 12 months), the healed cord, unbroken skin or a healed circumcision site is in doubt at check-in, my baby will not be bathed.";
+export const CLAUSE_B = "Products and skipping. I have read the list of products used in the session: the milk bath packet (colloidal oatmeal and coconut milk powder), floating rose petals, grapeseed massage oil, Mustela face moisturizer, and, only if I choose it, the Evereden face cream upgrade. I understand I will be asked to use a fragrance-free hand sanitizer and let my hands dry completely before handling my baby. I understand that I may skip any part of the session at any time by telling the instructor, and that skipping does not entitle me to any refund, credit or discount, because the session price stays the same. If I decline a paid upgrade, I will not be charged for it. I am responsible for telling Lys Rose at least 48 hours before my session about any allergy or sensitivity my baby or I have, including to any ingredient on the product list, and I may ask for the ingredient lists at any time.";
+export const CLAUSE_C = "Bring your own breastmilk. If I choose BYOB, I will bring my own breastmilk for my own baby, cold (liquid) or frozen. I am solely responsible for the milk, including its storage, warming, and adding it to my baby's bath. Lys Rose does not provide, inspect, store, handle, or test breastmilk; it provides only a cup of warm water I can use to warm my sealed milk myself.";
+export const ROSE_PETAL_CLAUSE = "Rose petals. I understand that the bath for my baby includes whole rose petals floating on the water for appearance only. The petals are not food. I will not let my baby eat or mouth the petals, and I will not place petals in my baby's mouth. I understand that petals can be a choking or breathing hazard if they get into a baby's mouth and that some babies react to flowers or pollen. I agree that my baby will stay under my direct supervision and within my arm's reach at all times during the session, including whenever my baby is near the water or the petals. I understand that I may choose a petal-free bath for my baby by ticking the box on the booking form or by telling the instructor at check-in, and that I may ask for the petals to be removed at any time. I will tell Lys Rose at least 48 hours before my session about any allergy or sensitivity my baby has, including to flowers or pollen.";
+export const CLAUSE_D = "Sick baby. I confirm that in the 24 hours before the session my baby has had no fever, vomiting or diarrhea, has no green nasal mucus, and has no other signs of illness (such as a rash or cough) and no breaks in the skin. If I sign this more than 24 hours before the session, I promise these will be true at the session, and I will tell Lys Rose before the session if my baby becomes unwell. I understand the instructor may ask us not to join if my baby seems unwell at check-in. What happens to my payment then is set out in the booking policy.";
+export const PARENT_SIGNATURE_SENTENCE = 'I am the parent or legal guardian of the baby named above. I sign this waiver for myself and on behalf of my baby.';
+export const ADULT_18_ACK = "I'm at least 18";
+export const PARENT_ROUTE_LABEL = "I'm the baby's parent or legal guardian";
 /** The agreement version stored with each signature. Signed copies are not on the birth-date deletion schedule. */
 export const BOOKING_TERMS_VERSION = 'booking-waiver-esignature-draft-2026-11-04';
 export const WAIVER_RETENTION = 'attorney to set';
 const DRAFT_ACKS = {
-  symptoms: SICK_SYMPTOMS_ACK,
-  illness: SICK_ILLNESS_ACK,
+  join: JOIN_RULE_ACK,
   checkin: SICK_CHECKIN_ACK,
   contact: SICK_CONTACT_ACK,
+  byob: BYOB_ACK,
 };
+const CLAUSE_LABELS = {
+  a: 'Age and health.',
+  b: 'Products and skipping.',
+  c: 'Bring your own breastmilk.',
+  d: 'Sick baby.',
+  petals: 'Rose petals.',
+};
+const CLAUSE_BODIES = {
+  a: CLAUSE_A.slice(CLAUSE_LABELS.a.length).trim(),
+  b: CLAUSE_B.slice(CLAUSE_LABELS.b.length).trim(),
+  c: CLAUSE_C.slice(CLAUSE_LABELS.c.length).trim(),
+  d: CLAUSE_D.slice(CLAUSE_LABELS.d.length).trim(),
+  petals: ROSE_PETAL_CLAUSE.slice(CLAUSE_LABELS.petals.length).trim(),
+};
+
+export function waiverIntro(babyName = "[baby's name]", sessionDate = '[date]') {
+  return `This waiver is for ${babyName}'s Lys Rose session on ${sessionDate}. Please read it carefully. It affects your legal rights.`;
+}
+
+export function additionalAdultText(babyName = "[baby's name]") {
+  return `Additional adult. I'm attending this session with ${babyName} and their parent or guardian. I've read this waiver. I accept the risks described in it for myself, and I release Lys Rose to the same extent for any claims of my own. I'll follow the instructor's and the parent's directions. I understand that I'm not signing on behalf of the baby, and that the baby's parent or guardian stays responsible for the baby's care and supervision.`;
+}
+
+export function signatureLead(part = 'parent') {
+  return part === 'additional' ? SIGNATURE_LEAD_ADULT : SIGNATURE_LEAD_PARENT;
+}
 
 export function sessionPriceLabel() {
   return `$${SESSION_PRICE_CENTS / 100}`;
@@ -101,24 +142,35 @@ export function fillDepositAck(depositCents = DEPOSIT_CENTS) {
   return DEPOSIT_ACK.replaceAll('{deposit}', formatCents(depositCents));
 }
 
-/** Exact text shown for the waiver, the terms, and every box label. The stored hash is of this string. */
-export function signedDocumentText() {
+/** Exact text shown on the signer's page. The stored hash is of this string. */
+export function signedDocumentText(details = {}) {
+  const part = details.part === 'additional' ? 'additional' : 'parent';
+  const babyName = details.babyName || "[baby's name]";
+  const sessionDate = details.sessionDate || '[date]';
   return [
-    'Waiver',
+    "Part 1. Baby and session details",
+    `Baby's full name: ${babyName}`,
+    `Baby's birth date: ${details.babyDob || "[baby's birth date]"}`,
+    `Session date: ${sessionDate}`,
+    `Time: ${details.sessionTime || '[time]'}`,
+    `Location: ${details.location || '[location]'}`,
+    `Booking ID: ${details.bookingId || '[booking ID]'}`,
+    `BYOB: ${details.byob ? 'Yes' : 'No'}`,
+    'Part 2. Waiver terms',
+    waiverIntro(babyName, sessionDate),
+    WAIVER_DISCLAIMER,
+    CLAUSE_A,
+    CLAUSE_B,
+    ...(details.byob ? [CLAUSE_C] : []),
+    ROSE_PETAL_CLAUSE,
+    CLAUSE_D,
     WAIVER_RELEASE_TEXT,
     FLORIDA_STATUTORY_NOTICE,
-    SIGNATURE_LEAD,
+    signatureLead(part),
     ESIGN_CONSENT,
-    AGE_ACK,
-    PEDIATRICIAN_ACK,
-    SKIP_ACK,
-    SICK_SYMPTOMS_ACK,
-    SICK_ILLNESS_ACK,
-    SICK_CHECKIN_ACK,
-    SICK_CONTACT_ACK,
-    fillDepositAck(),
-    fillRefundSummary(),
-  ].filter(part => part !== '').join('\n');
+    part === 'additional' ? additionalAdultText(babyName) : PARENT_SIGNATURE_SENTENCE,
+    ADULT_18_ACK,
+  ].join('\n');
 }
 export const FACE_CREAM_CENTS = {signature: 0, gentle: 500, premium: 1000};
 export const BATH_BAG_CENTS = 1800;
@@ -429,7 +481,18 @@ export function applyDraftCopy(documentRef) {
   for (const node of documentRef.querySelectorAll('[data-deposit-ack]')) node.textContent = fillDepositAck();
   for (const node of documentRef.querySelectorAll('[data-ack]')) node.textContent = DRAFT_ACKS[node.getAttribute('data-ack')] || '';
   for (const node of documentRef.querySelectorAll('[data-signature-heading]')) node.textContent = SIGNATURE_HEADING;
-  for (const node of documentRef.querySelectorAll('[data-signature-rest]')) node.textContent = SIGNATURE_LEAD.slice(SIGNATURE_HEADING.length).trim();
+  for (const node of documentRef.querySelectorAll('[data-signature-rest]')) {
+    const lead = node.getAttribute('data-signature-rest') === 'additional' ? SIGNATURE_LEAD_ADULT : SIGNATURE_LEAD_PARENT;
+    node.textContent = lead.slice(SIGNATURE_HEADING.length).trim();
+  }
+  for (const node of documentRef.querySelectorAll('[data-waiver-disclaimer]')) node.textContent = WAIVER_DISCLAIMER;
+  for (const node of documentRef.querySelectorAll('[data-clause-label]')) node.textContent = CLAUSE_LABELS[node.getAttribute('data-clause-label')] || '';
+  for (const node of documentRef.querySelectorAll('[data-clause-body]')) node.textContent = CLAUSE_BODIES[node.getAttribute('data-clause-body')] || '';
+  for (const node of documentRef.querySelectorAll('[data-parent-sentence]')) node.textContent = PARENT_SIGNATURE_SENTENCE;
+  for (const node of documentRef.querySelectorAll('[data-adult-18]')) node.textContent = ADULT_18_ACK;
+  for (const node of documentRef.querySelectorAll('[data-parent-route]')) node.textContent = PARENT_ROUTE_LABEL;
+  for (const node of documentRef.querySelectorAll('[data-waiver-intro]')) node.textContent = waiverIntro();
+  for (const node of documentRef.querySelectorAll('[data-additional-adult]')) node.textContent = additionalAdultText().slice('Additional adult.'.length).trim();
   for (const node of documentRef.querySelectorAll('[data-waiver-heading]')) node.textContent = WAIVER_HEADING;
   for (const node of documentRef.querySelectorAll('[data-waiver-body]')) node.textContent = WAIVER_RELEASE_TEXT.slice(WAIVER_HEADING.length).trim();
   for (const node of documentRef.querySelectorAll('[data-florida-notice]')) node.textContent = FLORIDA_STATUTORY_NOTICE;
@@ -453,7 +516,7 @@ function showAge(input) {
 }
 
 function missingConfirmations(form) {
-  return [...form.querySelectorAll('[name=confirmReady]')].filter(box => !box.checked);
+  return [...form.querySelectorAll('[name=confirmReady]')].filter(box => box.required && !box.checked);
 }
 
 function showConfirmations(form) {
@@ -482,6 +545,11 @@ function syncBath(form) {
   if (details) details.hidden = !byob;
   const petals = form.querySelector('[name=rosePetals]');
   if (petals && !byob) petals.checked = false;
+  const byobBox = form.querySelector('[name=confirmReady][value=byob]');
+  if (byobBox) {
+    byobBox.required = byob;
+    if (!byob) byobBox.checked = false;
+  }
   const error = form.querySelector('#bath-error');
   const chosen = Boolean(form.querySelector('[name=bath]:checked'));
   if (error && chosen) {
@@ -554,9 +622,31 @@ export function signingDateLabel(now = new Date()) {
 }
 
 function fillSignatureDate(form) {
-  const input = form.querySelector('#signature-date');
-  if (!input || input.value) return;
-  input.value = signingDateLabel();
+  const label = signingDateLabel();
+  for (const input of form.querySelectorAll('[name=signatureDate]')) {
+    if (!input.value) input.value = label;
+  }
+}
+
+function signerPayload(root) {
+  return {
+    signatureName: root.querySelector('[name=signatureName]')?.value || '',
+    email: root.querySelector('[name=signatureEmail]')?.value || '',
+    relationship: root.querySelector('[name=relationship]')?.value || '',
+    adult18: Boolean(root.querySelector('[name=adult18]')?.checked),
+    esignConsent: Boolean(root.querySelector('[name=esignConsent]')?.checked),
+  };
+}
+
+function waiverPayload(form, token) {
+  const part = form.querySelector('[name=signPart]')?.value === 'additional' ? 'additional' : 'parent';
+  const primary = form.querySelector(part === 'additional' ? '#waiver-part-4-fields' : '#waiver-part-3-fields');
+  const body = {token, part, ...signerPayload(primary)};
+  const second = form.querySelector('#second-parent-fields');
+  if (part === 'parent' && second && !second.hidden && (second.querySelector('[name=signatureName]')?.value || '').trim()) {
+    body.secondParent = signerPayload(second);
+  }
+  return body;
 }
 
 function applyPayButton(documentRef) {
@@ -724,18 +814,72 @@ export function initBooking(documentRef = document) {
   applyPayButton(documentRef);
 }
 
+function signerComplete(root) {
+  if (!root || root.hidden) return true;
+  const name = root.querySelector('[name=signatureName]')?.value.trim() || '';
+  const email = root.querySelector('[name=signatureEmail]')?.value.trim() || '';
+  const relationship = root.querySelector('[name=relationship]')?.value.trim() || '';
+  const adult = Boolean(root.querySelector('[name=adult18]')?.checked);
+  const consent = Boolean(root.querySelector('[name=esignConsent]')?.checked);
+  return /\p{L}/u.test(name) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && relationship.length > 0 && adult && consent;
+}
+
 function waiverReady(form) {
-  const name = form.querySelector('[name=signatureName]')?.value.trim() || '';
-  const consent = Boolean(form.querySelector('[name=esignConsent]')?.checked);
-  return consent && /\p{L}/u.test(name);
+  const part = form.querySelector('[name=signPart]')?.value === 'additional' ? 'additional' : 'parent';
+  const primary = form.querySelector(part === 'additional' ? '#waiver-part-4-fields' : '#waiver-part-3-fields');
+  if (!signerComplete(primary)) return false;
+  const second = form.querySelector('#second-parent-fields');
+  if (second && !second.hidden) {
+    const started = ['signatureName', 'signatureEmail', 'relationship'].some(name => (second.querySelector(`[name=${name}]`)?.value || '').trim());
+    if (started && !signerComplete(second)) return false;
+  }
+  return true;
 }
 
 function applyWaiverButton(form) {
-  const button = form.querySelector('.booking-pay');
+  const button = form.querySelector('#waiver-sign-button');
   if (!button) return;
   const ready = waiverReady(form);
   button.disabled = !ready;
   button.setAttribute('aria-disabled', ready ? 'false' : 'true');
+}
+
+function showWaiverPart(documentRef, part) {
+  const parent = documentRef.querySelector('#waiver-part-3');
+  const adult = documentRef.querySelector('#waiver-part-4');
+  const adultFields = documentRef.querySelector('#waiver-part-4-fields');
+  const invite = documentRef.querySelector('[name=invitePart]')?.value || 'parent';
+  const partInput = documentRef.querySelector('[name=signPart]');
+  if (partInput) partInput.value = part;
+  if (parent) parent.hidden = part !== 'parent';
+  if (adult) adult.hidden = invite !== 'additional';
+  if (adultFields) adultFields.hidden = part !== 'additional';
+  for (const lead of documentRef.querySelectorAll('[data-signature-rest]')) {
+    const which = lead.getAttribute('data-signature-rest') === 'additional' ? 'additional' : 'parent';
+    lead.textContent = signatureLead(which).slice(SIGNATURE_HEADING.length).trim();
+  }
+}
+
+function fillWaiverDetails(documentRef, details) {
+  const map = {
+    babyName: details.babyName,
+    babyDob: details.babyDob,
+    sessionDate: details.sessionDate,
+    sessionTime: details.sessionTime,
+    location: details.location,
+    bookingId: details.bookingId,
+    byob: details.byob ? 'Yes' : 'No',
+  };
+  for (const [key, value] of Object.entries(map)) {
+    const node = documentRef.querySelector(`[data-part1=${key}]`);
+    if (node && value) node.textContent = value;
+  }
+  const intro = documentRef.querySelector('[data-waiver-intro]');
+  if (intro) intro.textContent = waiverIntro(details.babyName, details.sessionDate);
+  const adultCopy = documentRef.querySelector('[data-additional-adult]');
+  if (adultCopy) adultCopy.textContent = additionalAdultText(details.babyName).slice('Additional adult.'.length).trim();
+  const clauseC = documentRef.querySelector('#waiver-clause-c');
+  if (clauseC) clauseC.hidden = !details.byob;
 }
 
 export function initWaiver(documentRef = document) {
@@ -749,8 +893,34 @@ export function initWaiver(documentRef = document) {
   if (tokenInput) tokenInput.value = token;
   const missing = documentRef.querySelector('#waiver-token-missing');
   if (missing) missing.hidden = Boolean(token);
-  form.addEventListener('change', () => applyWaiverButton(form));
+  const inviteInput = form.querySelector('[name=invitePart]');
+  if (inviteInput) inviteInput.value = 'parent';
+  showWaiverPart(documentRef, 'parent');
+  if (token) {
+    fetch(`${WAIVER_SIGN_URL}?token=${encodeURIComponent(token)}`, {headers: {Accept: 'application/json'}})
+      .then(response => response.ok ? response.json() : null)
+      .then(details => {
+        if (!details) return;
+        fillWaiverDetails(documentRef, details);
+        const part = details.part === 'additional' ? 'additional' : 'parent';
+        if (inviteInput) inviteInput.value = part;
+        showWaiverPart(documentRef, part);
+        applyWaiverButton(form);
+      })
+      .catch(() => {});
+  }
+  form.addEventListener('change', event => {
+    if (event.target?.name === 'signAsParent') {
+      showWaiverPart(documentRef, event.target.checked ? 'parent' : 'additional');
+    }
+    applyWaiverButton(form);
+  });
   form.addEventListener('input', () => applyWaiverButton(form));
+  documentRef.querySelector('#add-second-parent')?.addEventListener('click', () => {
+    const fields = documentRef.querySelector('#second-parent-fields');
+    if (fields) fields.hidden = false;
+    applyWaiverButton(form);
+  });
   form.addEventListener('submit', async event => {
     event.preventDefault();
     if (!waiverReady(form)) return;
@@ -765,11 +935,7 @@ export function initWaiver(documentRef = document) {
       const response = await fetch(WAIVER_SIGN_URL, {
         method: 'POST',
         headers: {'Content-Type': 'application/json', Accept: 'application/json'},
-        body: JSON.stringify({
-          token,
-          signatureName: form.querySelector('[name=signatureName]')?.value || '',
-          esignConsent: true,
-        }),
+        body: JSON.stringify(waiverPayload(form, token)),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {

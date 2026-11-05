@@ -396,7 +396,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
     const doc = await documentFor(page.file);
     assert.equal([...doc.querySelectorAll('nav a, header a, footer a')].some(link => (link.getAttribute('href') || '').includes('/book')), false, page.path);
   }
-  for (const page of pages.filter(item => item.path !== '/book/' && item.path !== '/book/policy/')) {
+  for (const page of pages.filter(item => item.path !== '/book/' && item.path !== '/book/policy/' && item.path !== '/privacy/')) {
     let text = await readFile(new URL(page.file, root), 'utf8');
     if (page.path === '/faq/') text = text.replaceAll(fillRefundSummary(), '');
     assert.equal(text.includes('$'), false, page.path);
@@ -534,7 +534,10 @@ test('the draft policy page keeps the refund terms and leaves out fees and discr
   assert.equal(policy.body.textContent.includes('one-time courtesy'), false);
   const bookPage = await documentFor('book/index.html');
   assert.equal(bookPage.querySelector('.booking-pay').textContent, 'Sign and continue');
+  assert.equal(bookPage.querySelector('[data-waiver-body]').textContent, "I am the parent or legal guardian of the baby named in this booking. I understand that a Lys Rose session is an educational, parent-led group class. I provide all hands-on care for my baby, and the instructor guides. Lys Rose doesn't offer facials, medical treatments, physical therapy or massage therapy. I understand the session has inherent risks, including: handling a wet, slippery baby in and around warm water; water that may be too warm or too cool; slips and falls on wet floors; a skin reaction or allergy to the products used (including the milk soak, oils, creams and floating rose petals); a baby mouthing or swallowing a petal or other small item; contact with shared, sanitized tools; and exposure to common illnesses in a group setting. I agree to keep my baby under my direct supervision and within my reach at all times. I voluntarily accept these risks for myself and my baby. To the fullest extent the law allows, I release Lys Rose LLC (doing business as Lys Rose Baby Spa), its owner, instructors and contractors from claims for injury or loss arising from these inherent risks.");
   assert.equal(bookPage.querySelector('[data-florida-notice]').textContent, '[Florida statutory notice: attorney to insert]');
+  assert.equal(bookPage.querySelector('[data-signature-heading]').textContent, 'Sign your waiver.');
+  assert.equal(bookPage.querySelector('[data-signature-rest]').textContent, 'Please read the waiver and booking terms above. By typing your full name and selecting "Sign and continue," you are signing electronically. Your typed name is your legal signature, just as if you\'d signed on paper, and it applies to the waiver and the booking terms shown on this page. You confirm you\'re the baby\'s parent or legal guardian and at least 18. We\'ll email you a copy of what you signed.');
   assert.equal(bookPage.querySelector('[name=esignConsent]').hasAttribute('checked'), false);
   assert.equal(bookPage.querySelector('[name=esignConsent]').closest('label').textContent, 'I agree to sign and receive these documents electronically. I can ask for a paper copy at any time by emailing hello@lysrosebabyspa.com.');
   assert.equal(bookPage.querySelector('[name=signatureName]').getAttribute('autocomplete'), 'off');
@@ -542,6 +545,9 @@ test('the draft policy page keeps the refund terms and leaves out fees and discr
   const privacy = await documentFor('privacy/index.html');
   assert.match(privacy.querySelector('.draft-banner').textContent, /Draft/);
   assert.equal(privacy.body.textContent.includes('IP address and browser details when you sign your waiver'), true);
+  assert.equal(privacy.body.textContent.includes("Your baby's birth date. We collect it at booking to confirm your baby meets our age rule (at least 4 weeks old and no older than 12 months on the session date), to plan age-appropriate sessions, and to understand our customers (business analysis, looked at in aggregate). We keep it, together with your booking record, for 3 years after your family's last booking, store it securely with access limited to Lys Rose, and never sell it. After that, we delete the full birth date and keep only your baby's age in months at each session, for business analysis. You can ask us to delete it at any time."), true);
+  assert.equal(privacy.body.textContent.includes("Health confirmations. The booking form asks you to tick boxes confirming, for example, that in the 24 hours before the session your baby has had no fever, vomiting or diarrhea. We store only whether each box was ticked (yes/no). We don't collect any health details."), true);
+  assert.equal(privacy.body.textContent.includes('We keep waitlist information for up to [24 – TO CONFIRM] months after our last contact with you, or until you ask us to delete it, whichever comes first. We keep records of text-message consent and opt-outs for [4 – TO CONFIRM] years so we can show we respected your choices. Booking and payment records are kept as long as tax and business laws require. Your baby\'s birth date is kept with the booking record for 3 years after your family\'s last booking, unless you ask us to delete it sooner. After that, we keep only your baby\'s age in months at each session.'), true);
   assert.equal(privacy.querySelector('meta[name=robots]').content, 'noindex,nofollow');
 });
 test('a set robe price replaces the coming soon row with the cutoff note', () => {

@@ -29,23 +29,21 @@ export const SICK_CHECKIN_ACK = "I understand that if my baby seems unwell at ch
 /** DRAFT pending Christy. */
 export const SICK_CONTACT_ACK = "I'll contact Lys Rose before the session if my baby becomes unwell.";
 export const BOOKING_CONFIRMATIONS = ['age', 'pediatrician', 'price', 'symptoms', 'illness', 'checkin', 'contact', 'deposit'];
-/**
- * DRAFT pending CFO.
- * The assumption-of-risk paragraph is section 2 of booking-waiver-esignature-draft-2026-11-04.md.
- * That file was not available here, so this is not a rewritten release.
- */
-export const WAIVER_RELEASE_TEXT = '';
+/** DRAFT pending CFO. Section 2 of the waiver e-signature draft, without the attorney note. */
+export const WAIVER_HEADING = 'Assumption of risk and release (DRAFT).';
+export const WAIVER_RELEASE_TEXT = `${WAIVER_HEADING} I am the parent or legal guardian of the baby named in this booking. I understand that a Lys Rose session is an educational, parent-led group class. I provide all hands-on care for my baby, and the instructor guides. Lys Rose doesn't offer facials, medical treatments, physical therapy or massage therapy. I understand the session has inherent risks, including: handling a wet, slippery baby in and around warm water; water that may be too warm or too cool; slips and falls on wet floors; a skin reaction or allergy to the products used (including the milk soak, oils, creams and floating rose petals); a baby mouthing or swallowing a petal or other small item; contact with shared, sanitized tools; and exposure to common illnesses in a group setting. I agree to keep my baby under my direct supervision and within my reach at all times. I voluntarily accept these risks for myself and my baby. To the fullest extent the law allows, I release Lys Rose LLC (doing business as Lys Rose Baby Spa), its owner, instructors and contractors from claims for injury or loss arising from these inherent risks.`;
 /** Placeholder only. Do not replace this with drafted statutory language. */
 export const FLORIDA_STATUTORY_NOTICE = '[Florida statutory notice: attorney to insert]';
 /** DRAFT pending CFO. Lead-in from the waiver e-signature draft. */
-export const SIGNATURE_LEAD = 'By typing your full name below, you are electronically signing this booking agreement and the acknowledgements above.';
+export const SIGNATURE_HEADING = 'Sign your waiver.';
+export const SIGNATURE_LEAD = `${SIGNATURE_HEADING} Please read the waiver and booking terms above. By typing your full name and selecting "Sign and continue," you are signing electronically. Your typed name is your legal signature, just as if you'd signed on paper, and it applies to the waiver and the booking terms shown on this page. You confirm you're the baby's parent or legal guardian and at least 18. We'll email you a copy of what you signed.`;
 /** DRAFT pending CFO. */
 export const ESIGN_CONSENT = 'I agree to sign and receive these documents electronically. I can ask for a paper copy at any time by emailing hello@lysrosebabyspa.com.';
 export const AGE_ACK = 'My baby is at least 4 weeks old, has no breaks in the skin, the umbilical cord stump has fallen off and healed, and any circumcision site is fully healed.';
 export const PEDIATRICIAN_ACK = "I've talked with my pediatrician about the products and activities used in the session, and I know I can skip any part at any time.";
 export const SKIP_ACK = "I understand there's no refund or discount for skipping any part of the session.";
 /** The agreement version stored with each signature. Signed copies are not on the birth-date deletion schedule. */
-export const BOOKING_TERMS_VERSION = 'booking-waiver-esignature-draft-2026-11-04';
+export const BOOKING_TERMS_VERSION = 'booking-waiver-esignature-draft-2026-11-05';
 export const WAIVER_RETENTION = 'attorney to set';
 const DRAFT_ACKS = {
   symptoms: SICK_SYMPTOMS_ACK,
@@ -421,11 +419,10 @@ export function applyDraftCopy(documentRef) {
   for (const node of documentRef.querySelectorAll('[data-refund-summary]')) node.textContent = fillRefundSummary();
   for (const node of documentRef.querySelectorAll('[data-deposit-ack]')) node.textContent = fillDepositAck();
   for (const node of documentRef.querySelectorAll('[data-ack]')) node.textContent = DRAFT_ACKS[node.getAttribute('data-ack')] || '';
-  for (const node of documentRef.querySelectorAll('[data-signature-lead]')) node.textContent = SIGNATURE_LEAD;
-  for (const node of documentRef.querySelectorAll('[data-waiver-release]')) {
-    node.textContent = WAIVER_RELEASE_TEXT;
-    node.hidden = !WAIVER_RELEASE_TEXT;
-  }
+  for (const node of documentRef.querySelectorAll('[data-signature-heading]')) node.textContent = SIGNATURE_HEADING;
+  for (const node of documentRef.querySelectorAll('[data-signature-rest]')) node.textContent = SIGNATURE_LEAD.slice(SIGNATURE_HEADING.length).trim();
+  for (const node of documentRef.querySelectorAll('[data-waiver-heading]')) node.textContent = WAIVER_HEADING;
+  for (const node of documentRef.querySelectorAll('[data-waiver-body]')) node.textContent = WAIVER_RELEASE_TEXT.slice(WAIVER_HEADING.length).trim();
   for (const node of documentRef.querySelectorAll('[data-florida-notice]')) node.textContent = FLORIDA_STATUTORY_NOTICE;
 }
 

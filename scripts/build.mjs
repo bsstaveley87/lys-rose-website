@@ -2,6 +2,7 @@ import {cp,mkdir,rm,readFile,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
+import {applyDraftCopy,sessionPriceLabel,sessionPriceLine,sessionPriceOffer} from '../assets/booking.js';
 const root=new URL('../',import.meta.url);
 const output=new URL('_site/',root);
 const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -40,11 +41,13 @@ function structuredData(page,document) {
 }
 function head(page,document,noindex=false) {
   const title=escape(page.title); const description=escape(page.description); const url=site.origin+page.path;
+  const robots=page.robots || (noindex?'noindex,follow':'index,follow,max-image-preview:large');
+  const unlisted=String(robots).startsWith('noindex');
   return `<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title>
 <meta name="description" content="${description}">
-<meta name="robots" content="${noindex?'noindex,follow':'index,follow,max-image-preview:large'}">
+<meta name="robots" content="${robots}">
 <meta name="theme-color" content="#FFFBFA">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <link rel="canonical" href="${url}">
@@ -71,7 +74,7 @@ function head(page,document,noindex=false) {
 <meta name="twitter:description" content="${description}">
 <meta name="twitter:image" content="${site.origin+site.image}">
 <meta name="twitter:image:alt" content="${escape(site.imageAlt)}">
-${noindex?'':`<script type="application/ld+json">${structuredData(page,document)}</script>`}
+${unlisted?'':`<script type="application/ld+json">${structuredData(page,document)}</script>`}
 <script type="module" src="/assets/${scriptName}"></script>`;
 }
 // Use the homepage's header, menu, fallback navigation and footer as shared components.
@@ -85,8 +88,19 @@ const sharedComponents=sharedSelectors.map(selector=>{
   }
   return [selector,component.outerHTML];
 });
+function applySessionPrice(document) {
+  const line=document.querySelector('[data-session-price]');
+  if(line) line.textContent=sessionPriceLine();
+  const total=document.querySelector('[data-session-price-total]');
+  if(total) total.textContent=sessionPriceLabel();
+  for(const script of document.querySelectorAll('script[type="application/ld+json"]')) {
+    if(script.textContent.includes('SESSION_PRICE')) script.textContent=script.textContent.replaceAll('SESSION_PRICE',sessionPriceOffer());
+  }
+}
 for(const page of pages) {
   const {document}=parseHTML(await readFile(new URL(page.file,root),'utf8'));
+  applySessionPrice(document);
+  applyDraftCopy(document);
   for(const [selector,html] of sharedComponents) {
     const target=document.querySelector(selector); if(target) target.outerHTML=html;
   }
@@ -106,6 +120,8 @@ for(const page of pages) {
 const {document:notFound}=parseHTML(await readFile(new URL('404.html',root),'utf8'));
 notFound.head.innerHTML=head({path:'/404.html',title:'Page Not Found | Lys Rose Baby Spa',description:'This page could not be found. Return to Lys Rose Baby Spa in Fort Lauderdale.'},notFound,true);
 await writeFile(new URL('404.html',output),'<!doctype html>\n'+notFound.documentElement.outerHTML+'\n');
-await writeFile(new URL('robots.txt',output),`User-agent: *\nAllow: /\nSitemap: ${site.origin}/sitemap.xml\n`);
-await writeFile(new URL('sitemap.xml',output),'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+pages.map(page=>`<url><loc>${site.origin+page.path}</loc></url>`).join('')+'</urlset>\n');
+const indexed=pages.filter(page=>!(page.robots||'').startsWith('noindex'));
+const disallowed=pages.filter(page=>(page.robots||'').startsWith('noindex')).map(page=>`Disallow: ${page.path}`).join('\n');
+await writeFile(new URL('robots.txt',output),`User-agent: *\nAllow: /\n${disallowed}\nSitemap: ${site.origin}/sitemap.xml\n`);
+await writeFile(new URL('sitemap.xml',output),'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+indexed.map(page=>`<url><loc>${site.origin+page.path}</loc></url>`).join('')+'</urlset>\n');
 console.log(`Built ${pages.length} pages, page-specific metadata and structured data, and versioned assets.`);

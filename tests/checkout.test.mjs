@@ -541,7 +541,7 @@ test('a signed waiver is stored with its hash, IP and user agent, and is not rew
   assert.equal(signed.ok, true);
   assert.equal(signed.parent_cleared, true);
   assert.equal(signed.can_add, true);
-  assert.equal(signed.limit, 2);
+  assert.equal(signed.limit, 1);
   const key = `waiver:${bookingId}:parent:parent@example.com`;
   const waiver = JSON.parse(await store.get(key));
   assert.equal(waiver.role, 'primary');
@@ -567,11 +567,9 @@ test('a signed waiver is stored with its hash, IP and user agent, and is not rew
   assert.equal(kept.signature_name, 'Someone Else');
   const added = await addWaiverAdult(store, token, 'Jordan Lee', 'jordan@example.com');
   assert.equal(added.ok, true);
-  assert.equal(added.can_add, true);
-  const second = await addWaiverAdult(store, token, 'Aunt May', 'may@example.com');
-  assert.equal(second.ok, true);
-  assert.equal(second.can_add, false);
-  const blocked = await addWaiverAdult(store, token, 'A Third', 'third@example.com');
+  assert.equal(added.can_add, false);
+  const blocked = await addWaiverAdult(store, token, 'Aunt May', 'may@example.com');
+  assert.equal(blocked.ok, false);
   assert.equal(blocked.status, 409);
   const secondLink = await waiverLink(store, bookingId, 'additional_adult', 'jordan@example.com', 'Jordan Lee');
   const secondToken = new URL(secondLink).searchParams.get('token');
@@ -590,7 +588,7 @@ test('a signed waiver is stored with its hash, IP and user agent, and is not rew
   assert.equal(secondRecord.signed_text.includes('Additional adult.'), true);
 });
 
-test('a paid second adult still leaves room for one more additional adult', async () => {
+test('a booking that already has a second adult does not offer another', async () => {
   const store = memoryStore();
   const response = await handleCheckoutRequest(checkoutRequest(form({
     secondAdult: true,
@@ -605,11 +603,10 @@ test('a paid second adult still leaves room for one more additional adult', asyn
   const link = await waiverLink(store, bookingId, 'primary', 'parent@example.com', 'Christy Zemour');
   const token = new URL(link).searchParams.get('token');
   const signed = await signWaiverRequest(store, token, signature({signatureName: 'Christy Zemour'}), openNow, 'LysRoseTest/1.0', '203.0.113.8');
-  assert.equal(signed.can_add, true);
+  assert.equal(signed.can_add, false);
   assert.equal(signed.parent_cleared, true);
-  const added = await addWaiverAdult(store, token, 'Aunt May', 'may@example.com');
-  assert.equal(added.can_add, false);
-  const blocked = await addWaiverAdult(store, token, 'A Third', 'third@example.com');
+  const blocked = await addWaiverAdult(store, token, 'Aunt May', 'may@example.com');
+  assert.equal(blocked.ok, false);
   assert.equal(blocked.status, 409);
 });
 

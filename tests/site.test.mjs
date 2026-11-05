@@ -555,7 +555,7 @@ test('the draft policy page keeps the refund terms and leaves out fees and discr
   assert.equal(waiverPage.querySelector('[name=signatureName]').value, '');
   assert.equal(waiverPage.querySelector('#waiver-confirmation').hasAttribute('hidden'), true);
   assert.equal(waiverPage.querySelector('#waiver-part-4').hasAttribute('hidden'), true);
-  assert.equal(waiverPage.querySelector('#waiver-add h3').textContent, 'Add another adult');
+  assert.equal(waiverPage.querySelector('#waiver-add h3').textContent, 'Add the second adult attending');
   assert.equal(waiverPage.querySelector('#waiver-add-form button').textContent, 'Send their waiver');
   assert.equal(waiverPage.querySelector('[data-parent-sentence]').textContent, PARENT_SIGNATURE_SENTENCE);
   assert.equal(waiverPage.querySelector('[data-adult-18]').textContent, ADULT_18_ACK);
@@ -565,7 +565,7 @@ test('the draft policy page keeps the refund terms and leaves out fees and discr
   assert.equal(waiverPage.querySelector('[data-clause-body=petals]').textContent, ROSE_PETAL_CLAUSE.slice('Rose petals.'.length).trim());
   assert.equal(waiverPage.querySelector('[data-waiver-disclaimer]').textContent, WAIVER_DISCLAIMER);
   assert.equal(waiverPage.querySelector('#waiver-clause-c').hasAttribute('hidden'), true);
-  assert.equal(MAX_EXTRA_ADULTS, 2);
+  assert.equal(MAX_EXTRA_ADULTS, 1);
   const readPage = await documentFor('book/waiver/read/index.html');
   assert.equal(readPage.querySelector('meta[name=robots]').content, 'noindex,nofollow');
   assert.equal(readPage.querySelector('form'), null);

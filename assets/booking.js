@@ -45,8 +45,8 @@ export const SIGNATURE_LEAD = SIGNATURE_LEAD_PARENT;
 export const CHECKOUT_WAIVER_NOTE = "After booking, we'll email you a waiver to sign online before your session.";
 /** DRAFT pending Christy. */
 export const SECOND_ADULT_WAIVER_NOTE = "Your second adult will receive their own waiver by email to sign before the session.";
-/** Additional adults besides the booking parent. The paid second adult counts toward this. */
-export const MAX_EXTRA_ADULTS = 2;
+/** The one extra adult besides the booking parent: the $25 second adult. */
+export const MAX_EXTRA_ADULTS = 1;
 export const WAIVER_SIGN_URL = 'https://forms.lysrosebabyspa.com/api/waiver';
 export const WAIVER_ADD_URL = 'https://forms.lysrosebabyspa.com/api/waiver-adult';
 /** DRAFT pending CFO. */

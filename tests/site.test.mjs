@@ -175,7 +175,7 @@ test('published home and FAQ copy stays on the waitlist and off the booking page
   const disclaimer = 'Parents provide all hands-on care while our instructor guides. Lys Rose doesn\'t offer facials, medical treatments, physical therapy or massage therapy. Our sessions are educational.';
   const included = [
     'A 2-hour session for you and your baby, led by a caring expert in babies and new parents',
-    'Your own baby bath, soft towels and a cozy station, all set up for you',
+    'Your own baby bath, 100% Turkish cotton towels and washcloths for baby, and a cozy station, all set up for you',
     'A floral milk bath with our Floral Milk Soak',
     'Baby massage and parent-led baby facial',
     'Petit cadeau: a little gift',

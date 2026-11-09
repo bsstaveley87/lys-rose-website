@@ -159,6 +159,12 @@ test('preview copy removes the flagged phrases and keeps the approved lines', as
   assert.ok(faq.includes('No. Parents provide all hands-on care while our instructor guides. Lys Rose doesn\'t offer facials, medical treatments, physical therapy or massage therapy. Our sessions are educational.'));
   assert.ok(about.includes('See you soon'));
   assert.ok(about.includes('White lilies and blush roses, for the lily in the Lys Rose name.'));
+  assert.ok(services.includes('<h3>iv. 100% Turkish cotton towels and washcloths for baby</h3><p>100% Turkish cotton towels and washcloths for baby.</p>'));
+  assert.ok(services.includes('Hooded towels are provided.'));
+  assert.equal(services.includes('Soft robes'), false);
+  assert.equal(services.includes('Robes and'), false);
+  assert.ok(about.includes('Every detail, including the warm floral milk bath, is chosen to give parents and babies a quiet moment together.'));
+  assert.equal(about.includes('soft robes'), false);
   assert.ok(services.includes('Le Petit Rituel'));
   assert.ok(services.includes('Slots are limited. Join the waitlist for early access to session reservations.'));
   assert.ok(home.includes('FORT LAUDERDALE &amp; NEARBY'));

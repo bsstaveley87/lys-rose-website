@@ -26,7 +26,7 @@ export const PRICES = {
     gentle: {amount: 500, taxable: true},
     premium: {amount: 1000, taxable: true},
   },
-  // Embroidered or plain: both taxable.
+  // Not offered for December 6. Not a catalog item. A request that includes it is rejected.
   robe: {amount: null, taxable: true} as PriceLine,
   bathBag: {amount: 1800, taxable: true},
   // [CPA] may be taxable as food; pending CPA check
@@ -342,7 +342,6 @@ export function catalogPlan(prices: PriceTable = PRICES) {
       item('Signature face crème', prices.creme.signature),
       item('Gentle face crème', prices.creme.gentle),
       item('Premium face crème', prices.creme.premium),
-      item('Embroidered keepsake robe', prices.robe),
       item('Floral Milk Bath Bag', prices.bathBag),
       {...item('Complimentary rose petals', prices.petals), create: false},
       item('Second adult', prices.secondAdult),

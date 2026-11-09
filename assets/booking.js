@@ -17,7 +17,7 @@ export const DEPOSIT_CENTS = 10000;
 /** Full birth dates are kept this many years after the family's last booking, then only age in months remains. */
 export const BIRTH_DATE_RETENTION_YEARS = 3;
 /** DRAFT pending Christy. {deposit}, {price}, {balance} and {half} are filled from the price config. */
-export const REFUND_SUMMARY = "{deposit} of your {price} payment is a nonrefundable deposit that holds your spot. If you cancel 7 or more days before your session, we refund the {balance} balance. If you cancel 48 hours or more before, we refund {half}. Within 48 hours, there's no refund. Add-ons follow the same timing, except personalized robes once they're sent for embroidery. If your baby is unwell, we'll move you to a new date within 60 days. If we cancel, you get a full refund.";
+export const REFUND_SUMMARY = "{deposit} of your {price} payment is a nonrefundable deposit that holds your spot. If you cancel 7 or more days before your session, we refund the {balance} balance. If you cancel 48 hours or more before, we refund {half}. Within 48 hours, there's no refund. Add-ons follow the same timing. If your baby is unwell, we'll move you to a new date within 60 days. If we cancel, you get a full refund.";
 /** DRAFT pending Christy. {deposit} is filled from DEPOSIT_CENTS. */
 export const DEPOSIT_ACK = "I understand {deposit} of my payment is a nonrefundable deposit that holds my spot. It isn't refunded, but it can go toward a new session for my family booked within 60 days, as long as my baby still meets the age rule (at least 4 weeks and no older than 12 months) on the new date.";
 /** DRAFT pending Christy. */
@@ -396,12 +396,15 @@ function placeRobeAddon(list, item) {
   else list.appendChild(item);
 }
 
-/** Coming soon while ROBE_CENTS is null. A set price replaces that row with the selectable robe. */
+/** The Dec 6 session does not offer the robe add-on. A null price removes the row. */
 export function mountRobeAddon(documentRef, cents = ROBE_CENTS) {
   const list = documentRef.querySelector('#book-addons .addon-preview');
   if (!list) return;
   const existing = list.querySelector('[data-robe-addon]');
-  if (cents == null) return;
+  if (cents == null) {
+    existing?.remove();
+    return;
+  }
   const item = documentRef.createElement('li');
   item.id = 'robe-addon';
   item.dataset.robeAddon = '';

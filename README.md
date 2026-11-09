@@ -43,7 +43,7 @@ The project uses `cloudflare.config.ts` and the cf CLI. Google Workspace root MX
 
 Hosted checkout is drafted on this branch and is not deployed. The worker does not call Square unless `SQUARE_ACCESS_TOKEN` and `SQUARE_LOCATION_ID` are set in the environment. Do not commit those values. Card numbers never reach this site: `POST /api/checkout` validates the booking and asks Square for a payment link. The buyer finishes on Square's page and returns to `/book/thank-you/`.
 
-While `SESSION` in `assets/booking.js` is null, or `CHECKOUT_CONFIGURED` is false, the pay button stays disabled and the page keeps the preview sentence. The session price is `SESSION_PRICE_CENTS` in `assets/booking.js`. The worker price table uses that same number. A null add-on price hides that extra. `TAX_ENABLED` stays `false` until the Florida registration is finished and the CFO says to turn taxes on. There is no surcharge and no processing fee. When tax is turned on, one Sales tax line at 7% (Florida 6% plus the Broward 1% surtax) is added only to taxable lines: crème upgrades, the robe, and the Floral Milk Bath Bag. The session, Signature crème, the bath choice, rose petals, and the second adult are not taxed.
+While `SESSION` in `assets/booking.js` is null, or `CHECKOUT_CONFIGURED` is false, the pay button stays disabled and the page keeps the preview sentence. The session price is `SESSION_PRICE_CENTS` in `assets/booking.js`. The worker price table uses that same number. A null add-on price hides that extra. `TAX_ENABLED` stays `false` until the Florida registration is finished and the CFO says to turn taxes on. There is no surcharge and no processing fee. When tax is turned on, one Sales tax line at 7% (Florida 6% plus the Broward 1% surtax) is added only to taxable lines: crème upgrades and the Floral Milk Bath Bag. The session, Signature crème, the bath choice, rose petals, and the second adult are not taxed. The embroidered robe add-on is not offered for the December 6 session and is not in the catalog.
 
 Set these in the Cloudflare worker environment, never in git:
 
@@ -60,7 +60,7 @@ The booking form asks for the baby's date of birth. `MIN_BABY_AGE_DAYS` (28) and
 
 `POST /api/square-webhook` checks Square's HMAC-SHA256 signature over the notification URL plus the raw body. Seats are counted only after `payment.updated` or `payment.created` with status `COMPLETED`. The payment link itself is not expired through the API. The order record stores the 48-hour cutoff, and the webhook compares `payment.created_at` with that cutoff. A late payment, a session that is already at the seat cap, or a payment with no matching order is stored as `refund-flagged` and does not take a seat. This preview does not call Square's refund API; someone refunds those payments in the Square dashboard. The seat cap is not written into any page.
 
-`scripts/square-catalog.mjs` prints the catalog it would create and does not call Square. `--apply` creates the items only when both credentials are present. It refuses `SQUARE_ENV=production` unless `CONFIRM_PRODUCTION=yes`. The Floral Milk Bath Bag is $18 and taxable. The second adult is $25 and not taxable for now. The robe is listed and skipped while its price is null. The redirect URL is `https://lysrosebabyspa.com/book/thank-you/`. Do not run `cf deploy` for this preview.
+`scripts/square-catalog.mjs` prints the catalog it would create and does not call Square. `--apply` creates the items only when both credentials are present. It refuses `SQUARE_ENV=production` unless `CONFIRM_PRODUCTION=yes`. The Floral Milk Bath Bag is $18 and taxable. The second adult is $25 and not taxable for now. The embroidered robe add-on is not in the catalog. The redirect URL is `https://lysrosebabyspa.com/book/thank-you/`. Do not run `cf deploy` for this preview.
 
 ## How to change the session price
 
@@ -83,7 +83,7 @@ Run `npm run build` and `npm test`. The test fails if the worker price and `SESS
 - Create a real `BOOKINGS` KV namespace and set its id in `worker/cloudflare.config.ts`.
 - Set the production `SQUARE_ACCESS_TOKEN` and `SQUARE_LOCATION_ID`, with `SQUARE_ENV=production`.
 - Leave `TAX_ENABLED` false until the Florida registration is approved.
-- Set the robe price. The Floral Milk Bath Bag is $18. The second adult is $25 and not taxable for now.
+- The Floral Milk Bath Bag is $18. The second adult is $25 and not taxable for now. The embroidered robe add-on is not offered for December 6.
 - Set `SESSION` and `CHECKOUT_CONFIGURED`.
 - Check the CORS origins in `worker/src/checkout.ts` (`lysrosebabyspa.com`, `www.lysrosebabyspa.com`, and `bsstaveley87.github.io`).
 - Refunds are handled manually in the Square dashboard.

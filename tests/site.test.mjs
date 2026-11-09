@@ -218,7 +218,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(html.includes('$280'), false);
   assert.equal(html.includes('per mom and baby'), false);
   assert.equal(html.includes('Taxes may apply to add-ons.'), false);
-  assert.equal((html.match(/Taxes may apply to enhancements\./g) || []).length, 4);
+  assert.equal((html.match(/Taxes may apply to enhancements\./g) || []).length, 3);
   const bookSource = await readFile(new URL('../book/index.html', import.meta.url), 'utf8');
   assert.equal(bookSource.includes('SESSION_PRICE'), true);
   assert.equal(bookSource.includes('28500'), false);
@@ -230,16 +230,9 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(html.includes('gift bag'), false);
   assert.equal((html.match(/available to add/g) || []).length, 0);
   assert.equal(ROBE_CENTS, null);
-  const robe = book.querySelector('#robe-addon');
-  assert.equal(robe.classList.contains('is-coming-soon'), true);
-  assert.equal(robe.getAttribute('aria-disabled'), 'true');
-  assert.equal(robe.querySelector('#robe-option').hasAttribute('disabled'), true);
-  assert.equal(robe.querySelector('#robe-option').getAttribute('aria-disabled'), 'true');
-  assert.equal(robe.querySelector('#robe-option').hasAttribute('name'), false);
-  assert.equal(robe.querySelector('#robe-coming-soon').textContent, 'Coming soon');
-  assert.equal(robe.querySelector('.visually-hidden').textContent, 'Coming soon');
-  assert.equal(robe.querySelector('.enhancement-note').textContent, 'A personalized embroidered robe for your baby.');
-  assert.equal(robe.querySelector('#robe-note'), null);
+  assert.equal(book.querySelector('#robe-addon'), null);
+  assert.equal(html.includes('Embroidered Keepsake Robe'), false);
+  assert.equal(html.includes('Coming soon'), false);
   assert.equal(html.includes('this option closes 14 days before your session'), false);
   assert.equal(book.querySelector('#bath-bag-addon .addon-price').textContent, '+$18');
   assert.equal(book.querySelector('#bath-bag-addon [name=bathBag]').hasAttribute('disabled'), false);
@@ -493,7 +486,7 @@ test('refund dollars come from the session price and the deposit', () => {
   assert.equal(DEPOSIT_CENTS, 10000);
   assert.equal(refundBalanceCents(), SESSION_PRICE_CENTS - DEPOSIT_CENTS);
   assert.equal(refundHalfBalanceCents(), Math.round((SESSION_PRICE_CENTS - DEPOSIT_CENTS) / 2));
-  assert.equal(fillRefundSummary(), `$100 of your $285 payment is a nonrefundable deposit that holds your spot. If you cancel 7 or more days before your session, we refund the $185 balance. If you cancel 48 hours or more before, we refund $92.50. Within 48 hours, there's no refund. Add-ons follow the same timing, except personalized robes once they're sent for embroidery. If your baby is unwell, we'll move you to a new date within 60 days. If we cancel, you get a full refund.`);
+  assert.equal(fillRefundSummary(), `$100 of your $285 payment is a nonrefundable deposit that holds your spot. If you cancel 7 or more days before your session, we refund the $185 balance. If you cancel 48 hours or more before, we refund $92.50. Within 48 hours, there's no refund. Add-ons follow the same timing. If your baby is unwell, we'll move you to a new date within 60 days. If we cancel, you get a full refund.`);
   assert.equal(fillRefundSummary(28000, 10000), REFUND_SUMMARY.replaceAll('{deposit}', '$100').replaceAll('{price}', '$280').replaceAll('{balance}', '$180').replaceAll('{half}', '$90'));
   assert.equal(fillRefundSummary(28000, 10000).includes('$92.50'), false);
   assert.equal(fillDepositAck(), DEPOSIT_ACK.replaceAll('{deposit}', '$100'));

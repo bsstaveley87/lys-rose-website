@@ -372,13 +372,13 @@ test('catalog plan prices the session variations together and skips null extras'
     'Signature face crème': false,
     'Gentle face crème': true,
     'Premium face crème': true,
-    'Embroidered keepsake robe': true,
     'Floral Milk Bath Bag': true,
     'Complimentary rose petals': false,
     'Second adult': false,
   });
   const objects = catalogUpsertObjects();
-  assert.equal(objects.some(item => item.item_data.name === 'Embroidered keepsake robe'), false);
+  assert.equal(plan.items.some(item => /robe/i.test(item.name)), false);
+  assert.equal(objects.some(item => /robe/i.test(item.item_data.name)), false);
   const secondAdultItem = objects.find(item => item.item_data.name === 'Second adult');
   assert.equal(secondAdultItem.item_data.is_taxable, false);
   assert.equal(secondAdultItem.item_data.variations[0].item_variation_data.price_money.amount, 2500);
@@ -408,7 +408,7 @@ test('catalog script stays a dry run unless credentials are present', async () =
   assert.match(dry.stdout, /Floral Milk Soak/);
   assert.match(dry.stdout, /BYOB/);
   assert.match(dry.stdout, /Gentle face crème/);
-  assert.match(dry.stdout, /Embroidered keepsake robe/);
+  assert.equal(dry.stdout.toLowerCase().includes('robe'), false);
   assert.match(dry.stdout, /Floral Milk Bath Bag/);
   assert.match(dry.stdout, /Second adult/);
   assert.match(dry.stdout, /"mode": "dry-run"/);
@@ -418,7 +418,7 @@ test('catalog script stays a dry run unless credentials are present', async () =
   assert.equal(flags['Signature face crème'], false);
   assert.equal(flags['Gentle face crème'], true);
   assert.equal(flags['Premium face crème'], true);
-  assert.equal(flags['Embroidered keepsake robe'], true);
+  assert.equal(Object.hasOwn(flags, 'Embroidered keepsake robe'), false);
   assert.equal(flags['Floral Milk Bath Bag'], true);
   assert.equal(printed.items.find(item => item.name === 'Floral Milk Bath Bag').amount, 1800);
   assert.equal(printed.items.find(item => item.name === 'Floral Milk Bath Bag').create, true);

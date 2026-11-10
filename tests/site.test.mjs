@@ -186,7 +186,7 @@ test('published home and FAQ copy stays on the waitlist and off the booking page
     'Baby massage and parent-led baby facial',
     'Petit cadeau: a little gift',
     'A spa photo op in a soft baby robe set',
-    'Refreshments, light bites and fresh florals',
+    'Refreshments and light bites',
     'An intimate small group',
     'We handle the laundry and cleanup, so you can simply enjoy',
   ];
@@ -208,7 +208,7 @@ test('published home and FAQ copy stays on the waitlist and off the booking page
   const data = JSON.parse(faq.querySelector('script[type="application/ld+json"]').textContent);
   const entities = data['@graph'].find(node => node['@type'] === 'FAQPage').mainEntity;
   const includedAnswer = entities.find(item => item.name === "What's included in my session?").acceptedAnswer.text;
-  assert.equal(includedAnswer, 'A 2-hour session for you and your baby, with a floral milk bath, baby massage and parent-led baby facial, a spa photo op in a soft baby robe set, refreshments, light bites and fresh florals. We handle the laundry and cleanup, so you can simply enjoy. Petit cadeau: a little gift.\n\nSee the full list in What\'s included.');
+  assert.equal(includedAnswer, 'A 2-hour session for you and your baby, with a floral milk bath, baby massage and parent-led baby facial, a spa photo op in a soft baby robe set, refreshments and light bites. We handle the laundry and cleanup, so you can simply enjoy. Petit cadeau: a little gift.\n\nSee the full list in What\'s included.');
   assert.equal(faq.querySelector('a[href="/#whats-included"]').textContent, "What's included");
   const bring = entities.find(item => item.name === 'What should I bring?').acceptedAnswer.text;
   assert.equal(bring, "Just your baby, a couple of diapers, a change of clothes and anything you need for feeding (bottle, formula or a nursing cover). We take care of the rest: towels, wipes and everything used during the session.");

@@ -7,7 +7,7 @@ import {validateFields, interestOptions, limits} from '../assets/validation.js';
 const approved = {
   '/': {
     title: 'Lys Rose Baby Spa · Fort Lauderdale',
-    description: "A guided session for parents and babies under 12 months: you'll learn infant massage, a warm floral milk bath and simple baby face care. Small group sessions in Fort Lauderdale. Join the waitlist.",
+    description: "A guided session for parents and babies under 12 months: you'll learn infant massage, a warm floral milk bath and simple parent-led baby facial. Small group sessions in Fort Lauderdale. Join the waitlist.",
   },
   '/about/': {
     title: 'About · Lys Rose Baby Spa',
@@ -15,7 +15,7 @@ const approved = {
   },
   '/services/': {
     title: 'Services · Lys Rose Baby Spa',
-    description: "Small group baby spa sessions where you'll learn guided infant massage, a warm floral milk bath and guided baby face care with your own baby, plus light refreshments. Led by caring professionals from the world of babies and new parents. Fort Lauderdale.",
+    description: "Small group baby spa sessions where you'll learn guided infant massage, a warm floral milk bath and parent-led baby facial with your own baby, plus light refreshments. Led by caring professionals from the world of babies and new parents. Fort Lauderdale.",
   },
   '/faq/': {
     title: 'FAQ · Lys Rose Baby Spa',
@@ -46,7 +46,7 @@ for(const page of pages) test(`${page.path}: indexable HTML, SEO, structured dat
   assert.equal(doc.querySelector('meta[property="og:description"]').content,description);
   assert.equal(doc.querySelector('meta[name="twitter:title"]').content,title);
   assert.equal(doc.querySelector('meta[name="twitter:description"]').content,description);
-  assert.equal(doc.querySelector('.disclaimer').textContent, 'Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
+  assert.equal(doc.querySelector('.disclaimer').textContent, 'Parents provide all hands-on care while our instructor guides. Lys Rose doesn\'t offer facials, medical treatments, physical therapy or massage therapy. Our sessions are educational.');
   assert.ok(doc.querySelector('#site-menu .menu-logo'));
   assert.ok([...doc.querySelectorAll('#site-menu nav a')].some(link => link.textContent === 'Home' && link.getAttribute('href') === '/'));
   assert.ok([...doc.querySelectorAll('noscript nav a')].some(link => link.textContent === 'Home'));
@@ -88,7 +88,8 @@ test('FAQ schema mirrors every visible answer exactly',async()=>{
   assert.deepEqual([...faq.mainEntity.map(item=>item.name)].filter(name=>name.endsWith('face crème')),['Signature face crème','Gentle face crème','Premium face crème']);
   assert.equal(faq.mainEntity.find(item=>item.name==='Signature face crème').acceptedAnswer.text,'Aloe Barbadensis Leaf Juice*, Water, Glycerin, Caprylyl/Capryl Glucoside, Sodium Benzoate, Potassium Sorbate, Citric Acid, Olea Europaea (Olive) Fruit Oil*.');
   const faqHtml=doc.documentElement.outerHTML.toLowerCase();
-  for (const word of ['mustela','evereden','ever-eden','soothing','facial']) assert.equal(faqHtml.includes(word),false,word);
+  for (const word of ['mustela','evereden','ever-eden','soothing']) assert.equal(faqHtml.includes(word),false,word);
+  assert.equal(faqHtml.replaceAll('parent-led baby facial','').replaceAll("doesn\'t offer facials",'').replaceAll('doesn&#39;t offer facials','').includes('facial'),false);
   assert.equal(faqHtml.replaceAll('organic colloidal oatmeal, organic coconut milk powder, organic dried red rose petals and buds.','').includes('organic'),false);
   items.forEach((item,i)=>assert.equal(faq.mainEntity[i].acceptedAnswer.text,[...item.querySelectorAll('p')].map(p=>p.textContent.trim()).join('\n\n')));
 });
@@ -146,7 +147,7 @@ test('versioned assets are referenced consistently',async()=>{
 });
 
 test('preview copy removes the flagged phrases and keeps the approved lines', async () => {
-  assert.deepEqual(interestOptions, ['Milk bath', 'Infant massage', 'Guided baby face care', 'The full new parent experience', 'Other']);
+  assert.deepEqual(interestOptions, ['Milk bath', 'Infant massage', 'Parent-led baby facial', 'The full new parent experience', 'Other']);
   assert.deepEqual([...(await documentFor('index.html')).querySelectorAll('[name=interests]')].map(input => input.getAttribute('value')), interestOptions);
   const read = file => readFile(new URL(file, root), 'utf8');
   const home = await read('index.html');
@@ -155,9 +156,15 @@ test('preview copy removes the flagged phrases and keeps the approved lines', as
   const faq = await read('faq/index.html');
   const all = home + about + services + faq;
   for (const phrase of ['Mini photoshoot', 'À bientôt', 'experienced practitioner', 'Places in each small group are limited.', 'spots']) assert.equal(all.includes(phrase), false, phrase);
-  assert.ok(faq.includes('No. Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.'));
+  assert.ok(faq.includes('No. Parents provide all hands-on care while our instructor guides. Lys Rose doesn\'t offer facials, medical treatments, physical therapy or massage therapy. Our sessions are educational.'));
   assert.ok(about.includes('See you soon'));
   assert.ok(about.includes('White lilies and blush roses, for the lily in the Lys Rose name.'));
+  assert.ok(services.includes('<h3>iv. 100% Turkish cotton towels and washcloths for baby</h3><p>100% Turkish cotton towels and washcloths for baby.</p>'));
+  assert.ok(services.includes('Hooded towels are provided.'));
+  assert.equal(services.includes('Soft robes'), false);
+  assert.equal(services.includes('Robes and'), false);
+  assert.ok(about.includes('Every detail, including the warm floral milk bath, is chosen to give parents and babies a quiet moment together.'));
+  assert.equal(about.includes('soft robes'), false);
   assert.ok(services.includes('Le Petit Rituel'));
   assert.ok(services.includes('Slots are limited. Join the waitlist for early access to session reservations.'));
   assert.ok(home.includes('FORT LAUDERDALE &amp; NEARBY'));
@@ -168,18 +175,18 @@ test('preview copy removes the flagged phrases and keeps the approved lines', as
   assert.doesNotMatch(css, /\.hero-lockup\s*\{[^}]*display:\s*none/);
   const data = JSON.parse((await documentFor('faq/index.html')).querySelector('script[type="application/ld+json"]').textContent);
   const answer = data['@graph'].find(node => node['@type'] === 'FAQPage').mainEntity.find(item => item.name === 'Is this a medical or therapy service?').acceptedAnswer.text;
-  assert.equal(answer, 'No. Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.');
+  assert.equal(answer, 'No. Parents provide all hands-on care while our instructor guides. Lys Rose doesn\'t offer facials, medical treatments, physical therapy or massage therapy. Our sessions are educational.');
 });
 test('published home and FAQ copy stays on the waitlist and off the booking page', async () => {
-  const disclaimer = 'Lys Rose sessions are educational and do not provide medical, physical therapy, midwifery or massage therapy services.';
+  const disclaimer = 'Parents provide all hands-on care while our instructor guides. Lys Rose doesn\'t offer facials, medical treatments, physical therapy or massage therapy. Our sessions are educational.';
   const included = [
     'A 2-hour session for you and your baby, led by a caring expert in babies and new parents',
-    'Your own baby bath, soft towels and a cozy station, all set up for you',
+    'Your own baby bath, 100% Turkish cotton towels and washcloths for baby, and a cozy station, all set up for you',
     'A floral milk bath with our Floral Milk Soak',
-    'Baby massage and face care',
+    'Baby massage and parent-led baby facial',
     'Petit cadeau: a little gift',
     'A spa photo op in a soft baby robe set',
-    'Refreshments, light bites and fresh florals',
+    'Refreshments and light bites',
     'An intimate small group',
     'We handle the laundry and cleanup, so you can simply enjoy',
   ];
@@ -187,7 +194,7 @@ test('published home and FAQ copy stays on the waitlist and off the booking page
   const lines = [...home.querySelectorAll('#whats-included .included-list li')].map(item => item.textContent.trim());
   assert.deepEqual(lines, included);
   assert.equal(home.querySelector('.hero-tagline').textContent, 'Inspired by Lily Rose.Shared with love.');
-  assert.equal(home.querySelector('.hero-intro').textContent, 'A session for you and your baby: infant massage, a warm floral milk bath and face care.');
+  assert.equal(home.querySelector('.hero-intro').textContent, 'A session for you and your baby: infant massage, a warm floral milk bath and parent-led baby facial.');
   assert.equal(home.querySelector('.footer-tagline').textContent, 'Inspired by Lily Rose. Shared with love.');
   const session = [...home.querySelectorAll('.session-item-copy')].map(item => item.textContent.replace(/\s+/g, ' ').trim());
   assert.deepEqual(session, [
@@ -201,7 +208,7 @@ test('published home and FAQ copy stays on the waitlist and off the booking page
   const data = JSON.parse(faq.querySelector('script[type="application/ld+json"]').textContent);
   const entities = data['@graph'].find(node => node['@type'] === 'FAQPage').mainEntity;
   const includedAnswer = entities.find(item => item.name === "What's included in my session?").acceptedAnswer.text;
-  assert.equal(includedAnswer, 'A 2-hour session for you and your baby, with a floral milk bath, baby massage and face care, a spa photo op in a soft baby robe set, refreshments, light bites and fresh florals. We handle the laundry and cleanup, so you can simply enjoy. Petit cadeau: a little gift.\n\nSee the full list in What\'s included.');
+  assert.equal(includedAnswer, 'A 2-hour session for you and your baby, with a floral milk bath, baby massage and parent-led baby facial, a spa photo op in a soft baby robe set, refreshments and light bites. We handle the laundry and cleanup, so you can simply enjoy. Petit cadeau: a little gift.\n\nSee the full list in What\'s included.');
   assert.equal(faq.querySelector('a[href="/#whats-included"]').textContent, "What's included");
   const bring = entities.find(item => item.name === 'What should I bring?').acceptedAnswer.text;
   assert.equal(bring, "Just your baby, a couple of diapers, a change of clothes and anything you need for feeding (bottle, formula or a nursing cover). We take care of the rest: towels, wipes and everything used during the session.");
@@ -217,7 +224,11 @@ test('published home and FAQ copy stays on the waitlist and off the booking page
     assert.equal(html.includes('/book'), false, page.path);
     assert.equal(html.includes('Le Petit Plus'), false, page.path);
     assert.equal(html.includes('$'), false, page.path);
-    assert.equal(html.toLowerCase().includes('facial'), false, page.path);
+    const lowered = html.toLowerCase();
+    const facialLeftover = lowered.replaceAll('parent-led baby facial','').replaceAll("doesn\'t offer facials",'').replaceAll('doesn&#39;t offer facials','');
+    assert.equal(facialLeftover.includes('facial'), false, page.path);
+    assert.equal(lowered.replaceAll(disclaimer.toLowerCase(),'').includes('treatment'), false, page.path);
+    for (const phrase of ["your baby gets a facial", 'perform a facial', 'performs a facial', 'give a facial', 'gives a facial', 'esthetician', 'licensed']) assert.equal(lowered.includes(phrase), false, `${page.path} ${phrase}`);
     assert.equal([...doc.querySelectorAll('a[href]')].some(link => (link.getAttribute('href') || '').includes('/book')), false, page.path);
     assert.equal(JSON.parse(doc.querySelector('script[type="application/ld+json"]').textContent)['@graph'].some(node => JSON.stringify(node).includes('/book')), false, page.path);
   }

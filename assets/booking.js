@@ -48,10 +48,10 @@ export const BOOKING_CONFIRMATIONS = ['age', 'price', 'join', 'checkin', 'contac
 /** Required only when the parent chooses BYOB. */
 export const BYOB_CONFIRMATION = 'byob';
 /** DRAFT pending CFO. Section 2 of the waiver e-signature draft, without the attorney note. */
-export const WAIVER_HEADING = 'Assumption of risk and release (DRAFT).';
-export const WAIVER_RELEASE_TEXT = `${WAIVER_HEADING} I am the parent or legal guardian of the baby named in this booking. I understand that a Lys Rose session is an educational, parent-led group class. I provide all hands-on care for my baby, and the instructor guides. Lys Rose doesn't offer facials, medical treatments, physical therapy or massage therapy. I understand the session has inherent risks, including: handling a wet, slippery baby in and around warm water; water that may be too warm or too cool; slips and falls on wet floors; a skin reaction or allergy to the products used (including the milk soak, oils, creams and floating rose petals); a baby mouthing or swallowing a petal or other small item; contact with shared, sanitized tools; and exposure to common illnesses in a group setting. I agree to keep my baby under my direct supervision and within my reach at all times. I voluntarily accept these risks for myself and my baby. To the fullest extent the law allows, I release Lys Rose LLC (doing business as Lys Rose Baby Spa), its owner, instructors and contractors from claims for injury or loss arising from these inherent risks.`;
-/** Placeholder only. Do not replace this with drafted statutory language. Section 7.2. */
-export const FLORIDA_STATUTORY_NOTICE = '[Florida statutory notice under Fla. Stat. 744.301(3): attorney to insert verbatim, in the required type.]';
+export const WAIVER_HEADING = 'Assumption of risk and release.';
+export const WAIVER_RELEASE_TEXT = `${WAIVER_HEADING} I am the parent or legal guardian of the baby named in this waiver. I understand that a Lys Rose session is an educational, parent-led group class. I provide all hands-on care for my baby, and the instructor guides. Lys Rose doesn't offer facials, medical treatments, physical therapy or massage therapy. I understand the session has inherent risks, including: handling a wet, slippery baby in and around warm water; water that may be too warm or too cool; slips and falls on wet floors; a skin reaction or allergy to the products used (including the milk soak, oils, creams and floating rose petals); a baby mouthing or swallowing a petal or other small item; contact with shared, sanitized tools; and exposure to common illnesses in a group setting. I agree to keep my baby under my direct supervision and within my reach at all times. I voluntarily accept these risks for myself and my baby. To the fullest extent the law allows, I release Lys Rose LLC (doing business as Lys Rose Baby Spa), its owner, instructors and contractors from claims for injury or loss arising from these inherent risks.`;
+/** Fla. Stat. 744.301(3)(b), copied from Waiver v0.9. Uppercase in the source, including the curly apostrophes. */
+export const FLORIDA_STATUTORY_NOTICE = 'NOTICE TO THE MINOR CHILD’S NATURAL GUARDIAN\n\nREAD THIS FORM COMPLETELY AND CAREFULLY. YOU ARE AGREEING TO LET YOUR MINOR CHILD ENGAGE IN A POTENTIALLY DANGEROUS ACTIVITY. YOU ARE AGREEING THAT, EVEN IF LYS ROSE LLC USES REASONABLE CARE IN PROVIDING THIS ACTIVITY, THERE IS A CHANCE YOUR CHILD MAY BE SERIOUSLY INJURED OR KILLED BY PARTICIPATING IN THIS ACTIVITY BECAUSE THERE ARE CERTAIN DANGERS INHERENT IN THE ACTIVITY WHICH CANNOT BE AVOIDED OR ELIMINATED. BY SIGNING THIS FORM YOU ARE GIVING UP YOUR CHILD’S RIGHT AND YOUR RIGHT TO RECOVER FROM LYS ROSE LLC IN A LAWSUIT FOR ANY PERSONAL INJURY, INCLUDING DEATH, TO YOUR CHILD OR ANY PROPERTY DAMAGE THAT RESULTS FROM THE RISKS THAT ARE A NATURAL PART OF THE ACTIVITY. YOU HAVE THE RIGHT TO REFUSE TO SIGN THIS FORM, AND LYS ROSE LLC HAS THE RIGHT TO REFUSE TO LET YOUR CHILD PARTICIPATE IF YOU DO NOT SIGN THIS FORM.';
 /** DRAFT pending CFO. Lead-in from section 3, as amended in section 6. */
 export const SIGNATURE_HEADING = 'Sign your waiver.';
 export const SIGNATURE_LEAD_PARENT = `${SIGNATURE_HEADING} Please read the waiver above. By typing your full name and selecting "Sign and continue," you are signing electronically. Your typed name is your legal signature, just as if you'd signed on paper, and it applies to the waiver shown on this page. You confirm you're at least 18 and the baby's parent or legal guardian. We'll email you a copy of what you signed.`;
@@ -76,18 +76,19 @@ export const WAIVER_DISCLAIMER = "Parents provide all hands-on care while our in
 export const CLAUSE_A = "Age and health. I confirm that: (a) my baby will be at least 4 weeks old and no older than 12 months on the date of the session; (b) my baby's umbilical cord stump has fallen off and the area is fully healed; (c) my baby's skin has no breaks (no cuts, scrapes or open areas); (d) if my baby has been circumcised, the circumcision site is fully healed; and (e) my baby is healthy on the day of the session. I will tell the instructor at check-in if any of this changes before the session starts. I have talked with my baby's pediatrician about the products and activities used in the session, and I know I can skip any part of the session at any time. I understand that Lys Rose may ask for my baby's birth date, and that if the age (4 weeks to 12 months), the healed cord, unbroken skin or a healed circumcision site is in doubt at check-in, my baby will not be bathed.";
 export const CLAUSE_B = "Products and skipping. I have read the list of products used in the session: the milk bath packet (colloidal oatmeal and coconut milk powder), floating rose petals, grapeseed massage oil, Mustela face moisturizer, and, only if I choose it, the Evereden face cream upgrade. I understand I will be asked to use a fragrance-free hand sanitizer and let my hands dry completely before handling my baby. I understand that I may skip any part of the session at any time by telling the instructor, and that skipping does not entitle me to any refund, credit or discount, because the session price stays the same. If I decline a paid upgrade, I will not be charged for it. I am responsible for telling Lys Rose at least 48 hours before my session about any allergy or sensitivity my baby or I have, including to any ingredient on the product list, and I may ask for the ingredient lists at any time.";
 export const CLAUSE_C = "Bring your own breastmilk. If I choose BYOB, I will bring my own breastmilk for my own baby, cold (liquid) or frozen. I am solely responsible for the milk, including its storage, warming, and adding it to my baby's bath. Lys Rose does not provide, inspect, store, handle, or test breastmilk; it provides only a cup of warm water I can use to warm my sealed milk myself.";
-export const ROSE_PETAL_CLAUSE = "Rose petals. I understand that the bath for my baby includes whole rose petals floating on the water for appearance only. The petals are not food. I will not let my baby eat or mouth the petals, and I will not place petals in my baby's mouth. I understand that petals can be a choking or breathing hazard if they get into a baby's mouth and that some babies react to flowers or pollen. I agree that my baby will stay under my direct supervision and within my arm's reach at all times during the session, including whenever my baby is near the water or the petals. I understand that I may choose a petal-free bath for my baby by ticking the box on the booking form or by telling the instructor at check-in, and that I may ask for the petals to be removed at any time. I will tell Lys Rose at least 48 hours before my session about any allergy or sensitivity my baby has, including to flowers or pollen.";
+export const ROSE_PETAL_CLAUSE = "Rose petals. I understand that the bath for my baby includes whole rose petals floating on the water for appearance only. The petals are not food. I will not let my baby eat or mouth the petals, and I will not place petals in my baby's mouth. I understand that petals can be a choking or breathing hazard if they get into a baby's mouth and that some babies react to flowers or pollen. I agree that my baby will stay under my direct supervision and within my arm's reach at all times during the session, including whenever my baby is near the water or the petals. I understand that I must choose a petal-free bath before my baby's bath begins, on the booking form or at check-in; once the bath has started, the petals are not removed. I will tell Lys Rose at least 48 hours before my session about any allergy or sensitivity my baby has, including to flowers or pollen.";
 export const CLAUSE_D = "Sick baby. I confirm that in the 24 hours before the session my baby has had no fever, vomiting or diarrhea, has no green nasal mucus, and has no other signs of illness (such as a rash or cough) and no breaks in the skin. If I sign this more than 24 hours before the session, I promise these will be true at the session, and I will tell Lys Rose before the session if my baby becomes unwell. I understand the instructor may ask us not to join if my baby seems unwell at check-in. What happens to my payment then is set out in the booking policy.";
 export const EMERGENCY_CLAUSE = "Emergency. If there's an emergency, Lys Rose may call 911. I'm responsible for decisions about my baby's care and for any medical costs. If I can't be reached in an emergency, Lys Rose may contact my emergency contact.";
-export const INDEMNIFICATION_CLAUSE = '[Indemnification: attorney to decide whether to include, and its scope.]';
 export const SEVERABILITY_CLAUSE = 'Severability. If any part of this waiver is found unenforceable, the rest still applies.';
 export const FLORIDA_LAW_CLAUSE = 'Florida law. This waiver is governed by Florida law.';
 export const VOLUNTARY_CLAUSE = "Voluntary. I've read this waiver, I understand it, and I'm signing it voluntarily.";
 export const PARENT_SIGNATURE_SENTENCE = 'I am the parent or legal guardian of the baby named above. I sign this waiver for myself and on behalf of my baby.';
 export const ADULT_18_ACK = "I'm at least 18";
 export const PARENT_ROUTE_LABEL = "I'm the baby's parent or legal guardian";
+/** Shown on the waiver pages and stored with every signature. */
+export const WAIVER_VERSION_LABEL = 'Waiver v0.9 (Nov 2026)';
 /** The agreement version stored with each signature. Signed copies are not on the birth-date deletion schedule. */
-export const BOOKING_TERMS_VERSION = 'booking-waiver-esignature-draft-2026-11-05';
+export const BOOKING_TERMS_VERSION = 'waiver-v0.9-2026-11';
 /** Body copy of the waiver document. The Florida notice is set 5pt larger. */
 export const WAIVER_BODY_FONT_PT = 12;
 export const FLORIDA_NOTICE_FONT_PT = 17;
@@ -105,7 +106,6 @@ const CLAUSE_LABELS = {
   d: 'Sick baby.',
   petals: 'Rose petals.',
   emergency: 'Emergency.',
-  indemnify: '[Indemnification: attorney to decide whether to include, and its scope.]',
   severability: 'Severability.',
   florida: 'Florida law.',
   voluntary: 'Voluntary.',
@@ -117,7 +117,6 @@ const CLAUSE_BODIES = {
   d: CLAUSE_D.slice(CLAUSE_LABELS.d.length).trim(),
   petals: ROSE_PETAL_CLAUSE.slice(CLAUSE_LABELS.petals.length).trim(),
   emergency: EMERGENCY_CLAUSE.slice(CLAUSE_LABELS.emergency.length).trim(),
-  indemnify: '',
   severability: SEVERABILITY_CLAUSE.slice(CLAUSE_LABELS.severability.length).trim(),
   florida: FLORIDA_LAW_CLAUSE.slice(CLAUSE_LABELS.florida.length).trim(),
   voluntary: VOLUNTARY_CLAUSE.slice(CLAUSE_LABELS.voluntary.length).trim(),
@@ -176,6 +175,27 @@ export function fillDepositAck(depositCents = DEPOSIT_CENTS) {
   return DEPOSIT_ACK.replaceAll('{deposit}', formatCents(depositCents));
 }
 
+/** Part 2 of Waiver v0.9, in file order. BYOB is included only when that bath was chosen. */
+export function renderedWaiverTerms(details = {}) {
+  const babyName = details.babyName || "[baby's name]";
+  const sessionDate = details.sessionDate || '[date]';
+  return [
+    waiverIntro(babyName, sessionDate),
+    WAIVER_DISCLAIMER,
+    CLAUSE_A,
+    CLAUSE_B,
+    ROSE_PETAL_CLAUSE,
+    ...(details.byob ? [CLAUSE_C] : []),
+    CLAUSE_D,
+    EMERGENCY_CLAUSE,
+    WAIVER_RELEASE_TEXT,
+    FLORIDA_STATUTORY_NOTICE,
+    SEVERABILITY_CLAUSE,
+    FLORIDA_LAW_CLAUSE,
+    VOLUNTARY_CLAUSE,
+  ].join('\n\n');
+}
+
 /** Exact text shown on the signer's page. The stored hash is of this string. */
 export function signedDocumentText(details = {}) {
   const part = details.part === 'additional' ? 'additional' : 'parent';
@@ -191,20 +211,7 @@ export function signedDocumentText(details = {}) {
     `Booking ID: ${details.bookingId || '[booking ID]'}`,
     `BYOB: ${details.byob ? 'Yes' : 'No'}`,
     'Part 2. Waiver terms',
-    waiverIntro(babyName, sessionDate),
-    WAIVER_DISCLAIMER,
-    CLAUSE_A,
-    CLAUSE_B,
-    ...(details.byob ? [CLAUSE_C] : []),
-    ROSE_PETAL_CLAUSE,
-    CLAUSE_D,
-    WAIVER_RELEASE_TEXT,
-    EMERGENCY_CLAUSE,
-    INDEMNIFICATION_CLAUSE,
-    SEVERABILITY_CLAUSE,
-    FLORIDA_LAW_CLAUSE,
-    VOLUNTARY_CLAUSE,
-    FLORIDA_STATUTORY_NOTICE,
+    renderedWaiverTerms({...details, babyName, sessionDate}),
     signatureLead(part),
     ESIGN_CONSENT,
     part === 'additional' ? additionalAdultText(babyName) : PARENT_SIGNATURE_SENTENCE,
@@ -253,15 +260,13 @@ function escapeHtml(value) {
   return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 }
 
-/** HTML for the emailed or PDF signed copy. The notice stays the source string and is styled larger, in capitals. */
+/** HTML for the emailed or PDF signed copy. The notice is uppercase in the source, larger, bold, and boxed. */
 export function signedCopyHtml(signedText) {
-  const paragraphs = String(signedText).split('\n').map(line => {
-    if (line === FLORIDA_STATUTORY_NOTICE) {
-      return `<p class="florida-notice" style="font-size:${FLORIDA_NOTICE_FONT_PT}pt;line-height:1.45;text-transform:uppercase">${escapeHtml(line)}</p>`;
-    }
-    return `<p style="font-size:${WAIVER_BODY_FONT_PT}pt">${escapeHtml(line)}</p>`;
-  });
-  return `<article style="font-size:${WAIVER_BODY_FONT_PT}pt">${paragraphs.join('')}</article>`;
+  const noticeStyle = `font-size:${FLORIDA_NOTICE_FONT_PT}pt;font-weight:700;line-height:1.45;text-transform:uppercase;border:1px solid #504B49;padding:12px 14px;white-space:pre-line`;
+  const chunks = String(signedText).split(FLORIDA_STATUTORY_NOTICE);
+  const body = chunk => chunk.split('\n').filter(line => line !== '').map(line => `<p style="font-size:${WAIVER_BODY_FONT_PT}pt">${escapeHtml(line)}</p>`).join('');
+  const html = chunks.map((chunk, index) => body(chunk) + (index < chunks.length - 1 ? `<p class="florida-notice" style="${noticeStyle}">${escapeHtml(FLORIDA_STATUTORY_NOTICE)}</p>` : '')).join('');
+  return `<article style="font-size:${WAIVER_BODY_FONT_PT}pt">${html}</article>`;
 }
 
 export function previewTotal(addonSelected, faceCream = 'signature', bathBag = false, secondAdult = false, paymentMode = DEFAULT_PAYMENT_MODE) {
@@ -567,6 +572,7 @@ export function applyDraftCopy(documentRef) {
   for (const node of documentRef.querySelectorAll('[data-waiver-heading]')) node.textContent = WAIVER_HEADING;
   for (const node of documentRef.querySelectorAll('[data-waiver-body]')) node.textContent = WAIVER_RELEASE_TEXT.slice(WAIVER_HEADING.length).trim();
   for (const node of documentRef.querySelectorAll('[data-florida-notice]')) node.textContent = FLORIDA_STATUTORY_NOTICE;
+  for (const node of documentRef.querySelectorAll('[data-waiver-version]')) node.textContent = WAIVER_VERSION_LABEL;
   for (const node of documentRef.querySelectorAll('[data-checkout-waiver-note]')) node.textContent = CHECKOUT_WAIVER_NOTE;
   for (const node of documentRef.querySelectorAll('[data-second-adult-waiver-note]')) node.textContent = SECOND_ADULT_WAIVER_NOTE;
 }

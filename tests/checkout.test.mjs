@@ -612,21 +612,22 @@ test('a signed waiver is stored with its hash, IP and user agent, and is not rew
   assert.equal(waiver.relationship, 'mother');
   assert.equal(waiver.signature_name, 'Someone Else');
   assert.equal(waiver.signed_at, openNow.toISOString());
-  assert.equal(waiver.terms_version, 'booking-waiver-esignature-draft-2026-11-05');
-  assert.equal(waiver.waiver_version, 'booking-waiver-esignature-draft-2026-11-05');
+  assert.equal(waiver.terms_version, 'waiver-v0.9-2026-11');
+  assert.equal(waiver.waiver_version, 'waiver-v0.9-2026-11');
   assert.equal(waiver.florida_notice_presentation.fontSizePt - waiver.florida_notice_presentation.bodyFontSizePt, 5);
   assert.equal(waiver.florida_notice_presentation.caps, true);
   assert.match(waiver.signed_copy_html, /font-size:17pt/);
   assert.match(waiver.signed_copy_html, /text-transform:uppercase/);
   assert.equal(waiver.signed_copy_html.includes(FLORIDA_STATUTORY_NOTICE), true);
-  assert.equal(waiver.signed_text.includes(FLORIDA_STATUTORY_NOTICE.toUpperCase()), false);
+  assert.equal(waiver.signed_copy_html.includes('NOTICE TO THE MINOR CHILD'), true);
   assert.deepEqual(waiver.emergency_contact, {name: 'Pat Contact', phone: '954-555-0199', relationship: 'aunt'});
   assert.equal(waiver.signed_text.includes("Emergency. If there's an emergency, Lys Rose may call 911."), true);
-  assert.equal(waiver.signed_text.indexOf('Emergency.') < waiver.signed_text.indexOf('[Indemnification:'), true);
-  assert.equal(waiver.signed_text.indexOf('[Indemnification:') < waiver.signed_text.indexOf('Severability.'), true);
+  assert.equal(waiver.signed_text.includes('Indemnification'), false);
+  assert.equal(waiver.signed_text.includes('PENDING N65'), false);
+  assert.equal(waiver.signed_text.indexOf('Emergency.') < waiver.signed_text.indexOf('NOTICE TO THE MINOR'), true);
+  assert.equal(waiver.signed_text.indexOf('NOTICE TO THE MINOR') < waiver.signed_text.indexOf('Severability.'), true);
   assert.equal(waiver.signed_text.indexOf('Severability.') < waiver.signed_text.indexOf('Florida law.'), true);
   assert.equal(waiver.signed_text.indexOf('Florida law.') < waiver.signed_text.indexOf('Voluntary.'), true);
-  assert.equal(waiver.signed_text.indexOf('Voluntary.') < waiver.signed_text.indexOf('[Florida statutory notice'), true);
   assert.equal(waiver.user_agent, 'LysRoseTest/1.0');
   assert.equal(waiver.ip_address, '203.0.113.8');
   assert.equal(waiver.babyName, 'Lily');
@@ -640,6 +641,7 @@ test('a signed waiver is stored with its hash, IP and user agent, and is not rew
   assert.equal(waiver.signed_text.includes('Bring your own breastmilk.'), false);
   assert.match(waiver.text_sha256, /^[0-9a-f]{64}$/);
   assert.equal(waiver.text_sha256, await sha256Hex(shown));
+  assert.notEqual(await sha256Hex(shown), await sha256Hex(shown.replace('Voluntary.', 'Voluntary!')));
   const again = await signWaiverRequest(store, token, signature({signatureName: 'Changed'}), openNow, 'other', '1.2.3.4');
   assert.equal(again.already, true);
   const kept = JSON.parse(await store.get(key));
@@ -670,7 +672,8 @@ test('a signed waiver is stored with its hash, IP and user agent, and is not rew
   assert.equal(secondRecord.emergency_contact, null);
   assert.equal(secondRecord.signature_image, null);
   assert.equal(secondRecord.signed_text.includes('Additional adult.'), true);
-  assert.equal(secondRecord.waiver_version, 'booking-waiver-esignature-draft-2026-11-05');
+  assert.equal(secondRecord.waiver_version, 'waiver-v0.9-2026-11');
+  assert.equal(secondRecord.text_sha256, await sha256Hex(secondRecord.signed_text));
   assert.match(secondRecord.signed_copy_html, /font-size:17pt/);
 });
 

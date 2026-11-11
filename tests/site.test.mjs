@@ -723,7 +723,7 @@ test('the draft policy page keeps the refund terms and leaves out fees and discr
   assert.match(privacy.querySelector('.draft-banner').textContent, /Draft/);
   assert.equal(privacy.body.textContent.includes('IP address and browser details when you sign your waiver'), true);
   assert.equal(privacy.body.textContent.includes("If you give us an emergency contact, we collect their name, phone number and relationship to you. We use these only to reach that person if there's an emergency during your session, and we keep them with your signed waiver."), true);
-  assert.equal(privacy.body.textContent.includes('We keep signed waivers and their signing records (including the time, IP address and browser details) for as long as they may be needed for any legal claim related to the session, which can be many years. They are not deleted on our 3-year schedule for other booking details.'), true);
+  assert.equal(privacy.body.textContent.includes("We keep signed waivers and their signing records (including the time, IP address and browser details) for as long as they may be needed for any legal claim related to the session, which can be many years. They are not deleted on the 3-year schedule we use for your baby's birth date."), true);
   assert.equal(privacy.body.textContent.includes('Effective date: [effective date]'), true);
   assert.equal(privacy.body.textContent.includes('MAILING'), false);
   assert.equal(privacy.body.textContent.includes('hello@lysrosebabyspa.com'), true);

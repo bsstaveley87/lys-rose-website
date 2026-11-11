@@ -290,9 +290,12 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.deepEqual([...book.querySelectorAll('[name=bath]')].map(input => input.closest('label').textContent.trim()), ['Floral Milk Soak', 'BYOB (Bring your own breastmilk)']);
   for (const input of book.querySelectorAll('[name=bath]')) assert.equal(input.hasAttribute('required'), true);
   assert.equal(book.querySelector('#byob-details').hasAttribute('hidden'), true);
+  assert.equal(book.querySelector('#floral-details').hasAttribute('hidden'), true);
   assert.equal(book.querySelector('#byob-note').textContent, "Bring your breastmilk cold or frozen. We can warm it for you on site. You'll add it to your baby's bath yourself.");
+  assert.equal(book.querySelector('[name=petalFree]').closest('label').textContent.trim(), 'Petal-free bath (no rose petals)');
+  assert.equal(book.querySelector('#floral-petals-note').textContent, "Choose now; petals can't be added or removed once the bath begins.");
   assert.equal(book.querySelector('[name=rosePetals]').closest('label').textContent.trim(), 'Add complimentary rose petals');
-  assert.equal(book.querySelector('#rose-petals-note').textContent, "Choose now if you'd like them; petals can't be added later.");
+  assert.equal(book.querySelector('#rose-petals-note').textContent, "Choose now; petals can't be added or removed once the bath begins.");
   assert.equal(book.querySelector('[name=rosePetals]').hasAttribute('required'), false);
   assert.equal(html.includes('The Lys Rose at Home Kit'), false);
   assert.equal(html.includes('The at-home baby spa kit.'), false);
@@ -586,6 +589,41 @@ test('the due-now total switches between the deposit and the full session', () =
   assert.equal(doc.getElementById('session-charge-amount').textContent, '$285');
   assert.equal(doc.getElementById('balance-note').hidden, true);
 });
+test('floral milk soak includes petals unless declined, and BYOB adds them only when chosen', () => {
+  const {document: doc} = parseHTML(`<!doctype html><html><body><form id="booking-form">
+<input type="radio" name="bath" value="floral-milk-soak"/>
+<div id="floral-details" hidden><input type="checkbox" name="petalFree" value="yes"/></div>
+<input type="radio" name="bath" value="byob"/>
+<div id="byob-details" hidden><input type="checkbox" name="rosePetals" value="yes"/></div>
+<p id="petal-line" hidden><span id="petal-line-amount"></span></p>
+<strong id="booking-total"></strong>
+<button class="booking-pay" type="button"></button>
+</form></body></html>`);
+  initBooking(doc);
+  const floral = doc.querySelector('[name=bath][value=floral-milk-soak]');
+  floral.checked = true;
+  floral.dispatchEvent(new doc.defaultView.Event('change', {bubbles: true}));
+  assert.equal(doc.querySelector('#floral-details').hidden, false);
+  assert.equal(doc.querySelector('#byob-details').hidden, true);
+  assert.equal(doc.querySelector('#petal-line').hidden, false);
+  assert.equal(doc.querySelector('#petal-line-amount').textContent, 'Yes');
+  const free = doc.querySelector('[name=petalFree]');
+  free.checked = true;
+  free.dispatchEvent(new doc.defaultView.Event('change', {bubbles: true}));
+  assert.equal(doc.querySelector('#petal-line-amount').textContent, 'No');
+  const byob = doc.querySelector('[name=bath][value=byob]');
+  floral.checked = false;
+  byob.checked = true;
+  byob.dispatchEvent(new doc.defaultView.Event('change', {bubbles: true}));
+  assert.equal(doc.querySelector('#floral-details').hidden, true);
+  assert.equal(doc.querySelector('#byob-details').hidden, false);
+  assert.equal(doc.querySelector('[name=petalFree]').checked, false);
+  assert.equal(doc.querySelector('#petal-line-amount').textContent, 'No');
+  const add = doc.querySelector('[name=rosePetals]');
+  add.checked = true;
+  add.dispatchEvent(new doc.defaultView.Event('change', {bubbles: true}));
+  assert.equal(doc.querySelector('#petal-line-amount').textContent, 'Yes');
+});
 test('the draft policy page keeps the refund terms and leaves out fees and discretion', async () => {
   const policy = await documentFor('book/policy/index.html');
   assert.equal(policy.querySelector('meta[name=robots]').content, 'noindex,nofollow');
@@ -684,7 +722,11 @@ test('the draft policy page keeps the refund terms and leaves out fees and discr
   const privacy = await documentFor('privacy/index.html');
   assert.match(privacy.querySelector('.draft-banner').textContent, /Draft/);
   assert.equal(privacy.body.textContent.includes('IP address and browser details when you sign your waiver'), true);
-  assert.equal(privacy.body.textContent.includes('emergency contact name and phone, used only to reach them in an emergency'), true);
+  assert.equal(privacy.body.textContent.includes("If you give us an emergency contact, we collect their name, phone number and relationship to you. We use these only to reach that person if there's an emergency during your session, and we keep them with your signed waiver."), true);
+  assert.equal(privacy.body.textContent.includes('We keep signed waivers and their signing records (including the time, IP address and browser details) for as long as they may be needed for any legal claim related to the session, which can be many years. They are not deleted on our 3-year schedule for other booking details.'), true);
+  assert.equal(privacy.body.textContent.includes('Effective date: [effective date]'), true);
+  assert.equal(privacy.body.textContent.includes('MAILING'), false);
+  assert.equal(privacy.body.textContent.includes('hello@lysrosebabyspa.com'), true);
   assert.equal(privacy.body.textContent.includes("Your baby's birth date. We collect it at booking to confirm your baby meets our age rule (at least 4 weeks old and no older than 12 months on the session date), to plan age-appropriate sessions, and to understand our customers (business analysis, looked at in aggregate). We keep it, together with your booking record, for 3 years after your family's last booking, store it securely with access limited to Lys Rose, and never sell it. After that, we delete the full birth date and keep only your baby's age in months at each session, for business analysis. You can ask us to delete it at any time."), true);
   assert.equal(privacy.body.textContent.includes("Health confirmations. The booking form asks you to tick boxes confirming, for example, that in the 24 hours before the session your baby has had no fever, vomiting or diarrhea. We store only whether each box was ticked (yes/no). We don't collect any health details."), true);
   assert.equal(privacy.body.textContent.includes('We keep waitlist information for up to [24 – TO CONFIRM] months after our last contact with you, or until you ask us to delete it, whichever comes first. We keep records of text-message consent and opt-outs for [4 – TO CONFIRM] years so we can show we respected your choices. Booking and payment records are kept as long as tax and business laws require. Your baby\'s birth date is kept with the booking record for 3 years after your family\'s last booking, unless you ask us to delete it sooner. After that, we keep only your baby\'s age in months at each session.'), true);

@@ -12,6 +12,7 @@ import {
   taxesEnabled,
   buildOrder,
   catalogPlan,
+  confirmationEmailPreview,
   catalogUpsertObjects,
   handleCheckoutRequest,
   handleWebhookRequest,
@@ -130,7 +131,7 @@ test('price table ignores tampered client prices and keeps taxes off', async () 
   ]);
   assert.equal(order.total, SESSION_PRICE_CENTS + 1000);
   assert.match(order.note, /BYOB/);
-  assert.match(order.note, /rose petals: yes/);
+  assert.match(order.note, /Rose petals: yes/);
   assert.equal(order.lines.some(line => line.base_price_money.amount === 1), false);
 
   const signature = buildOrder(validateBooking(form(), {session, now: openNow}).booking, PRICES, session);
@@ -141,6 +142,27 @@ test('price table ignores tampered client prices and keeps taxes off', async () 
   assert.match(signature.note, /Crème: Signature/);
   const byob = buildOrder(validateBooking(form({bath: 'byob', petals: 'no'}), {session, now: openNow}).booking, PRICES, session);
   assert.equal(byob.lines[0].variation_name, 'BYOB (Bring your own breastmilk)');
+  const floral = validateBooking(form(), {session, now: openNow});
+  assert.equal(floral.booking.petals, true);
+  assert.equal(floral.booking.bath, 'floral-milk-soak');
+  const floralOrder = buildOrder(floral.booking, PRICES, session);
+  assert.match(floralOrder.note, /Rose petals: yes/);
+  assert.equal(floralOrder.total, SESSION_PRICE_CENTS);
+  assert.equal(confirmationEmailPreview(floral.booking).rose_petals, 'yes');
+  const petalFree = validateBooking(form({petalFree: 'yes', rosePetals: 'yes'}), {session, now: openNow});
+  assert.equal(petalFree.booking.petals, false);
+  assert.match(buildOrder(petalFree.booking, PRICES, session).note, /Rose petals: no/);
+  assert.equal(buildOrder(petalFree.booking, PRICES, session).total, SESSION_PRICE_CENTS);
+  assert.equal(confirmationEmailPreview(petalFree.booking).rose_petals, 'no');
+  const byobOn = validateBooking(form({bath: 'byob', rosePetals: 'yes'}), {session, now: openNow});
+  assert.equal(byobOn.booking.petals, true);
+  assert.match(buildOrder(byobOn.booking, PRICES, session).note, /Rose petals: yes/);
+  assert.equal(buildOrder(byobOn.booking, PRICES, session).total, SESSION_PRICE_CENTS);
+  assert.equal(confirmationEmailPreview(byobOn.booking).rose_petals, 'yes');
+  const byobOff = validateBooking(form({bath: 'byob', petalFree: 'yes'}), {session, now: openNow});
+  assert.equal(byobOff.booking.petals, false);
+  assert.match(buildOrder(byobOff.booking, PRICES, session).note, /Rose petals: no/);
+  assert.equal(confirmationEmailPreview(byobOff.booking).rose_petals, 'no');
 
   const gentle = buildOrder(validateBooking(form({creme: 'gentle', faceCream: 'gentle'}), {session, now: openNow}).booking, PRICES, session);
   assert.equal(gentle.total, SESSION_PRICE_CENTS + 500);

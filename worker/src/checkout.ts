@@ -1,4 +1,4 @@
-import {BALANCE_COLLECTION, BOOKING_CONFIRMATIONS, BOOKING_TERMS_VERSION, DEPOSIT_CENTS, FLORIDA_NOTICE_FONT_PT, MAX_EXTRA_ADULTS, SESSION, SESSION_LOCATION, SESSION_LOCATION_NOTE, SESSION_PRICE_CENTS, SEATS_PER_SESSION, WAIVER_BODY_FONT_PT, WAIVER_RETENTION, ageMonthsAtSession, babyAgeMessage, bookingClosesAt, bookingIsClosed, robeIsClosed, sessionDateLabel, sessionTimeLabel, signedCopyHtml, signedDocumentText} from '../../assets/booking.js';
+import {BALANCE_COLLECTION, BOOKING_CONFIRMATIONS, BOOKING_TERMS_VERSION, DEPOSIT_CENTS, FLORIDA_NOTICE_FONT_PT, MAX_EXTRA_ADULTS, SESSION, SESSION_LOCATION, SESSION_LOCATION_NOTE, SESSION_PRICE_CENTS, SEATS_PER_SESSION, WAIVER_BODY_FONT_PT, WAIVER_RETENTION, ageMonthsAtSession, babyAgeMessage, bookingClosesAt, bookingIsClosed, petalsIncluded, robeIsClosed, sessionDateLabel, sessionTimeLabel, signedCopyHtml, signedDocumentText} from '../../assets/booking.js';
 
 /**
  * Server-side prices in cents. The browser total is only a preview.
@@ -185,7 +185,7 @@ export function validateBooking(raw: unknown, options: {session?: SessionConfig;
   const rawMode = text(data.paymentMode, 20);
   const paymentMode = rawMode === '' ? 'full' : rawMode;
   if (paymentMode !== 'deposit' && paymentMode !== 'full') errors.paymentMode = 'Please choose what you pay now.';
-  const petals = bath === 'byob' && flag(data.petals ?? data.rosePetals);
+  const petals = petalsIncluded(bath, {petalFree: flag(data.petalFree), rosePetals: flag(data.petals ?? data.rosePetals)});
   if (robe && prices.robe.amount == null) errors.robe = "That extra isn't available.";
   if (robe && prices.robe.amount != null && robeIsClosed(session.date, now)) errors.robe = 'The embroidered robe option has closed for this session.';
   if (bathBag && prices.bathBag.amount == null) errors.bathBag = "That extra isn't available.";
@@ -272,8 +272,7 @@ export function buildOrder(booking: BookingRecord, prices: PriceTable = PRICES, 
     false,
     deposit ? 'Nonrefundable deposit' : bathVariationName(booking.bath, booking.petals),
   )];
-  const notes = [`Location: ${SESSION_LOCATION}. ${SESSION_LOCATION_NOTE}`, `Baby date of birth: ${booking.babyDob}`, `Bath: ${booking.bath === 'byob' ? 'BYOB (bring your own breastmilk)' : 'Floral Milk Soak'}`];
-  if (booking.bath === 'byob') notes.push(`Complimentary rose petals: ${booking.petals ? 'yes' : 'no'}`);
+  const notes = [`Location: ${SESSION_LOCATION}. ${SESSION_LOCATION_NOTE}`, `Baby date of birth: ${booking.babyDob}`, `Bath: ${booking.bath === 'byob' ? 'BYOB (bring your own breastmilk)' : 'Floral Milk Soak'}`, `Rose petals: ${booking.petals ? 'yes' : 'no'}`];
   const creme = prices.creme[booking.creme as keyof typeof prices.creme];
   if (creme.amount != null && creme.amount > 0) {
     lines.push(orderLine(booking.creme === 'premium' ? 'Premium face crème' : 'Gentle face crème', creme.amount, creme.taxable));
@@ -576,6 +575,17 @@ export function paymentFromEvent(payload: unknown): PaymentEvent | null {
  * A full session, a late payment, or an unknown order is stored as refund-flagged.
  * This does not call Square's refund API.
  */
+export function confirmationEmailPreview(booking: {email?: string; bath?: string; petals?: boolean; location?: string}) {
+  return {
+    event: 'booking_confirmation_email_preview',
+    sent: false,
+    to: booking.email || '',
+    bath: booking.bath || '',
+    rose_petals: booking.petals ? 'yes' : 'no',
+    location: booking.location || '',
+  };
+}
+
 export async function recordCompletedPayment(store: BookingStore, payment: PaymentEvent) {
   const existing = await store.get(`payment:${payment.id}`);
   if (existing) return {ok: true as const, duplicate: true, ...(JSON.parse(existing) as {status: string; refundFlag: boolean; reason: string})};
@@ -609,6 +619,7 @@ export async function recordCompletedPayment(store: BookingStore, payment: Payme
       }
     }
   }
+  if (order?.booking) console.log(JSON.stringify(confirmationEmailPreview(order.booking)));
   await store.put(`booking:${payment.id}`, JSON.stringify({
     ...(order?.booking || {}),
     email: order?.email || order?.booking?.email || '',

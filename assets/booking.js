@@ -76,7 +76,7 @@ export const WAIVER_DISCLAIMER = "Parents provide all hands-on care while our in
 export const CLAUSE_A = "Age and health. I confirm that: (a) my baby will be at least 4 weeks old and no older than 12 months on the date of the session; (b) my baby's umbilical cord stump has fallen off and the area is fully healed; (c) my baby's skin has no breaks (no cuts, scrapes or open areas); (d) if my baby has been circumcised, the circumcision site is fully healed; and (e) my baby is healthy on the day of the session. I will tell the instructor at check-in if any of this changes before the session starts. I have talked with my baby's pediatrician about the products and activities used in the session, and I know I can skip any part of the session at any time. I understand that Lys Rose may ask for my baby's birth date, and that if the age (4 weeks to 12 months), the healed cord, unbroken skin or a healed circumcision site is in doubt at check-in, my baby will not be bathed.";
 export const CLAUSE_B = "Products and skipping. I have read the list of products used in the session: the milk bath packet (colloidal oatmeal and coconut milk powder), floating rose petals, grapeseed massage oil, Mustela face moisturizer, and, only if I choose it, the Evereden face cream upgrade. I understand I will be asked to use a fragrance-free hand sanitizer and let my hands dry completely before handling my baby. I understand that I may skip any part of the session at any time by telling the instructor, and that skipping does not entitle me to any refund, credit or discount, because the session price stays the same. If I decline a paid upgrade, I will not be charged for it. I am responsible for telling Lys Rose at least 48 hours before my session about any allergy or sensitivity my baby or I have, including to any ingredient on the product list, and I may ask for the ingredient lists at any time.";
 export const CLAUSE_C = "Bring your own breastmilk. If I choose BYOB, I will bring my own breastmilk for my own baby, cold (liquid) or frozen. I am solely responsible for the milk, including its storage, warming, and adding it to my baby's bath. Lys Rose does not provide, inspect, store, handle, or test breastmilk; it provides only a cup of warm water I can use to warm my sealed milk myself.";
-export const ROSE_PETAL_CLAUSE = "Rose petals. I understand that the bath for my baby includes whole rose petals floating on the water for appearance only. The petals are not food. I will not let my baby eat or mouth the petals, and I will not place petals in my baby's mouth. I understand that petals can be a choking or breathing hazard if they get into a baby's mouth and that some babies react to flowers or pollen. I agree that my baby will stay under my direct supervision and within my arm's reach at all times during the session, including whenever my baby is near the water or the petals. I understand that I must choose a petal-free bath before my baby's bath begins, on the booking form or at check-in; once the bath has started, the petals are not removed. I will tell Lys Rose at least 48 hours before my session about any allergy or sensitivity my baby has, including to flowers or pollen.";
+export const ROSE_PETAL_CLAUSE = "Rose petals. I understand that, unless I choose a petal-free bath, the Floral Milk Soak bath includes whole rose petals floating on the water for appearance only, and that with BYOB petals are added only if I choose them. The petals are not food. I will not let my baby eat or mouth the petals, and I will not place petals in my baby's mouth. I understand that petals can be a choking or breathing hazard if they get into a baby's mouth and that some babies react to flowers or pollen. I agree that my baby will stay under my direct supervision and within my arm's reach at all times during the session, including whenever my baby is near the water or the petals. I understand that I must make my petal choice before my baby's bath begins, on the booking form or at check-in; once the bath has started, the petals are not removed. I will tell Lys Rose at least 48 hours before my session about any allergy or sensitivity my baby has, including to flowers or pollen.";
 export const CLAUSE_D = "Sick baby. I confirm that in the 24 hours before the session my baby has had no fever, vomiting or diarrhea, has no green nasal mucus, and has no other signs of illness (such as a rash or cough) and no breaks in the skin. If I sign this more than 24 hours before the session, I promise these will be true at the session, and I will tell Lys Rose before the session if my baby becomes unwell. I understand the instructor may ask us not to join if my baby seems unwell at check-in. What happens to my payment then is set out in the booking policy.";
 export const EMERGENCY_CLAUSE = "Emergency. If there's an emergency, Lys Rose may call 911. I'm responsible for decisions about my baby's care and for any medical costs. If I can't be reached in an emergency, Lys Rose may contact my emergency contact.";
 export const SEVERABILITY_CLAUSE = 'Severability. If any part of this waiver is found unenforceable, the rest still applies.';
@@ -121,6 +121,13 @@ const CLAUSE_BODIES = {
   florida: FLORIDA_LAW_CLAUSE.slice(CLAUSE_LABELS.florida.length).trim(),
   voluntary: VOLUNTARY_CLAUSE.slice(CLAUSE_LABELS.voluntary.length).trim(),
 };
+
+/** Floral Milk Soak includes petals unless the parent opts out. BYOB adds them only when chosen. */
+export function petalsIncluded(bath, {petalFree = false, rosePetals = false} = {}) {
+  if (bath === 'byob') return Boolean(rosePetals);
+  if (bath === 'floral-milk-soak') return !petalFree;
+  return false;
+}
 
 export function waiverIntro(babyName = "[baby's name]", sessionDate = '[date]') {
   return `This waiver is for ${babyName}'s Lys Rose session on ${sessionDate}. Please read it carefully. It affects your legal rights.`;
@@ -616,12 +623,30 @@ function showConfirmations(form) {
   return missing;
 }
 
+function syncPetalSummary(form) {
+  const line = form.querySelector('#petal-line');
+  const amount = form.querySelector('#petal-line-amount');
+  const bath = checkedValue(form, 'bath');
+  const included = petalsIncluded(bath, {
+    petalFree: Boolean(form.querySelector('[name=petalFree]')?.checked),
+    rosePetals: Boolean(form.querySelector('[name=rosePetals]')?.checked),
+  });
+  if (line) line.hidden = bath !== 'floral-milk-soak' && bath !== 'byob';
+  if (amount) amount.textContent = included ? 'Yes' : 'No';
+}
+
 function syncBath(form) {
-  const byob = Boolean(form.querySelector('[name=bath][value=byob]')?.checked);
+  const bath = checkedValue(form, 'bath');
+  const byob = bath === 'byob';
+  const floral = form.querySelector('#floral-details');
+  if (floral) floral.hidden = bath !== 'floral-milk-soak';
   const details = form.querySelector('#byob-details');
   if (details) details.hidden = !byob;
   const petals = form.querySelector('[name=rosePetals]');
   if (petals && !byob) petals.checked = false;
+  const petalFree = form.querySelector('[name=petalFree]');
+  if (petalFree && bath !== 'floral-milk-soak') petalFree.checked = false;
+  syncPetalSummary(form);
   const byobBox = form.querySelector('[name=confirmReady][value=byob]');
   if (byobBox) {
     byobBox.required = byob;
@@ -802,6 +827,7 @@ function bookingPayload(form) {
     babyDob: form.querySelector('[name=babyDob]')?.value || '',
     bath: checkedValue(form, 'bath'),
     rosePetals: Boolean(form.querySelector('[name=rosePetals]')?.checked),
+    petalFree: Boolean(form.querySelector('[name=petalFree]')?.checked),
     creme: checkedValue(page, 'faceCream'),
     confirmReady: [...form.querySelectorAll('[name=confirmReady]:checked')].map(box => box.value),
     robe: Boolean(page.querySelector('[name=robe]')?.checked),
@@ -915,7 +941,7 @@ export function initBooking(documentRef = document) {
       syncSecondAdult(form);
       applyPayButton(documentRef);
     }
-    if (event.target?.name === 'bath') syncBath(form);
+    if (event.target?.name === 'bath' || event.target?.name === 'petalFree' || event.target?.name === 'rosePetals') syncBath(form);
   });
   form.addEventListener('change', event => {
     if (event.target?.name === 'allergies') syncAllergies(form);

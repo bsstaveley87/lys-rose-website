@@ -93,12 +93,16 @@
 <fieldset class="booking-choice" id="bath-choice">
 <legend>Choose your bath</legend>
 <label class="choice-row"><input type="radio" name="bath" value="floral-milk-soak" required/> Floral Milk Soak</label>
+<div id="floral-details" hidden>
+<label class="choice-row"><input type="checkbox" name="petalFree" value="yes"/><span>Petal-free bath (no rose petals)</span></label>
+<p class="field-hint" id="floral-petals-note">Choose now; petals can't be added or removed once the bath begins.</p>
+</div>
 <label class="choice-row"><input type="radio" name="bath" value="byob" required/> BYOB (Bring your own breastmilk)</label>
 <div id="byob-details" hidden>
 <p class="field-hint" id="byob-note">Bring your breastmilk cold or frozen. We can warm it for you on site. You'll add it to your baby's bath yourself.</p>
 <label class="choice-row"><input type="checkbox" name="rosePetals" value="yes"/><span>Add complimentary rose petals</span></label>
 <label class="choice-row"><input type="checkbox" name="confirmReady" value="byob"/><span data-ack="byob"></span></label>
-<p class="field-hint" id="rose-petals-note">Choose now if you'd like them; petals can't be added later.</p>
+<p class="field-hint" id="rose-petals-note">Choose now; petals can't be added or removed once the bath begins.</p>
 </div>
 <span class="field-error" id="bath-error" hidden></span>
 </fieldset>
@@ -122,6 +126,7 @@
 </div>
 <div class="booking-total" id="booking-summary">
 <p class="total-line" id="session-charge"><span id="session-charge-label">Session</span><span id="session-charge-amount"></span></p>
+<p class="total-line" id="petal-line" hidden><span>Rose petals</span><span id="petal-line-amount"></span></p>
 <p class="total-line" id="face-cream-charge" hidden><span id="face-cream-charge-label"></span><span id="face-cream-charge-amount"></span></p>
 <p class="total-line" id="bath-bag-charge" hidden><span>Floral Milk Bath Bag</span><span id="bath-bag-charge-amount"></span></p>
 <p class="total-line" id="second-adult-charge" hidden><span>Second adult</span><span id="second-adult-charge-amount"></span></p>

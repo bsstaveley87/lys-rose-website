@@ -4,7 +4,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
 import {validateFields, interestOptions, limits} from '../assets/validation.js';
-import {ADULT_18_ACK, AGE_TOO_OLD_MESSAGE, AGE_TOO_YOUNG_MESSAGE, BALANCE_COLLECTION, BATH_BAG_CENTS, BOOKING_LEAD_HOURS, BOOKING_TERMS_VERSION, CHECKOUT_WAIVER_NOTE, CLAUSE_A, CLAUSE_B, CLAUSE_C, CLAUSE_D, DEPOSIT_ACK, DEPOSIT_CENTS, FLORIDA_NOTICE_FONT_PT, FLORIDA_STATUTORY_NOTICE, JOIN_RULE_ACK, MAX_BABY_AGE_MONTHS, MAX_EXTRA_ADULTS, MIN_BABY_AGE_DAYS, PARENT_SIGNATURE_SENTENCE, REFUND_SUMMARY, ROBE_CENTS, ROSE_PETAL_CLAUSE, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SECOND_ADULT_WAIVER_NOTE, SESSION, SESSION_PRICE_CENTS, SICK_CHECKIN_ACK, SICK_CONTACT_ACK, SIGNATURE_HEADING, SIGNATURE_LEAD, WAIVER_BODY_FONT_PT, WAIVER_DISCLAIMER, WAIVER_HEADING, WAIVER_RELEASE_TEXT, ageMonthsAtSession, applyRobeCutoff, babyAgeMessage, balanceDueCents, bookingIsClosed, fillDepositAck, fillRefundSummary, formatCents, initBooking, mountRobeAddon, previewTotal, refundBalanceCents, refundHalfBalanceCents, robeIsClosed, robeNote, sessionDateLabel, sessionPriceLabel, sessionPriceLine, sessionPriceOffer, sessionStatus, sessionTimeLabel, signedCopyHtml, signingDateLabel} from '../assets/booking.js';
+import {ADULT_18_ACK, AGE_TOO_OLD_MESSAGE, AGE_TOO_YOUNG_MESSAGE, BALANCE_COLLECTION, BATH_BAG_CENTS, BOOKING_LEAD_HOURS, BOOKING_TERMS_VERSION, CHECKOUT_WAIVER_NOTE, CLAUSE_A, CLAUSE_B, CLAUSE_C, CLAUSE_D, DEPOSIT_ACK, DEPOSIT_CENTS, FLORIDA_NOTICE_FONT_PT, FLORIDA_STATUTORY_NOTICE, JOIN_RULE_ACK, MAX_BABY_AGE_MONTHS, MAX_EXTRA_ADULTS, MIN_BABY_AGE_DAYS, PARENT_SIGNATURE_SENTENCE, REFUND_SUMMARY, ROBE_CENTS, ROSE_PETAL_CLAUSE, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SECOND_ADULT_WAIVER_NOTE, SESSION, SESSION_LOCATION, SESSION_LOCATION_NOTE, SESSION_PRICE_CENTS, SICK_CHECKIN_ACK, SICK_CONTACT_ACK, SIGNATURE_HEADING, SIGNATURE_LEAD, WAIVER_BODY_FONT_PT, WAIVER_DISCLAIMER, WAIVER_HEADING, WAIVER_RELEASE_TEXT, ageMonthsAtSession, applyRobeCutoff, babyAgeMessage, balanceDueCents, bookingIsClosed, fillDepositAck, fillRefundSummary, formatCents, initBooking, mountRobeAddon, previewTotal, refundBalanceCents, refundHalfBalanceCents, robeIsClosed, robeNote, sessionDateLabel, sessionPriceLabel, sessionPriceLine, sessionPriceOffer, sessionStatus, sessionTimeLabel, signedCopyHtml, signingDateLabel} from '../assets/booking.js';
 const approved = {
   '/': {
     title: 'Lys Rose Baby Spa · Fort Lauderdale',
@@ -168,8 +168,8 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(event['@type'], 'Event');
   assert.equal(event.startDate, undefined);
   assert.equal(event.endDate, undefined);
-  assert.equal(event.location.address.addressLocality, 'Fort Lauderdale');
-  assert.equal(event.location.address.addressRegion, 'FL');
+  assert.equal(event.location['@type'], 'Place');
+  assert.deepEqual(event.location.address, { '@type': 'PostalAddress', addressLocality: 'Fort Lauderdale', addressRegion: 'FL' });
   assert.equal(event.location.address.streetAddress, undefined);
   assert.equal(event.location.name, undefined);
   assert.equal(event.offers['@type'], 'Offer');
@@ -187,7 +187,11 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelectorAll('#booking-dates .date-card').length, 1);
   assert.equal(book.querySelector('#session-date').textContent, 'Date to be announced');
   assert.equal(book.querySelector('#session-time').textContent, 'Time to be announced');
-  assert.equal(book.querySelector('.session-where').textContent, 'Fort Lauderdale');
+  assert.equal(book.querySelector('#session-location').textContent, SESSION_LOCATION);
+  assert.equal(book.querySelector('#session-location-note').textContent, SESSION_LOCATION_NOTE);
+  assert.equal(book.querySelector('#checkout-location').textContent, SESSION_LOCATION);
+  assert.equal(book.querySelector('#checkout-location-note').textContent, SESSION_LOCATION_NOTE);
+  assert.equal(book.querySelector('meta[name=description]').content.includes(SESSION_LOCATION), true);
   assert.equal(book.querySelector('.session-cutoff').textContent, 'Booking closes about 48 hours before each session.');
   assert.equal(html.includes('December 6'), false);
   assert.equal(html.includes('November 22'), false);

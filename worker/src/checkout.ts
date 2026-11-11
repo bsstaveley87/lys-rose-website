@@ -1,4 +1,4 @@
-import {BALANCE_COLLECTION, BOOKING_CONFIRMATIONS, BOOKING_TERMS_VERSION, DEPOSIT_CENTS, FLORIDA_NOTICE_FONT_PT, MAX_EXTRA_ADULTS, SESSION, SESSION_PRICE_CENTS, SEATS_PER_SESSION, WAIVER_BODY_FONT_PT, WAIVER_RETENTION, ageMonthsAtSession, babyAgeMessage, bookingClosesAt, bookingIsClosed, robeIsClosed, sessionDateLabel, sessionTimeLabel, signedCopyHtml, signedDocumentText} from '../../assets/booking.js';
+import {BALANCE_COLLECTION, BOOKING_CONFIRMATIONS, BOOKING_TERMS_VERSION, DEPOSIT_CENTS, FLORIDA_NOTICE_FONT_PT, MAX_EXTRA_ADULTS, SESSION, SESSION_LOCATION, SESSION_LOCATION_NOTE, SESSION_PRICE_CENTS, SEATS_PER_SESSION, WAIVER_BODY_FONT_PT, WAIVER_RETENTION, ageMonthsAtSession, babyAgeMessage, bookingClosesAt, bookingIsClosed, robeIsClosed, sessionDateLabel, sessionTimeLabel, signedCopyHtml, signedDocumentText} from '../../assets/booking.js';
 
 /**
  * Server-side prices in cents. The browser total is only a preview.
@@ -201,7 +201,7 @@ export function validateBooking(raw: unknown, options: {session?: SessionConfig;
     sessionDate: session.date,
     sessionStart: session.start || '',
     sessionEnd: session.end || '',
-    location: 'Fort Lauderdale',
+    location: SESSION_LOCATION,
     waiver_status: [
       {role: 'primary' as const, part: 'parent' as const, name: parentName, email, status: 'pending' as const},
       ...(secondAdult ? [{role: 'second_adult' as const, part: 'additional' as const, name: secondAdultName, email: secondAdultEmail, status: 'pending' as const}] : []),
@@ -272,7 +272,7 @@ export function buildOrder(booking: BookingRecord, prices: PriceTable = PRICES, 
     false,
     deposit ? 'Nonrefundable deposit' : bathVariationName(booking.bath, booking.petals),
   )];
-  const notes = [`Baby date of birth: ${booking.babyDob}`, `Bath: ${booking.bath === 'byob' ? 'BYOB (bring your own breastmilk)' : 'Floral Milk Soak'}`];
+  const notes = [`Location: ${SESSION_LOCATION}. ${SESSION_LOCATION_NOTE}`, `Baby date of birth: ${booking.babyDob}`, `Bath: ${booking.bath === 'byob' ? 'BYOB (bring your own breastmilk)' : 'Floral Milk Soak'}`];
   if (booking.bath === 'byob') notes.push(`Complimentary rose petals: ${booking.petals ? 'yes' : 'no'}`);
   const creme = prices.creme[booking.creme as keyof typeof prices.creme];
   if (creme.amount != null && creme.amount > 0) {
@@ -841,7 +841,7 @@ function waiverShownText(booking: BookingRecord, part: 'parent' | 'additional') 
     babyDob: booking.babyDob,
     sessionDate: sessionDateLabel(session),
     sessionTime: sessionTimeLabel(session),
-    location: booking.location || 'Fort Lauderdale',
+    location: booking.location || SESSION_LOCATION,
     bookingId: booking.booking_id,
     byob: booking.bath === 'byob',
   });
@@ -971,7 +971,7 @@ export function waiverPreview(booking: BookingRecord, part: 'parent' | 'addition
     babyDob: booking.babyDob,
     sessionDate: sessionDateLabel(session),
     sessionTime: sessionTimeLabel(session),
-    location: booking.location || 'Fort Lauderdale',
+    location: booking.location || SESSION_LOCATION,
     bookingId: booking.booking_id,
     byob: booking.bath === 'byob',
     part,

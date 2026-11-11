@@ -12,6 +12,9 @@ export const AGE_TOO_YOUNG_MESSAGE = 'Your baby needs to be at least 4 weeks old
 export const AGE_TOO_OLD_MESSAGE = 'Our sessions are designed for babies from 4 weeks to 12 months old.';
 /** Pilot session price in cents. This is the only session price to edit. */
 export const SESSION_PRICE_CENTS = 28500;
+/** The venue is not chosen. Do not replace this with a place name. */
+export const SESSION_LOCATION = 'Location TBD, local to Fort Lauderdale / Broward County';
+export const SESSION_LOCATION_NOTE = 'The exact location will be shared with you before your session.';
 /** Nonrefundable deposit in cents. The refund line and deposit checkbox use this with the session price. */
 export const DEPOSIT_CENTS = 10000;
 /** Parents choose one of these at checkout. Enhancements are charged in full either way. */
@@ -184,7 +187,7 @@ export function signedDocumentText(details = {}) {
     `Baby's birth date: ${details.babyDob || "[baby's birth date]"}`,
     `Session date: ${sessionDate}`,
     `Time: ${details.sessionTime || '[time]'}`,
-    `Location: ${details.location || '[location]'}`,
+    `Location: ${details.location || SESSION_LOCATION}`,
     `Booking ID: ${details.bookingId || '[booking ID]'}`,
     `BYOB: ${details.byob ? 'Yes' : 'No'}`,
     'Part 2. Waiver terms',
@@ -405,6 +408,8 @@ function applySession(documentRef, now = new Date()) {
   const timeEl = documentRef.querySelector('#session-time');
   if (dateEl) dateEl.textContent = sessionDateLabel(SESSION);
   if (timeEl) timeEl.textContent = sessionTimeLabel(SESSION);
+  for (const node of documentRef.querySelectorAll('[data-session-location]')) node.textContent = SESSION_LOCATION;
+  for (const node of documentRef.querySelectorAll('[data-session-location-note]')) node.textContent = SESSION_LOCATION_NOTE;
   const card = documentRef.querySelector('#session-card');
   if (card) {
     if (SESSION?.date) card.dataset.sessionDate = SESSION.date;

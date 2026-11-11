@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {readFile} from 'node:fs/promises';
-import {BALANCE_COLLECTION, CHECKOUT_CONFIGURED, CHECKOUT_URL, DEPOSIT_CENTS, FLORIDA_STATUTORY_NOTICE, SESSION, SESSION_PRICE_CENTS} from '../assets/booking.js';
+import {BALANCE_COLLECTION, CHECKOUT_CONFIGURED, CHECKOUT_URL, DEPOSIT_CENTS, FLORIDA_STATUTORY_NOTICE, SESSION, SESSION_LOCATION, SESSION_LOCATION_NOTE, SESSION_PRICE_CENTS} from '../assets/booking.js';
 import {
   PRICES,
   TAX_ENABLED,
@@ -394,7 +394,13 @@ test('deposit mode charges the deposit plus enhancements and ignores a client am
   const paid = validateBooking(form(), {session, now: openNow});
   assert.equal(paid.booking.paymentMode, 'full');
   assert.equal(paid.booking.balance_due, 0);
-  assert.equal(buildOrder(paid.booking, PRICES, session).lines[0].base_price_money.amount, SESSION_PRICE_CENTS);
+  assert.equal(paid.booking.location, SESSION_LOCATION);
+  const fullOrder = buildOrder(paid.booking, PRICES, session);
+  assert.equal(fullOrder.lines[0].base_price_money.amount, SESSION_PRICE_CENTS);
+  assert.match(fullOrder.note, new RegExp(SESSION_LOCATION.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.match(fullOrder.note, new RegExp(SESSION_LOCATION_NOTE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.equal(fullOrder.lines.some(line => /street|avenue|boulevard|suite/i.test(line.name)), false);
+  assert.equal(catalogPlan().items.some(item => /street|avenue|boulevard|suite/i.test(item.name)), false);
 });
 
 test('catalog plan prices the session variations together and skips null extras', () => {
@@ -585,7 +591,7 @@ test('a signed waiver is stored with its hash, IP and user agent, and is not rew
     babyDob: '2026-09-01',
     sessionDate: sessionDateLabel(session),
     sessionTime: sessionTimeLabel(session),
-    location: 'Fort Lauderdale',
+    location: SESSION_LOCATION,
     bookingId,
     byob: false,
   });

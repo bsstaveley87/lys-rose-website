@@ -167,8 +167,10 @@ body.menu-open { overflow:hidden; }
 .date-status { align-self:flex-start; margin:0; padding:8px 12px; border:1px solid var(--ink); font:500 12px/1.2 Jost,sans-serif; letter-spacing:.16em; text-transform:uppercase; }
 .date-card.is-booked { background:transparent; border-style:dashed; }
 .date-card.is-booked .date-status { border-color:var(--champagne); letter-spacing:.14em; }
-.session-when,.session-where,.session-cutoff,.session-closed { margin:0; }
+.session-when,.session-where,.session-cutoff,.session-closed,.session-where-note { margin:0; }
 .session-where { letter-spacing:.04em; }
+.session-where-note,.checkout-location-note { margin:4px 0 0; font-size:15px; line-height:1.5; }
+.checkout-location { margin:0; letter-spacing:.04em; }
 .session-cutoff { font-size:15px; line-height:1.5; }
 .session-closed { font-size:15px; line-height:1.5; }
 #byob-details { display:flex; flex-direction:column; gap:8px; margin-top:4px; }

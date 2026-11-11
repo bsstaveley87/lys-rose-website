@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Reserve a session · Lys Rose Baby Spa</title>
-<meta name="description" content="A session for parents and their babies in Fort Lauderdale: a warm floral milk bath, infant massage and a parent-led baby facial."/>
+<meta name="description" content="A session for parents and their babies: a warm floral milk bath, infant massage and a parent-led baby facial. Location TBD, local to Fort Lauderdale / Broward County."/>
 <meta name="robots" content="noindex,nofollow"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
@@ -52,14 +52,15 @@
 <li><article class="date-card" id="session-card">
 <h3 id="session-date">Date to be announced</h3>
 <p class="session-when" id="session-time">Time to be announced</p>
-<p class="session-where">Fort Lauderdale</p>
+<p class="session-where" id="session-location" data-session-location>Location TBD, local to Fort Lauderdale / Broward County</p>
+<p class="session-where-note" id="session-location-note" data-session-location-note>The exact location will be shared with you before your session.</p>
 <p class="session-cutoff">Booking closes about 48 hours before each session.</p>
 <p class="session-closed" id="booking-window" hidden tabindex="-1">Booking for this session has closed.</p>
 </article></li>
 </ul>
 <!-- Session price is filled from SESSION_PRICE_CENTS in assets/booking.js. Do not hardcode it here. -->
 <p class="booking-price" data-session-price></p>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Event","name":"Lys Rose session","eventAttendanceMode":"https://schema.org/OfflineEventAttendanceMode","eventStatus":"https://schema.org/EventScheduled","location":{"@type":"Place","address":{"@type":"PostalAddress","addressLocality":"Fort Lauderdale","addressRegion":"FL","addressCountry":"US"}},"offers":{"@type":"Offer","price":"SESSION_PRICE","priceCurrency":"USD","url":"https://lysrosebabyspa.com/book/"},"organizer":{"@type":"Organization","name":"Lys Rose Baby Spa","url":"https://lysrosebabyspa.com/"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Event","name":"Lys Rose session","eventAttendanceMode":"https://schema.org/OfflineEventAttendanceMode","eventStatus":"https://schema.org/EventScheduled","location":{"@type":"Place","address":{"@type":"PostalAddress","addressLocality":"Fort Lauderdale","addressRegion":"FL"}},"offers":{"@type":"Offer","price":"SESSION_PRICE","priceCurrency":"USD","url":"https://lysrosebabyspa.com/book/"},"organizer":{"@type":"Organization","name":"Lys Rose Baby Spa","url":"https://lysrosebabyspa.com/"}}</script>
 </div>
 </section>
 <section class="editorial-section" id="book-offer">
@@ -127,6 +128,8 @@
 <p class="total-line total-due"><span>Due now</span><strong id="booking-total" data-session-price-total></strong></p>
 </div>
 <div class="checkout-preview" id="booking-checkout">
+<p class="checkout-location" id="checkout-location" data-session-location>Location TBD, local to Fort Lauderdale / Broward County</p>
+<p class="checkout-location-note" id="checkout-location-note" data-session-location-note>The exact location will be shared with you before your session.</p>
 <p class="checkout-label">Online pay at checkout is a preview only. No card details are collected.</p>
 <!-- DRAFT pending Christy. The sentence is REFUND_SUMMARY in assets/booking.js. Amounts come from SESSION_PRICE_CENTS and DEPOSIT_CENTS. -->
 <p class="refund-policy" id="refund-policy"><span class="placeholder-mark">Draft</span> <span data-refund-summary></span> <a href="/book/policy/">Full booking &amp; refund policy</a><!-- Isolated until Christy approves. Remove the next span and anchor together. --> <span data-read-waiver-sep>·</span> <a data-read-waiver href="/book/waiver/read/" target="_blank" rel="noopener">Read the waiver</a></p>

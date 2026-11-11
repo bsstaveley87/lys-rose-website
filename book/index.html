@@ -120,8 +120,11 @@
 <label class="choice-row"><input type="checkbox" name="photoRelease"/><span><span class="placeholder-mark">Placeholder</span> [Photo release wording pending review] <span class="field-optional">Optional</span></span></label>
 </div>
 <div class="booking-total" id="booking-summary">
+<p class="total-line" id="session-charge"><span id="session-charge-label">Session</span><span id="session-charge-amount"></span></p>
 <p class="total-line" id="face-cream-charge" hidden><span id="face-cream-charge-label"></span><span id="face-cream-charge-amount"></span></p>
-<p class="total-line total-due"><span>Total</span><strong id="booking-total" data-session-price-total></strong></p>
+<p class="total-line" id="bath-bag-charge" hidden><span>Floral Milk Bath Bag</span><span id="bath-bag-charge-amount"></span></p>
+<p class="total-line" id="second-adult-charge" hidden><span>Second adult</span><span id="second-adult-charge-amount"></span></p>
+<p class="total-line total-due"><span>Due now</span><strong id="booking-total" data-session-price-total></strong></p>
 </div>
 <div class="checkout-preview" id="booking-checkout">
 <p class="checkout-label">Online pay at checkout is a preview only. No card details are collected.</p>
@@ -129,6 +132,12 @@
 <p class="refund-policy" id="refund-policy"><span class="placeholder-mark">Draft</span> <span data-refund-summary></span> <a href="/book/policy/">Full booking &amp; refund policy</a><!-- Isolated until Christy approves. Remove the next span and anchor together. --> <span data-read-waiver-sep>·</span> <a data-read-waiver href="/book/waiver/read/" target="_blank" rel="noopener">Read the waiver</a></p>
 <label class="choice-row"><input type="checkbox" name="confirmReady" value="deposit" required aria-describedby="deposit-error"/><span><span class="placeholder-mark">Draft</span> <span data-deposit-ack></span></span></label>
 <p class="field-error" id="deposit-error" hidden></p>
+<fieldset class="booking-choice" id="payment-choice">
+<legend>What you pay now</legend>
+<label class="choice-row"><input type="radio" name="paymentMode" value="deposit" required/><span>Pay the <span data-money="deposit"></span> deposit now</span></label>
+<label class="choice-row"><input type="radio" name="paymentMode" value="full" checked required/><span>Pay <span data-money="price"></span> now</span></label>
+<p class="field-hint" id="balance-note" hidden>The <span data-money="balance"></span> balance is still due. When and how it is collected is not decided yet.</p>
+</fieldset>
 <p class="signature-lead"><span class="placeholder-mark">Draft</span> <span data-checkout-waiver-note></span></p>
 <p class="field-error" id="checkout-error" hidden></p>
 <button class="submit-button booking-pay" type="button" disabled aria-disabled="true">Reserve and pay</button>

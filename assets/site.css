@@ -247,8 +247,9 @@ body.menu-open { overflow:hidden; }
 .waiver-doc-head h1 { margin:0; font:400 clamp(32px,8vw,44px)/1.15 'Cormorant Garamond',Georgia,serif; }
 .waiver-doc-sub { margin:10px 0 0; font:400 16px/1.4 'Cormorant Garamond',Georgia,serif; }
 .waiver-doc-entity { margin:8px 0 0; font:500 12px/1.4 Jost,sans-serif; letter-spacing:.16em; }
-.waiver-prose { margin:0; padding:0 0 0 1.4em; }
-.waiver-prose > li { margin:0 0 16px; padding:0; font:400 16px/1.55 Jost,sans-serif; }
+.waiver-prose { margin:0; padding:0 0 0 1.4em; font-size:12pt; }
+.waiver-prose > li { margin:0 0 16px; padding:0; font:400 12pt/1.55 Jost,sans-serif; }
+.waiver-prose > li.florida-notice { font-size:17pt; line-height:1.45; text-transform:uppercase; font-weight:400; }
 .waiver-prose p { margin:8px 0 0; }
 .waiver-sign-sheet { display:flex; flex-direction:column; gap:18px; margin-top:28px; padding-top:24px; border-top:1px solid var(--champagne); }
 .waiver-locked { display:flex; flex-direction:column; gap:12px; }

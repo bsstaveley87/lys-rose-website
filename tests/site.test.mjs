@@ -4,7 +4,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
 import {validateFields, interestOptions, limits} from '../assets/validation.js';
-import {ADULT_18_ACK, AGE_TOO_OLD_MESSAGE, AGE_TOO_YOUNG_MESSAGE, BATH_BAG_CENTS, BOOKING_LEAD_HOURS, CHECKOUT_WAIVER_NOTE, CLAUSE_A, CLAUSE_B, CLAUSE_C, CLAUSE_D, DEPOSIT_ACK, DEPOSIT_CENTS, FLORIDA_STATUTORY_NOTICE, JOIN_RULE_ACK, MAX_BABY_AGE_MONTHS, MAX_EXTRA_ADULTS, MIN_BABY_AGE_DAYS, PARENT_SIGNATURE_SENTENCE, REFUND_SUMMARY, ROBE_CENTS, ROSE_PETAL_CLAUSE, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SECOND_ADULT_WAIVER_NOTE, SESSION, SESSION_PRICE_CENTS, SICK_CHECKIN_ACK, SICK_CONTACT_ACK, SIGNATURE_HEADING, SIGNATURE_LEAD, WAIVER_DISCLAIMER, WAIVER_HEADING, WAIVER_RELEASE_TEXT, ageMonthsAtSession, applyRobeCutoff, babyAgeMessage, bookingIsClosed, fillDepositAck, fillRefundSummary, formatCents, initBooking, mountRobeAddon, previewTotal, refundBalanceCents, refundHalfBalanceCents, robeIsClosed, robeNote, sessionDateLabel, sessionPriceLabel, sessionPriceLine, sessionPriceOffer, sessionStatus, sessionTimeLabel, signingDateLabel} from '../assets/booking.js';
+import {ADULT_18_ACK, AGE_TOO_OLD_MESSAGE, AGE_TOO_YOUNG_MESSAGE, BALANCE_COLLECTION, BATH_BAG_CENTS, BOOKING_LEAD_HOURS, BOOKING_TERMS_VERSION, CHECKOUT_WAIVER_NOTE, CLAUSE_A, CLAUSE_B, CLAUSE_C, CLAUSE_D, DEPOSIT_ACK, DEPOSIT_CENTS, FLORIDA_NOTICE_FONT_PT, FLORIDA_STATUTORY_NOTICE, JOIN_RULE_ACK, MAX_BABY_AGE_MONTHS, MAX_EXTRA_ADULTS, MIN_BABY_AGE_DAYS, PARENT_SIGNATURE_SENTENCE, REFUND_SUMMARY, ROBE_CENTS, ROSE_PETAL_CLAUSE, SEATS_PER_SESSION, SECOND_ADULT_CENTS, SECOND_ADULT_WAIVER_NOTE, SESSION, SESSION_PRICE_CENTS, SICK_CHECKIN_ACK, SICK_CONTACT_ACK, SIGNATURE_HEADING, SIGNATURE_LEAD, WAIVER_BODY_FONT_PT, WAIVER_DISCLAIMER, WAIVER_HEADING, WAIVER_RELEASE_TEXT, ageMonthsAtSession, applyRobeCutoff, babyAgeMessage, balanceDueCents, bookingIsClosed, fillDepositAck, fillRefundSummary, formatCents, initBooking, mountRobeAddon, previewTotal, refundBalanceCents, refundHalfBalanceCents, robeIsClosed, robeNote, sessionDateLabel, sessionPriceLabel, sessionPriceLine, sessionPriceOffer, sessionStatus, sessionTimeLabel, signedCopyHtml, signingDateLabel} from '../assets/booking.js';
 const approved = {
   '/': {
     title: 'Lys Rose Baby Spa · Fort Lauderdale',
@@ -193,7 +193,7 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(html.includes('November 22'), false);
   assert.equal(html.includes('10:30 AM'), false);
   assert.equal(book.querySelector('#booking-dates [data-booking-card]'), null);
-  assert.deepEqual([...book.querySelectorAll('#booking-checkout input')].map(input => input.getAttribute('name')), ['confirmReady']);
+  assert.deepEqual([...book.querySelectorAll('#booking-checkout input')].map(input => input.getAttribute('name')), ['confirmReady', 'paymentMode', 'paymentMode']);
   assert.equal(book.querySelector('.card-mock'), null);
   assert.equal(book.querySelector('.booking-pay').getAttribute('type'), 'button');
   assert.equal(book.querySelector('.booking-intro').textContent, 'A session for you and your baby: a warm floral milk bath, infant massage and a parent-led baby facial.');
@@ -327,6 +327,9 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.deepEqual(previewTotal(false, 'signature'), {cents:SESSION_PRICE_CENTS, label:sessionPriceLabel(), addonPending:false});
   assert.deepEqual(previewTotal(false, 'gentle'), {cents:SESSION_PRICE_CENTS + 500, label:`$${(SESSION_PRICE_CENTS + 500) / 100}`, addonPending:false});
   assert.deepEqual(previewTotal(false, 'premium'), {cents:SESSION_PRICE_CENTS + 1000, label:`$${(SESSION_PRICE_CENTS + 1000) / 100}`, addonPending:false});
+  assert.deepEqual(previewTotal(false, 'premium', true, true, 'deposit'), {cents: DEPOSIT_CENTS + 1000 + BATH_BAG_CENTS + SECOND_ADULT_CENTS, label: `$${(DEPOSIT_CENTS + 1000 + BATH_BAG_CENTS + SECOND_ADULT_CENTS) / 100}`, addonPending: false});
+  assert.equal(balanceDueCents('deposit'), SESSION_PRICE_CENTS - DEPOSIT_CENTS);
+  assert.equal(balanceDueCents('full'), 0);
   for (const word of ['hypoallergenic', 'soothing']) assert.equal(html.toLowerCase().includes(word), false, word);
   assert.equal(/\bfacial\b/i.test(html.toLowerCase().replaceAll('parent-led baby facial','').replaceAll('facials','')), false);
   const included = [
@@ -377,10 +380,19 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('[data-read-waiver]').textContent, 'Read the waiver');
   assert.equal(book.querySelector('[data-read-waiver]').closest('button'), null);
   assert.equal(book.querySelector('[data-checkout-waiver-note]').textContent, CHECKOUT_WAIVER_NOTE);
+  assert.equal(book.querySelector('#payment-choice legend').textContent, 'What you pay now');
+  assert.equal(book.querySelector('[name=paymentMode][value=full]').hasAttribute('checked'), true);
+  assert.equal(book.querySelector('[name=paymentMode][value=deposit]').closest('label').textContent, 'Pay the $100 deposit now');
+  assert.equal(book.querySelector('[name=paymentMode][value=full]').closest('label').textContent, 'Pay $285 now');
+  assert.equal(book.querySelector('#balance-note').hasAttribute('hidden'), true);
+  assert.equal(book.querySelector('#balance-note').textContent, 'The $185 balance is still due. When and how it is collected is not decided yet.');
+  assert.equal(book.querySelector('#payment-choice').textContent.toLowerCase().includes('card fee'), false);
+  assert.equal(book.querySelector('#payment-choice').textContent.toLowerCase().includes('discretion'), false);
+  assert.deepEqual(BALANCE_COLLECTION, {method: null, dueDaysBeforeSession: null});
   assert.equal(book.querySelector('.booking-pay').textContent, 'Reserve and pay');
   assert.equal(book.querySelector('#second-adult-fields').hasAttribute('hidden'), true);
   assert.equal(book.querySelector('[data-second-adult-waiver-note]').textContent, SECOND_ADULT_WAIVER_NOTE);
-  assert.deepEqual([...book.querySelectorAll('#booking-checkout input')].map(input => input.getAttribute('name')), ['confirmReady']);
+  assert.deepEqual([...book.querySelectorAll('#booking-checkout input')].map(input => input.getAttribute('name')), ['confirmReady', 'paymentMode', 'paymentMode']);
   assert.equal(html.toLowerCase().includes('stripe'), false);
   assert.equal(html.toLowerCase().includes('square'), false);
   const thanks = await documentFor('book/thank-you/index.html');
@@ -524,6 +536,52 @@ test('the pay button stays off until the birth date is valid and every required 
   assert.equal(button.disabled, true);
   assert.equal(button.getAttribute('aria-disabled'), 'true');
 });
+test('the due-now total switches between the deposit and the full session', () => {
+  const {document: doc} = parseHTML(`<!doctype html><html><body><form id="booking-form">
+<p id="session-charge"><span id="session-charge-label"></span><span id="session-charge-amount"></span></p>
+<p id="face-cream-charge" hidden><span id="face-cream-charge-label"></span><span id="face-cream-charge-amount"></span></p>
+<p id="bath-bag-charge" hidden><span id="bath-bag-charge-amount"></span></p>
+<p id="second-adult-charge" hidden><span id="second-adult-charge-amount"></span></p>
+<strong id="booking-total"></strong>
+<input type="radio" name="faceCream" value="signature" checked/>
+<input type="radio" name="faceCream" value="premium"/>
+<input type="checkbox" name="bathBag"/>
+<input type="checkbox" name="secondAdult"/>
+<input type="radio" name="paymentMode" value="deposit"/>
+<input type="radio" name="paymentMode" value="full" checked/>
+<p id="balance-note" hidden></p>
+<button class="booking-pay" type="button"></button>
+</form></body></html>`);
+  initBooking(doc);
+  assert.equal(doc.getElementById('booking-total').textContent, '$285');
+  assert.equal(doc.getElementById('session-charge-label').textContent, 'Session');
+  assert.equal(doc.getElementById('session-charge-amount').textContent, '$285');
+  assert.equal(doc.getElementById('balance-note').hidden, true);
+  const deposit = doc.querySelector('[name=paymentMode][value=deposit]');
+  doc.querySelector('[name=paymentMode][value=full]').checked = false;
+  deposit.checked = true;
+  deposit.dispatchEvent(new doc.defaultView.Event('change', {bubbles: true}));
+  assert.equal(doc.getElementById('booking-total').textContent, '$100');
+  assert.equal(doc.getElementById('session-charge-label').textContent, 'Deposit');
+  assert.equal(doc.getElementById('balance-note').hidden, false);
+  const bag = doc.querySelector('[name=bathBag]');
+  bag.checked = true;
+  bag.dispatchEvent(new doc.defaultView.Event('change', {bubbles: true}));
+  assert.equal(doc.getElementById('booking-total').textContent, '$118');
+  assert.equal(doc.getElementById('bath-bag-charge').hidden, false);
+  const cream = doc.querySelector('[name=faceCream][value=premium]');
+  doc.querySelector('[name=faceCream][value=signature]').checked = false;
+  cream.checked = true;
+  cream.dispatchEvent(new doc.defaultView.Event('change', {bubbles: true}));
+  assert.equal(doc.getElementById('booking-total').textContent, '$128');
+  const full = doc.querySelector('[name=paymentMode][value=full]');
+  deposit.checked = false;
+  full.checked = true;
+  full.dispatchEvent(new doc.defaultView.Event('change', {bubbles: true}));
+  assert.equal(doc.getElementById('booking-total').textContent, '$313');
+  assert.equal(doc.getElementById('session-charge-amount').textContent, '$285');
+  assert.equal(doc.getElementById('balance-note').hidden, true);
+});
 test('the draft policy page keeps the refund terms and leaves out fees and discretion', async () => {
   const policy = await documentFor('book/policy/index.html');
   assert.equal(policy.querySelector('meta[name=robots]').content, 'noindex,nofollow');
@@ -587,6 +645,24 @@ test('the draft policy page keeps the refund terms and leaves out fees and discr
   assert.equal(readPage.querySelector('[data-clause-body=c]').textContent, CLAUSE_C.slice('Bring your own breastmilk.'.length).trim());
   assert.equal(readPage.querySelector('[data-waiver-body]').textContent, WAIVER_RELEASE_TEXT.slice(WAIVER_HEADING.length).trim());
   assert.equal(readPage.querySelector('[data-florida-notice]').textContent, FLORIDA_STATUTORY_NOTICE);
+  assert.equal(waiverPage.querySelector('[data-florida-notice]').closest('li').classList.contains('florida-notice'), true);
+  assert.equal(readPage.querySelector('[data-florida-notice]').closest('li').classList.contains('florida-notice'), true);
+  const css = await readFile(new URL('../assets/site.css', import.meta.url), 'utf8');
+  const bodyRule = css.match(/\.waiver-prose > li \{([^}]+)\}/)[1];
+  const noticeRule = css.match(/\.waiver-prose > li\.florida-notice \{([^}]+)\}/)[1];
+  assert.match(bodyRule, /12pt/);
+  assert.match(noticeRule, /font-size:\s*17pt/);
+  assert.match(noticeRule, /text-transform:\s*uppercase/);
+  assert.equal(FLORIDA_NOTICE_FONT_PT, 17);
+  assert.equal(WAIVER_BODY_FONT_PT, 12);
+  assert.ok(FLORIDA_NOTICE_FONT_PT - WAIVER_BODY_FONT_PT >= 5);
+  assert.equal(css.includes('@media') && /florida-notice[\s\S]*font-size:\s*(?!17pt)/.test(css.split('.waiver-prose > li.florida-notice')[1] || ''), false);
+  const copy = signedCopyHtml(`Body line\n${FLORIDA_STATUTORY_NOTICE}`);
+  assert.match(copy, new RegExp(`font-size:${FLORIDA_NOTICE_FONT_PT}pt`));
+  assert.match(copy, /text-transform:uppercase/);
+  assert.equal(copy.includes(FLORIDA_STATUTORY_NOTICE), true);
+  assert.equal(copy.includes(FLORIDA_STATUTORY_NOTICE.toUpperCase()), false);
+  assert.equal(BOOKING_TERMS_VERSION, 'booking-waiver-esignature-draft-2026-11-05');
   const privacy = await documentFor('privacy/index.html');
   assert.match(privacy.querySelector('.draft-banner').textContent, /Draft/);
   assert.equal(privacy.body.textContent.includes('IP address and browser details when you sign your waiver'), true);

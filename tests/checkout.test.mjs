@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {readFile} from 'node:fs/promises';
-import {CHECKOUT_CONFIGURED, CHECKOUT_URL, SESSION, SESSION_PRICE_CENTS} from '../assets/booking.js';
+import {BALANCE_COLLECTION, CHECKOUT_CONFIGURED, CHECKOUT_URL, DEPOSIT_CENTS, FLORIDA_STATUTORY_NOTICE, SESSION, SESSION_PRICE_CENTS} from '../assets/booking.js';
 import {
   PRICES,
   TAX_ENABLED,
@@ -357,6 +357,46 @@ test('tax at 7% is added only to taxable lines, and only when enabled', async ()
   assert.equal(captured.order.line_items.some(line => /fee|surcharge/i.test(line.name)), false);
 });
 
+test('deposit mode charges the deposit plus enhancements and ignores a client amount', () => {
+  const rejected = validateBooking(form({paymentMode: 'half'}), {session, now: openNow});
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.errors.paymentMode, 'Please choose what you pay now.');
+  const booking = validateBooking(form({
+    paymentMode: 'deposit',
+    creme: 'premium',
+    bathBag: true,
+    secondAdult: true,
+    secondAdultName: 'Jordan Lee',
+    secondAdultEmail: 'jordan@example.com',
+    total: 1,
+    price: 1,
+    amount: 50,
+  }), {session, now: openNow});
+  assert.equal(booking.ok, true);
+  assert.equal(booking.booking.paymentMode, 'deposit');
+  assert.equal(booking.booking.balance_due, SESSION_PRICE_CENTS - DEPOSIT_CENTS);
+  assert.deepEqual(booking.booking.balance_collection, BALANCE_COLLECTION);
+  const order = buildOrder(booking.booking, PRICES, session);
+  assert.equal(order.lines[0].name, 'Session deposit');
+  assert.equal(order.lines[0].base_price_money.amount, DEPOSIT_CENTS);
+  assert.equal(order.lines[0].taxable, false);
+  assert.deepEqual(order.lines.map(line => [line.name, line.base_price_money.amount]), [
+    ['Session deposit', DEPOSIT_CENTS],
+    ['Premium face crème', 1000],
+    ['Floral Milk Bath Bag', 1800],
+    ['Second adult', 2500],
+  ]);
+  assert.equal(order.total, DEPOSIT_CENTS + 1000 + 1800 + 2500);
+  const payload = squareOrderPayload(order, {TAX_ENABLED: 'true', SQUARE_LOCATION_ID: 'LOC123'});
+  assert.equal(payload.metadata.payment_mode, 'deposit');
+  assert.equal(payload.metadata.balance_due, String(SESSION_PRICE_CENTS - DEPOSIT_CENTS));
+  assert.equal(payload.line_items.find(line => line.name === 'Session deposit').applied_taxes, undefined);
+  const paid = validateBooking(form(), {session, now: openNow});
+  assert.equal(paid.booking.paymentMode, 'full');
+  assert.equal(paid.booking.balance_due, 0);
+  assert.equal(buildOrder(paid.booking, PRICES, session).lines[0].base_price_money.amount, SESSION_PRICE_CENTS);
+});
+
 test('catalog plan prices the session variations together and skips null extras', () => {
   const plan = catalogPlan();
   assert.equal(plan.taxes, 'off');
@@ -372,10 +412,15 @@ test('catalog plan prices the session variations together and skips null extras'
     'Signature face crème': false,
     'Gentle face crème': true,
     'Premium face crème': true,
+    'Session deposit': false,
     'Floral Milk Bath Bag': true,
     'Complimentary rose petals': false,
     'Second adult': false,
   });
+  const depositItem = plan.items.find(item => item.name === 'Session deposit');
+  assert.equal(depositItem.amount, DEPOSIT_CENTS);
+  assert.equal(depositItem.create, true);
+  assert.equal(depositItem.taxable, false);
   const objects = catalogUpsertObjects();
   assert.equal(plan.items.some(item => /robe/i.test(item.name)), false);
   assert.equal(objects.some(item => /robe/i.test(item.item_data.name)), false);
@@ -409,6 +454,7 @@ test('catalog script stays a dry run unless credentials are present', async () =
   assert.match(dry.stdout, /BYOB/);
   assert.match(dry.stdout, /Gentle face crème/);
   assert.equal(dry.stdout.toLowerCase().includes('robe'), false);
+  assert.match(dry.stdout, /Session deposit/);
   assert.match(dry.stdout, /Floral Milk Bath Bag/);
   assert.match(dry.stdout, /Second adult/);
   assert.match(dry.stdout, /"mode": "dry-run"/);
@@ -418,6 +464,9 @@ test('catalog script stays a dry run unless credentials are present', async () =
   assert.equal(flags['Signature face crème'], false);
   assert.equal(flags['Gentle face crème'], true);
   assert.equal(flags['Premium face crème'], true);
+  assert.equal(flags['Session deposit'], false);
+  assert.equal(printed.items.find(item => item.name === 'Session deposit').amount, DEPOSIT_CENTS);
+  assert.equal(printed.items.find(item => item.name === 'Session deposit').create, true);
   assert.equal(Object.hasOwn(flags, 'Embroidered keepsake robe'), false);
   assert.equal(flags['Floral Milk Bath Bag'], true);
   assert.equal(printed.items.find(item => item.name === 'Floral Milk Bath Bag').amount, 1800);
@@ -558,6 +607,13 @@ test('a signed waiver is stored with its hash, IP and user agent, and is not rew
   assert.equal(waiver.signature_name, 'Someone Else');
   assert.equal(waiver.signed_at, openNow.toISOString());
   assert.equal(waiver.terms_version, 'booking-waiver-esignature-draft-2026-11-05');
+  assert.equal(waiver.waiver_version, 'booking-waiver-esignature-draft-2026-11-05');
+  assert.equal(waiver.florida_notice_presentation.fontSizePt - waiver.florida_notice_presentation.bodyFontSizePt, 5);
+  assert.equal(waiver.florida_notice_presentation.caps, true);
+  assert.match(waiver.signed_copy_html, /font-size:17pt/);
+  assert.match(waiver.signed_copy_html, /text-transform:uppercase/);
+  assert.equal(waiver.signed_copy_html.includes(FLORIDA_STATUTORY_NOTICE), true);
+  assert.equal(waiver.signed_text.includes(FLORIDA_STATUTORY_NOTICE.toUpperCase()), false);
   assert.deepEqual(waiver.emergency_contact, {name: 'Pat Contact', phone: '954-555-0199', relationship: 'aunt'});
   assert.equal(waiver.signed_text.includes("Emergency. If there's an emergency, Lys Rose may call 911."), true);
   assert.equal(waiver.signed_text.indexOf('Emergency.') < waiver.signed_text.indexOf('[Indemnification:'), true);
@@ -608,6 +664,8 @@ test('a signed waiver is stored with its hash, IP and user agent, and is not rew
   assert.equal(secondRecord.emergency_contact, null);
   assert.equal(secondRecord.signature_image, null);
   assert.equal(secondRecord.signed_text.includes('Additional adult.'), true);
+  assert.equal(secondRecord.waiver_version, 'booking-waiver-esignature-draft-2026-11-05');
+  assert.match(secondRecord.signed_copy_html, /font-size:17pt/);
 });
 
 test('a booking that already has a second adult does not offer another', async () => {

@@ -372,7 +372,10 @@ test('booking preview is unlisted, has no seat count, and prices stay off public
   assert.equal(book.querySelector('#refund-policy').textContent, `Draft ${fillRefundSummary()} Full booking & refund policy · Read the waiver`);
   assert.equal(book.querySelector('#refund-policy a').getAttribute('href'), '/book/policy/');
   assert.equal(book.querySelector('[data-read-waiver]').getAttribute('href'), '/book/waiver/read/');
+  assert.equal(book.querySelector('[data-read-waiver]').getAttribute('target'), '_blank');
+  assert.equal(book.querySelector('[data-read-waiver]').getAttribute('rel'), 'noopener');
   assert.equal(book.querySelector('[data-read-waiver]').textContent, 'Read the waiver');
+  assert.equal(book.querySelector('[data-read-waiver]').closest('button'), null);
   assert.equal(book.querySelector('[data-checkout-waiver-note]').textContent, CHECKOUT_WAIVER_NOTE);
   assert.equal(book.querySelector('.booking-pay').textContent, 'Reserve and pay');
   assert.equal(book.querySelector('#second-adult-fields').hasAttribute('hidden'), true);

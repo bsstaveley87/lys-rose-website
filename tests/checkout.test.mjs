@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {readFile} from 'node:fs/promises';
-import {BALANCE_COLLECTION, CHECKOUT_CONFIGURED, CHECKOUT_URL, DEPOSIT_CENTS, FLORIDA_STATUTORY_NOTICE, SESSION, SESSION_LOCATION, SESSION_LOCATION_NOTE, SESSION_PRICE_CENTS} from '../assets/booking.js';
+import {CHECKOUT_CONFIGURED, CHECKOUT_URL, FLORIDA_STATUTORY_NOTICE, SESSION, SESSION_LOCATION, SESSION_LOCATION_NOTE, SESSION_PRICE_CENTS} from '../assets/booking.js';
 import {
   PRICES,
   TAX_ENABLED,
@@ -379,10 +379,7 @@ test('tax at 7% is added only to taxable lines, and only when enabled', async ()
   assert.equal(captured.order.line_items.some(line => /fee|surcharge/i.test(line.name)), false);
 });
 
-test('deposit mode charges the deposit plus enhancements and ignores a client amount', () => {
-  const rejected = validateBooking(form({paymentMode: 'half'}), {session, now: openNow});
-  assert.equal(rejected.ok, false);
-  assert.equal(rejected.errors.paymentMode, 'Please choose what you pay now.');
+test('checkout charges the full session plus enhancements and ignores a client amount', () => {
   const booking = validateBooking(form({
     paymentMode: 'deposit',
     creme: 'premium',
@@ -395,27 +392,25 @@ test('deposit mode charges the deposit plus enhancements and ignores a client am
     amount: 50,
   }), {session, now: openNow});
   assert.equal(booking.ok, true);
-  assert.equal(booking.booking.paymentMode, 'deposit');
-  assert.equal(booking.booking.balance_due, SESSION_PRICE_CENTS - DEPOSIT_CENTS);
-  assert.deepEqual(booking.booking.balance_collection, BALANCE_COLLECTION);
+  assert.equal(Object.hasOwn(booking.booking, 'paymentMode'), false);
+  assert.equal(Object.hasOwn(booking.booking, 'balance_due'), false);
+  assert.equal(Object.hasOwn(booking.booking, 'balance_collection'), false);
   const order = buildOrder(booking.booking, PRICES, session);
-  assert.equal(order.lines[0].name, 'Session deposit');
-  assert.equal(order.lines[0].base_price_money.amount, DEPOSIT_CENTS);
+  assert.equal(order.lines[0].name, sessionLine);
+  assert.equal(order.lines[0].base_price_money.amount, SESSION_PRICE_CENTS);
   assert.equal(order.lines[0].taxable, false);
   assert.deepEqual(order.lines.map(line => [line.name, line.base_price_money.amount]), [
-    ['Session deposit', DEPOSIT_CENTS],
+    [sessionLine, SESSION_PRICE_CENTS],
     ['Premium face crème', 1000],
     ['Floral Milk Bath Bag', 1800],
     ['Second adult', 2500],
   ]);
-  assert.equal(order.total, DEPOSIT_CENTS + 1000 + 1800 + 2500);
+  assert.equal(order.total, SESSION_PRICE_CENTS + 1000 + 1800 + 2500);
   const payload = squareOrderPayload(order, {TAX_ENABLED: 'true', SQUARE_LOCATION_ID: 'LOC123'});
-  assert.equal(payload.metadata.payment_mode, 'deposit');
-  assert.equal(payload.metadata.balance_due, String(SESSION_PRICE_CENTS - DEPOSIT_CENTS));
-  assert.equal(payload.line_items.find(line => line.name === 'Session deposit').applied_taxes, undefined);
+  assert.equal(Object.hasOwn(payload.metadata, 'payment_mode'), false);
+  assert.equal(Object.hasOwn(payload.metadata, 'balance_due'), false);
+  assert.equal(payload.line_items.some(line => line.name === 'Session deposit'), false);
   const paid = validateBooking(form(), {session, now: openNow});
-  assert.equal(paid.booking.paymentMode, 'full');
-  assert.equal(paid.booking.balance_due, 0);
   assert.equal(paid.booking.location, SESSION_LOCATION);
   const fullOrder = buildOrder(paid.booking, PRICES, session);
   assert.equal(fullOrder.lines[0].base_price_money.amount, SESSION_PRICE_CENTS);
@@ -440,15 +435,11 @@ test('catalog plan prices the session variations together and skips null extras'
     'Signature face crème': false,
     'Gentle face crème': true,
     'Premium face crème': true,
-    'Session deposit': false,
     'Floral Milk Bath Bag': true,
     'Complimentary rose petals': false,
     'Second adult': false,
   });
-  const depositItem = plan.items.find(item => item.name === 'Session deposit');
-  assert.equal(depositItem.amount, DEPOSIT_CENTS);
-  assert.equal(depositItem.create, true);
-  assert.equal(depositItem.taxable, false);
+  assert.equal(plan.items.some(item => item.name === 'Session deposit'), false);
   const objects = catalogUpsertObjects();
   assert.equal(plan.items.some(item => /robe/i.test(item.name)), false);
   assert.equal(objects.some(item => /robe/i.test(item.item_data.name)), false);
@@ -482,7 +473,7 @@ test('catalog script stays a dry run unless credentials are present', async () =
   assert.match(dry.stdout, /BYOB/);
   assert.match(dry.stdout, /Gentle face crème/);
   assert.equal(dry.stdout.toLowerCase().includes('robe'), false);
-  assert.match(dry.stdout, /Session deposit/);
+  assert.equal(dry.stdout.includes('Session deposit'), false);
   assert.match(dry.stdout, /Floral Milk Bath Bag/);
   assert.match(dry.stdout, /Second adult/);
   assert.match(dry.stdout, /"mode": "dry-run"/);
@@ -492,9 +483,7 @@ test('catalog script stays a dry run unless credentials are present', async () =
   assert.equal(flags['Signature face crème'], false);
   assert.equal(flags['Gentle face crème'], true);
   assert.equal(flags['Premium face crème'], true);
-  assert.equal(flags['Session deposit'], false);
-  assert.equal(printed.items.find(item => item.name === 'Session deposit').amount, DEPOSIT_CENTS);
-  assert.equal(printed.items.find(item => item.name === 'Session deposit').create, true);
+  assert.equal(Object.hasOwn(flags, 'Session deposit'), false);
   assert.equal(Object.hasOwn(flags, 'Embroidered keepsake robe'), false);
   assert.equal(flags['Floral Milk Bath Bag'], true);
   assert.equal(printed.items.find(item => item.name === 'Floral Milk Bath Bag').amount, 1800);

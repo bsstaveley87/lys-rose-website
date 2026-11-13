@@ -140,12 +140,6 @@
 <p class="refund-policy" id="refund-policy"><span class="placeholder-mark">Draft</span> <span data-refund-summary></span> <a href="/book/policy/">Full booking &amp; refund policy</a><!-- Isolated until Christy approves. Remove the next span and anchor together. --> <span data-read-waiver-sep>·</span> <a data-read-waiver href="/book/waiver/read/" target="_blank" rel="noopener">Read the waiver</a></p>
 <label class="choice-row"><input type="checkbox" name="confirmReady" value="deposit" required aria-describedby="deposit-error"/><span><span class="placeholder-mark">Draft</span> <span data-deposit-ack></span></span></label>
 <p class="field-error" id="deposit-error" hidden></p>
-<fieldset class="booking-choice" id="payment-choice">
-<legend>What you pay now</legend>
-<label class="choice-row"><input type="radio" name="paymentMode" value="deposit" required/><span>Pay the <span data-money="deposit"></span> deposit now</span></label>
-<label class="choice-row"><input type="radio" name="paymentMode" value="full" checked required/><span>Pay <span data-money="price"></span> now</span></label>
-<p class="field-hint" id="balance-note" hidden>The <span data-money="balance"></span> balance is still due. When and how it is collected is not decided yet.</p>
-</fieldset>
 <p class="signature-lead"><span class="placeholder-mark">Draft</span> <span data-checkout-waiver-note></span></p>
 <p class="field-error" id="checkout-error" hidden></p>
 <button class="submit-button booking-pay" type="button" disabled aria-disabled="true">Reserve and pay</button>

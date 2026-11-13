@@ -1,4 +1,4 @@
-import {BALANCE_COLLECTION, BOOKING_CONFIRMATIONS, BOOKING_TERMS_VERSION, DEPOSIT_CENTS, FLORIDA_NOTICE_FONT_PT, MAX_EXTRA_ADULTS, SESSION, SESSION_LOCATION, SESSION_LOCATION_NOTE, SESSION_PRICE_CENTS, SEATS_PER_SESSION, WAIVER_BODY_FONT_PT, WAIVER_RETENTION, ageMonthsAtSession, babyAgeMessage, bookingClosesAt, bookingIsClosed, petalsIncluded, robeIsClosed, sessionDateLabel, sessionTimeLabel, signedCopyHtml, signedDocumentText} from '../../assets/booking.js';
+import {BOOKING_CONFIRMATIONS, BOOKING_TERMS_VERSION, FLORIDA_NOTICE_FONT_PT, MAX_EXTRA_ADULTS, SESSION, SESSION_LOCATION, SESSION_LOCATION_NOTE, SESSION_PRICE_CENTS, SEATS_PER_SESSION, WAIVER_BODY_FONT_PT, WAIVER_RETENTION, ageMonthsAtSession, babyAgeMessage, bookingClosesAt, bookingIsClosed, petalsIncluded, robeIsClosed, sessionDateLabel, sessionTimeLabel, signedCopyHtml, signedDocumentText} from '../../assets/booking.js';
 
 /**
  * Server-side prices in cents. The browser total is only a preview.
@@ -93,9 +93,6 @@ export type BookingRecord = {
   terms_version?: string;
   user_agent?: string;
   ip_address?: string;
-  paymentMode: 'deposit' | 'full';
-  balance_due: number;
-  balance_collection: {method: null | 'square_invoice' | 'payment_link' | 'card_on_file'; dueDaysBeforeSession: number | null};
   booking_id: string;
   order_id?: string;
   square_payment_id: string | null;
@@ -182,9 +179,6 @@ export function validateBooking(raw: unknown, options: {session?: SessionConfig;
   const secondAdultEmail = text(data.secondAdultEmail, 254);
   if (secondAdult && (!/\p{L}/u.test(secondAdultName))) errors.secondAdultName = "Please enter your second adult's name.";
   if (secondAdult && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(secondAdultEmail)) errors.secondAdultEmail = "Please enter your second adult's email.";
-  const rawMode = text(data.paymentMode, 20);
-  const paymentMode = rawMode === '' ? 'full' : rawMode;
-  if (paymentMode !== 'deposit' && paymentMode !== 'full') errors.paymentMode = 'Please choose what you pay now.';
   const petals = petalsIncluded(bath, {petalFree: flag(data.petalFree), rosePetals: flag(data.petals ?? data.rosePetals)});
   if (robe && prices.robe.amount == null) errors.robe = "That extra isn't available.";
   if (robe && prices.robe.amount != null && robeIsClosed(session.date, now)) errors.robe = 'The embroidered robe option has closed for this session.';
@@ -193,9 +187,6 @@ export function validateBooking(raw: unknown, options: {session?: SessionConfig;
   if (Object.keys(errors).length) return {ok: false as const, status: 400, errors};
   const booking: BookingRecord = {
     parentName, email, phone, babyName, babyDob, bath, creme, petals, robe, bathBag, secondAdult,
-    paymentMode: paymentMode === 'deposit' ? 'deposit' : 'full',
-    balance_due: paymentMode === 'deposit' ? (prices.session.amount ?? 0) - DEPOSIT_CENTS : 0,
-    balance_collection: {method: BALANCE_COLLECTION.method, dueDaysBeforeSession: BALANCE_COLLECTION.dueDaysBeforeSession},
     secondAdultName: secondAdult ? secondAdultName : '',
     secondAdultEmail: secondAdult ? secondAdultEmail : '',
     sessionDate: session.date,
@@ -265,13 +256,7 @@ export function salesTaxCents(lines: Array<Pick<LineItem, 'taxable' | 'base_pric
 }
 
 export function buildOrder(booking: BookingRecord, prices: PriceTable = PRICES, session: SessionConfig = null): PreparedOrder {
-  const deposit = booking.paymentMode === 'deposit';
-  const lines: LineItem[] = [orderLine(
-    deposit ? 'Session deposit' : sessionLineName(session),
-    deposit ? DEPOSIT_CENTS : (prices.session.amount ?? 0),
-    false,
-    deposit ? 'Nonrefundable deposit' : bathVariationName(booking.bath, booking.petals),
-  )];
+  const lines: LineItem[] = [orderLine(sessionLineName(session), prices.session.amount ?? 0, false, bathVariationName(booking.bath, booking.petals))];
   const notes = [`Location: ${SESSION_LOCATION}. ${SESSION_LOCATION_NOTE}`, `Baby date of birth: ${booking.babyDob}`, `Bath: ${booking.bath === 'byob' ? 'BYOB (bring your own breastmilk)' : 'Floral Milk Soak'}`, `Rose petals: ${booking.petals ? 'yes' : 'no'}`];
   const creme = prices.creme[booking.creme as keyof typeof prices.creme];
   if (creme.amount != null && creme.amount > 0) {
@@ -318,8 +303,6 @@ export function squareOrderPayload(order: PreparedOrder, env: CheckoutEnv = {}) 
     metadata: {
       baby_date_of_birth: order.booking.babyDob,
       booking_id: order.booking.booking_id,
-      payment_mode: order.booking.paymentMode,
-      balance_due: String(order.booking.balance_due ?? 0),
       waiver_status: order.booking.waiver_status.map(adult => `${adult.role}:${adult.status}`).join(','),
     },
     pricing_options: {auto_apply_taxes: false},
@@ -358,7 +341,6 @@ export function catalogPlan(prices: PriceTable = PRICES) {
       item('Signature face crème', prices.creme.signature),
       item('Gentle face crème', prices.creme.gentle),
       item('Premium face crème', prices.creme.premium),
-      item('Session deposit', {amount: DEPOSIT_CENTS, taxable: false}),
       item('Floral Milk Bath Bag', prices.bathBag),
       {...item('Complimentary rose petals', prices.petals), create: false},
       item('Second adult', prices.secondAdult),

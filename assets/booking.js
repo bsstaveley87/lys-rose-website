@@ -15,21 +15,8 @@ export const SESSION_PRICE_CENTS = 28500;
 /** The venue is not chosen. Do not replace this with a place name. */
 export const SESSION_LOCATION = 'Location TBD, local to Fort Lauderdale / Broward County';
 export const SESSION_LOCATION_NOTE = 'The exact location will be shared with you before your session.';
-/** Nonrefundable deposit in cents. The refund line and deposit checkbox use this with the session price. */
+/** Nonrefundable portion used by the refund line and the deposit acknowledgement. Checkout charges the full session. */
 export const DEPOSIT_CENTS = 10000;
-/** Parents choose one of these at checkout. Enhancements are charged in full either way. */
-export const PAYMENT_MODES = ['deposit', 'full'];
-/** Today's checkout charges the session in full until a parent chooses the deposit. */
-export const DEFAULT_PAYMENT_MODE = 'full';
-/**
- * The CFO has not decided when the balance is due or how it is collected.
- * method stays null until it is 'square_invoice', 'payment_link', or 'card_on_file'.
- * dueDaysBeforeSession stays null until the CFO sets a number of days.
- */
-export const BALANCE_COLLECTION = {
-  method: null,
-  dueDaysBeforeSession: null,
-};
 /** Full birth dates are kept this many years after the family's last booking, then only age in months remains. */
 export const BIRTH_DATE_RETENTION_YEARS = 3;
 /** DRAFT pending Christy. {deposit}, {price}, {balance} and {half} are filled from the price config. */
@@ -254,15 +241,6 @@ export function enhancementCents(faceCream = 'signature', bathBag = false, secon
   return (FACE_CREAM_CENTS[faceCream] || 0) + (bathBag ? BATH_BAG_CENTS : 0) + (secondAdult ? SECOND_ADULT_CENTS : 0);
 }
 
-export function amountDueNowCents(paymentMode = DEFAULT_PAYMENT_MODE, extrasCents = 0) {
-  const sessionPortion = paymentMode === 'deposit' ? DEPOSIT_CENTS : SESSION_PRICE_CENTS;
-  return sessionPortion + extrasCents;
-}
-
-export function balanceDueCents(paymentMode = DEFAULT_PAYMENT_MODE) {
-  return paymentMode === 'deposit' ? SESSION_PRICE_CENTS - DEPOSIT_CENTS : 0;
-}
-
 function escapeHtml(value) {
   return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 }
@@ -276,8 +254,8 @@ export function signedCopyHtml(signedText) {
   return `<article style="font-size:${WAIVER_BODY_FONT_PT}pt">${html}</article>`;
 }
 
-export function previewTotal(addonSelected, faceCream = 'signature', bathBag = false, secondAdult = false, paymentMode = DEFAULT_PAYMENT_MODE) {
-  const cents = amountDueNowCents(paymentMode, enhancementCents(faceCream, bathBag, secondAdult));
+export function previewTotal(addonSelected, faceCream = 'signature', bathBag = false, secondAdult = false) {
+  const cents = SESSION_PRICE_CENTS + enhancementCents(faceCream, bathBag, secondAdult);
   return {
     cents,
     label: `$${cents / 100}`,
@@ -840,7 +818,6 @@ function bookingPayload(form) {
     allergyDetails: form.querySelector('[name=allergyDetails]')?.value || '',
     waiver: Boolean(form.querySelector('[name=waiver]')?.checked),
     photoRelease: Boolean(form.querySelector('[name=photoRelease]')?.checked),
-    paymentMode: checkedValue(page, 'paymentMode', DEFAULT_PAYMENT_MODE),
   };
 }
 
@@ -886,14 +863,11 @@ function syncTotal(documentRef = document) {
   const choice = checkedValue(documentRef, 'faceCream', 'signature');
   const bathBag = Boolean(documentRef.querySelector('[name=bathBag]')?.checked);
   const secondAdult = Boolean(documentRef.querySelector('[name=secondAdult]')?.checked);
-  const paymentMode = checkedValue(documentRef, 'paymentMode', DEFAULT_PAYMENT_MODE);
-  const total = previewTotal(false, choice, bathBag, secondAdult, paymentMode);
-  const balance = documentRef.querySelector('#balance-note');
-  if (balance) balance.hidden = paymentMode !== 'deposit';
+  const total = previewTotal(false, choice, bathBag, secondAdult);
   const sessionLabel = documentRef.getElementById('session-charge-label');
   const sessionAmount = documentRef.getElementById('session-charge-amount');
-  if (sessionLabel) sessionLabel.textContent = paymentMode === 'deposit' ? 'Deposit' : 'Session';
-  if (sessionAmount) sessionAmount.textContent = formatCents(paymentMode === 'deposit' ? DEPOSIT_CENTS : SESSION_PRICE_CENTS);
+  if (sessionLabel) sessionLabel.textContent = 'Session';
+  if (sessionAmount) sessionAmount.textContent = formatCents(SESSION_PRICE_CENTS);
   const bagLine = documentRef.getElementById('bath-bag-charge');
   if (bagLine) bagLine.hidden = !bathBag;
   const bagAmount = documentRef.getElementById('bath-bag-charge-amount');
@@ -936,7 +910,7 @@ export function initBooking(documentRef = document) {
     dob.addEventListener('blur', () => showAge(dob));
   }
   documentRef.addEventListener('change', event => {
-    if (event.target?.name === 'faceCream' || event.target?.name === 'bathBag' || event.target?.name === 'secondAdult' || event.target?.name === 'paymentMode') syncTotal(documentRef);
+    if (event.target?.name === 'faceCream' || event.target?.name === 'bathBag' || event.target?.name === 'secondAdult') syncTotal(documentRef);
     if (event.target?.name === 'secondAdult') {
       syncSecondAdult(form);
       applyPayButton(documentRef);

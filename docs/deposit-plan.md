@@ -1,6 +1,6 @@
 # Deposit or pay in full (preview plan)
 
-**Parked: no deposit for now (Christy, Nov 12).** Checkout charges the full session plus enhancements. This note is not in effect and is not built.
+**Dropped: no deposit option (Christy, Nov 12).** Checkout charges the full session plus enhancements. This note is not in effect and is not built.
 
 Draft for the CFO. Not in effect. This preview does not call Square production and does not create catalog items.
 

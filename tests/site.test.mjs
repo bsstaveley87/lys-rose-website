@@ -4,7 +4,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {parseHTML} from 'linkedom';
 import {site,pages} from '../site.config.mjs';
 import {validateFields, interestOptions, limits} from '../assets/validation.js';
-import {ADULT_18_ACK, AGE_TOO_OLD_MESSAGE, AGE_TOO_YOUNG_MESSAGE, BATH_BAG_CENTS, BOOKING_LEAD_HOURS, BOOKING_TERMS_VERSION, CHECKOUT_WAIVER_NOTE, CLAUSE_A, CLAUSE_B, CLAUSE_C, CLAUSE_D, DEPOSIT_ACK, DEPOSIT_CENTS, FLORIDA_NOTICE_FONT_PT, FLORIDA_STATUTORY_NOTICE, JOIN_RULE_ACK, MAX_BABY_AGE_MONTHS, MAX_EXTRA_ADULTS, MIN_BABY_AGE_DAYS, PARENT_SIGNATURE_SENTENCE, REFUND_SUMMARY, ROBE_CENTS, ROSE_PETAL_CLAUSE, SEATS_PER_SESSION, renderedWaiverTerms, WAIVER_VERSION_LABEL, SECOND_ADULT_CENTS, SECOND_ADULT_WAIVER_NOTE, SESSION, SESSION_LOCATION, SESSION_LOCATION_NOTE, SESSION_PRICE_CENTS, SICK_CHECKIN_ACK, SICK_CONTACT_ACK, SIGNATURE_HEADING, SIGNATURE_LEAD, WAIVER_BODY_FONT_PT, WAIVER_DISCLAIMER, WAIVER_HEADING, WAIVER_RELEASE_TEXT, ageMonthsAtSession, applyRobeCutoff, babyAgeMessage, bookingIsClosed, fillDepositAck, fillRefundSummary, formatCents, initBooking, mountRobeAddon, previewTotal, refundBalanceCents, refundHalfBalanceCents, robeIsClosed, robeNote, sessionDateLabel, sessionPriceLabel, sessionPriceLine, sessionPriceOffer, sessionStatus, sessionTimeLabel, signedCopyHtml, signingDateLabel} from '../assets/booking.js';
+import {ADULT_18_ACK, AGE_TOO_OLD_MESSAGE, AGE_TOO_YOUNG_MESSAGE, BATH_BAG_CENTS, BOOKING_LEAD_HOURS, BOOKING_TERMS_VERSION, CHECKOUT_WAIVER_NOTE, CLAUSE_A, CLAUSE_B, CLAUSE_C, CLAUSE_D, DEPOSIT_ACK, DEPOSIT_CENTS, FLORIDA_NOTICE_FONT_PT, FLORIDA_STATUTORY_NOTICE, JOIN_RULE_ACK, MAX_BABY_AGE_MONTHS, MAX_EXTRA_ADULTS, MIN_BABY_AGE_DAYS, PARENT_SIGNATURE_SENTENCE, REFUND_SUMMARY, ROBE_CENTS, ROSE_PETAL_CLAUSE, SEATS_PER_SESSION, renderedWaiverTerms, WAIVER_VERSION_LABEL, SECOND_ADULT_CENTS, SECOND_ADULT_WAIVER_NOTE, SESSION, SESSION_LOCATION, SESSION_LOCATION_NOTE, SESSION_PRICE_CENTS, SICK_CHECKIN_ACK, SICK_CONTACT_ACK, SIGNATURE_HEADING, SIGNATURE_LEAD, WAIVER_BODY_FONT_PT, WAIVER_DISCLAIMER, WAIVER_HEADING, WAIVER_RELEASE_TEXT, ageMonthsAtSession, applyRobeCutoff, babyAgeMessage, bookingIsClosed, DEPOSIT_CONFIRM_ERROR, fillDepositAck, fillRefundSummary, formatCents, initBooking, mountRobeAddon, previewTotal, refundBalanceCents, refundHalfBalanceCents, robeIsClosed, robeNote, sessionDateLabel, sessionPriceLabel, sessionPriceLine, sessionPriceOffer, sessionStatus, sessionTimeLabel, signedCopyHtml, signingDateLabel} from '../assets/booking.js';
 const approved = {
   '/': {
     title: 'Lys Rose Baby Spa · Fort Lauderdale',
@@ -502,11 +502,11 @@ test('refund dollars come from the session price and the deposit', () => {
   assert.equal(DEPOSIT_CENTS, 10000);
   assert.equal(refundBalanceCents(), SESSION_PRICE_CENTS - DEPOSIT_CENTS);
   assert.equal(refundHalfBalanceCents(), Math.round((SESSION_PRICE_CENTS - DEPOSIT_CENTS) / 2));
-  assert.equal(fillRefundSummary(), `$100 of your $285 payment is a nonrefundable deposit that holds your spot. If you cancel 7 or more days before your session, we refund the $185 balance. If you cancel 48 hours or more before, we refund $92.50. Within 48 hours, there's no refund. Enhancements (crème upgrades, the Floral Milk Bath Bag and a second adult) are refunded on the same timing, including sales tax. If your baby is unwell, we'll move you to a new date within 60 days. If we cancel, you get a full refund.`);
+  assert.equal(fillRefundSummary(), "$100 of your $285 payment is nonrefundable and holds your spot. If you cancel 7 or more days before your session, we refund the remaining balance of $185. If you cancel less than 7 days but at least 48 hours before, we refund half of it ($92.50). Within 48 hours, the remaining balance isn't refunded. Add-ons are refundable if you cancel. If your baby is unwell, we'll move you to a new date within 60 days. If we cancel, you get a full refund.");
   assert.equal(fillRefundSummary(28000, 10000), REFUND_SUMMARY.replaceAll('{deposit}', '$100').replaceAll('{price}', '$280').replaceAll('{balance}', '$180').replaceAll('{half}', '$90'));
   assert.equal(fillRefundSummary(28000, 10000).includes('$92.50'), false);
-  assert.equal(fillDepositAck(), DEPOSIT_ACK.replaceAll('{deposit}', '$100'));
-  assert.equal(fillDepositAck(15000).includes(formatCents(15000)), true);
+  assert.equal(fillDepositAck(), "I understand $100 of my payment is nonrefundable and holds my spot. It can go toward a new session for my family booked within 60 days, as long as my baby still meets the age rule (4 weeks to 12 months) on the new date.");
+  assert.equal(DEPOSIT_CONFIRM_ERROR, 'Please confirm the nonrefundable $100 before reserving.');
   assert.equal(ageMonthsAtSession('2026-09-01', '2026-12-06'), 3);
   assert.equal(ageMonthsAtSession('2025-12-06', '2026-12-06'), 12);
   assert.equal(ageMonthsAtSession('2026-11-08', '2026-12-06'), 0);
@@ -537,21 +537,35 @@ test('the pay button stays off until the birth date is valid and every required 
   assert.equal(button.disabled, true);
   assert.equal(button.getAttribute('aria-disabled'), 'true');
 });
-test('enhancements are refunded on the same timing as the balance', async () => {
-  const sentence = 'Enhancements (crème upgrades, the Floral Milk Bath Bag and a second adult) are refunded on the same timing, including sales tax.';
-  assert.equal(fillRefundSummary().includes(sentence), true);
+test('add-ons are refundable if you cancel, and the old tier sentence is gone', async () => {
+  const line = fillRefundSummary();
+  const label = "I understand $100 of my payment is nonrefundable and holds my spot. It can go toward a new session for my family booked within 60 days, as long as my baby still meets the age rule (4 weeks to 12 months) on the new date.";
+  assert.equal(line, "$100 of your $285 payment is nonrefundable and holds your spot. If you cancel 7 or more days before your session, we refund the remaining balance of $185. If you cancel less than 7 days but at least 48 hours before, we refund half of it ($92.50). Within 48 hours, the remaining balance isn't refunded. Add-ons are refundable if you cancel. If your baby is unwell, we'll move you to a new date within 60 days. If we cancel, you get a full refund.");
+  assert.equal(line.includes('same timing'), false);
   const book = await documentFor('book/index.html');
-  assert.equal(book.querySelector('[data-refund-summary]').textContent.includes(sentence), true);
-  assert.equal(book.querySelector('[data-refund-summary]').textContent.includes('$100 of your $285 payment is a nonrefundable deposit that holds your spot.'), true);
+  assert.equal(book.querySelector('[data-refund-summary]').textContent, line);
+  assert.equal(book.querySelector('[data-deposit-ack]').textContent, label);
+  const {document: formDoc} = parseHTML(`<!doctype html><html><body><form id="booking-form"><input id="baby-dob" name="babyDob" type="date" value="2026-09-01"/><input type="checkbox" name="confirmReady" value="deposit" required checked/><p id="deposit-error" hidden></p><button class="booking-pay" type="button"></button></form></body></html>`);
+  initBooking(formDoc);
+  const box = formDoc.querySelector('[value=deposit]');
+  box.required = true;
+  box.checked = false;
+  box.dispatchEvent(new formDoc.defaultView.Event('change', {bubbles: true}));
+  assert.equal(formDoc.querySelector('#deposit-error').textContent, DEPOSIT_CONFIRM_ERROR);
   const faq = await documentFor('faq/index.html');
-  assert.equal(faq.body.textContent.includes(sentence), true);
+  assert.equal(faq.body.textContent.includes(line), true);
   const data = JSON.parse(faq.querySelector('script[type="application/ld+json"]').textContent);
   const answer = data['@graph'].find(node => node['@type'] === 'FAQPage').mainEntity.find(item => item.name === 'What is your refund policy?').acceptedAnswer.text;
-  assert.equal(answer.includes(sentence), true);
+  assert.equal(answer.includes(line), true);
+  assert.equal(answer.includes('same timing'), false);
   const policy = await documentFor('book/policy/index.html');
-  assert.equal(policy.body.textContent.includes('Enhancements (crème upgrades, the Floral Milk Bath Bag and a second adult) are refunded on the same timing as the balance, including the sales tax.'), true);
-  assert.equal(policy.body.textContent.includes('If Lys Rose cancels, add-ons are refunded in full.'), true);
-  assert.equal(policy.body.textContent.includes('If Lys Rose cancels, you get a full refund, including the deposit.'), true);
+  assert.equal(policy.body.textContent.includes('Add-ons are refundable if you cancel.'), true);
+  assert.equal(policy.body.textContent.includes('same timing'), false);
+  assert.equal(policy.body.textContent.includes('If your baby is unwell or turned away, add-ons move with the booking, or become store credit if no date works.'), true);
+  assert.equal(policy.body.textContent.includes('If Lys Rose cancels, you get a full refund, including the $100.'), true);
+  assert.equal(policy.body.textContent.includes('second-adult add-on is not refunded'), false);
+  const policySource = await readFile(new URL('../book/policy/index.html', import.meta.url), 'utf8');
+  assert.equal(policySource.includes('FLAGGED: awaiting Christy (second-adult refund)'), true);
 });
 test('checkout charges the full session plus enhancements', () => {
   const {document: doc} = parseHTML(`<!doctype html><html><body><form id="booking-form">

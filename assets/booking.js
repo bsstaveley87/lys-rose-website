@@ -19,10 +19,11 @@ export const SESSION_LOCATION_NOTE = 'The exact location will be shared with you
 export const DEPOSIT_CENTS = 10000;
 /** Full birth dates are kept this many years after the family's last booking, then only age in months remains. */
 export const BIRTH_DATE_RETENTION_YEARS = 3;
-/** DRAFT pending Christy. {deposit}, {price}, {balance} and {half} are filled from the price config. */
-export const REFUND_SUMMARY = "{deposit} of your {price} payment is a nonrefundable deposit that holds your spot. If you cancel 7 or more days before your session, we refund the {balance} balance. If you cancel 48 hours or more before, we refund {half}. Within 48 hours, there's no refund. Enhancements (crème upgrades, the Floral Milk Bath Bag and a second adult) are refunded on the same timing, including sales tax. If your baby is unwell, we'll move you to a new date within 60 days. If we cancel, you get a full refund.";
-/** DRAFT pending Christy. {deposit} is filled from DEPOSIT_CENTS. */
-export const DEPOSIT_ACK = "I understand {deposit} of my payment is a nonrefundable deposit that holds my spot. It isn't refunded, but it can go toward a new session for my family booked within 60 days, as long as my baby still meets the age rule (at least 4 weeks and no older than 12 months) on the new date.";
+/** Approved by Christy, Nov 13. {deposit}, {price}, {balance} and {half} are filled from the price config. */
+export const REFUND_SUMMARY = "{deposit} of your {price} payment is nonrefundable and holds your spot. If you cancel 7 or more days before your session, we refund the remaining balance of {balance}. If you cancel less than 7 days but at least 48 hours before, we refund half of it ({half}). Within 48 hours, the remaining balance isn't refunded. Add-ons are refundable if you cancel. If your baby is unwell, we'll move you to a new date within 60 days. If we cancel, you get a full refund.";
+/** Approved by Christy, Nov 13. */
+export const DEPOSIT_ACK = "I understand $100 of my payment is nonrefundable and holds my spot. It can go toward a new session for my family booked within 60 days, as long as my baby still meets the age rule (4 weeks to 12 months) on the new date.";
+export const DEPOSIT_CONFIRM_ERROR = 'Please confirm the nonrefundable $100 before reserving.';
 /** DRAFT pending Christy. */
 export const SICK_SYMPTOMS_ACK = 'In the 24 hours before the session, my baby has had no fever, vomiting or diarrhea, and has no green nasal mucus.';
 /** DRAFT pending Christy. */
@@ -165,8 +166,8 @@ export function fillRefundSummary(priceCents = SESSION_PRICE_CENTS, depositCents
     .replaceAll('{half}', formatCents(refundHalfBalanceCents(priceCents, depositCents)));
 }
 
-export function fillDepositAck(depositCents = DEPOSIT_CENTS) {
-  return DEPOSIT_ACK.replaceAll('{deposit}', formatCents(depositCents));
+export function fillDepositAck() {
+  return DEPOSIT_ACK;
 }
 
 /** Part 2 of Waiver v0.9, in file order. BYOB is included only when that bath was chosen. */
@@ -595,7 +596,7 @@ function showConfirmations(form) {
   const depositMissing = missing.some(box => box.value === 'deposit');
   const depositError = form.querySelector('#deposit-error');
   if (depositError) {
-    depositError.textContent = depositMissing ? 'Please confirm the deposit before reserving.' : '';
+    depositError.textContent = depositMissing ? DEPOSIT_CONFIRM_ERROR : '';
     depositError.hidden = !depositMissing;
   }
   return missing;
@@ -920,7 +921,7 @@ export function initBooking(documentRef = document) {
   form.addEventListener('change', event => {
     if (event.target?.name === 'allergies') syncAllergies(form);
     if (event.target?.name === 'confirmReady' || event.target?.name === 'waiver') {
-      if (missingConfirmations(form).length === 0) showConfirmations(form);
+      showConfirmations(form);
       applyPayButton(documentRef);
     }
   });

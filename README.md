@@ -4,7 +4,7 @@ Website: https://lysrosebabyspa.com. GitHub Pages serves the site; Cloudflare su
 
 ## Build and validate
 
-Requires Node.js 24 or newer for the site checks. Run:
+Requires Node.js 24, as pinned in `.nvmrc` and used in GitHub Actions. Node 20 cannot import the worker TypeScript. The package accepts Node 22.18 or newer. Run:
 
 ```
 npm ci
@@ -38,6 +38,55 @@ cf deploy
 ```
 
 The project uses `cloudflare.config.ts` and the cf CLI. Google Workspace root MX/SPF/DKIM records are retained. Cloudflare Email Routing uses the forms subdomain. The existing Full TLS setting encrypts the origin connection; GitHub must finish its origin certificate before switching to Full (strict). Cloudflare's public certificate is independent.
+
+## Checkout preview
+
+Hosted checkout is drafted on this branch and is not deployed. The worker does not call Square unless `SQUARE_ACCESS_TOKEN` and `SQUARE_LOCATION_ID` are set in the environment. Do not commit those values. Card numbers never reach this site: `POST /api/checkout` validates the booking and asks Square for a payment link. The buyer finishes on Square's page and returns to `/book/thank-you/`.
+
+While `SESSION` in `assets/booking.js` is null, or `CHECKOUT_CONFIGURED` is false, the pay button stays disabled and the page keeps the preview sentence. The session price is `SESSION_PRICE_CENTS` in `assets/booking.js`. The worker price table uses that same number. A null add-on price hides that extra. `TAX_ENABLED` stays `false` until the Florida registration is finished and the CFO says to turn taxes on. There is no surcharge and no processing fee. When tax is turned on, one Sales tax line at 7% (Florida 6% plus the Broward 1% surtax) is added only to taxable lines: crème upgrades and the Floral Milk Bath Bag. The session, Signature crème, the bath choice, rose petals, and the second adult are not taxed. The embroidered robe add-on is not offered for the December 6 session and is not in the catalog.
+
+Set these in the Cloudflare worker environment, never in git:
+
+| Name | Binding | Purpose |
+| --- | --- | --- |
+| `SQUARE_ACCESS_TOKEN` | secret | Square API token. Sandbox until go-live. |
+| `SQUARE_LOCATION_ID` | secret | Location id for LYS ROSE LLC. |
+| `SQUARE_ENV` | text, default `sandbox` | `sandbox` or `production`. Anything else uses sandbox. |
+| `SQUARE_WEBHOOK_SIGNATURE_KEY` | secret | Signature key from the Square webhook subscription. |
+| `TAX_ENABLED` | text, default `false` | `true` adds a 7% sales-tax line on taxable lines only. `auto_apply_taxes` stays false. Leave `false` for now. |
+| `BOOKINGS` | KV | Pending orders, confirmed bookings, and seat counts. Create the namespace and set its id in `worker/cloudflare.config.ts` before any deploy. |
+
+The booking form asks for the baby's date of birth. `MIN_BABY_AGE_DAYS` (28) and `MAX_BABY_AGE_MONTHS` (12) in `assets/booking.js` are the only age limits: on the session date the baby must be at least 4 weeks old, and a baby who turns 12 months that day is still allowed. The date is stored on the `BOOKINGS` record, with `age_months_at_session`, and copied into the Square order note and order metadata. Keep the full birth date for 3 years after the family's last booking, then delete it and keep only the baby's age in months at the session. Signed waiver records do not follow that deletion. Their retention is `attorney to set`. The privacy page and the booking waiver are drafts. Signed waiver records use `BOOKING_TERMS_VERSION` and a hash of the text shown. The refund line uses `SESSION_PRICE_CENTS` and `DEPOSIT_CENTS` (10000). The balance is the price minus the deposit, and the 48-hour tier is half of that balance.
+
+`POST /api/square-webhook` checks Square's HMAC-SHA256 signature over the notification URL plus the raw body. Seats are counted only after `payment.updated` or `payment.created` with status `COMPLETED`. The payment link itself is not expired through the API. The order record stores the 48-hour cutoff, and the webhook compares `payment.created_at` with that cutoff. A late payment, a session that is already at the seat cap, or a payment with no matching order is stored as `refund-flagged` and does not take a seat. This preview does not call Square's refund API; someone refunds those payments in the Square dashboard. The seat cap is not written into any page.
+
+`scripts/square-catalog.mjs` prints the catalog it would create and does not call Square. `--apply` creates the items only when both credentials are present. It refuses `SQUARE_ENV=production` unless `CONFIRM_PRODUCTION=yes`. The Floral Milk Bath Bag is $18 and taxable. The second adult is $25 and not taxable for now. The embroidered robe add-on is not in the catalog. The redirect URL is `https://lysrosebabyspa.com/book/thank-you/`. Do not run `cf deploy` for this preview.
+
+## How to change the session price
+
+The pilot price is $285. Edit one number:
+
+- `assets/booking.js`: `SESSION_PRICE_CENTS` (28500 cents for $285).
+
+These files use that number and should not get a second copy of it:
+
+- `worker/src/checkout.ts`: the session line reads `SESSION_PRICE_CENTS` and stays not taxable.
+- `scripts/build.mjs`: writes the booking-page price line, the order total, and the JSON-LD offer from that constant.
+- `book/index.html`: placeholders only (`data-session-price`, `data-session-price-total`, and `SESSION_PRICE` in the offer). There is no sentence under the big price.
+- `faq/index.html`: marked so the session price is not added. Public pages stay free of prices.
+
+Run `npm run build` and `npm test`. The test fails if the worker price and `SESSION_PRICE_CENTS` drift apart.
+
+## Go-live checklist
+
+- Create a Square webhook subscription for `https://forms.lysrosebabyspa.com/api/square-webhook` on `payment.created` and `payment.updated`, and put its signature key in `SQUARE_WEBHOOK_SIGNATURE_KEY`. The URL must match exactly.
+- Create a real `BOOKINGS` KV namespace and set its id in `worker/cloudflare.config.ts`.
+- Set the production `SQUARE_ACCESS_TOKEN` and `SQUARE_LOCATION_ID`, with `SQUARE_ENV=production`.
+- Leave `TAX_ENABLED` false until the Florida registration is approved.
+- The Floral Milk Bath Bag is $18. The second adult is $25 and not taxable for now. The embroidered robe add-on is not offered for December 6.
+- Set `SESSION` and `CHECKOUT_CONFIGURED`.
+- Check the CORS origins in `worker/src/checkout.ts` (`lysrosebabyspa.com`, `www.lysrosebabyspa.com`, and `bsstaveley87.github.io`).
+- Refunds are handled manually in the Square dashboard.
 
 ## Visual assets and content
 

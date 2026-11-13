@@ -502,7 +502,7 @@ test('refund dollars come from the session price and the deposit', () => {
   assert.equal(DEPOSIT_CENTS, 10000);
   assert.equal(refundBalanceCents(), SESSION_PRICE_CENTS - DEPOSIT_CENTS);
   assert.equal(refundHalfBalanceCents(), Math.round((SESSION_PRICE_CENTS - DEPOSIT_CENTS) / 2));
-  assert.equal(fillRefundSummary(), `$100 of your $285 payment is a nonrefundable deposit that holds your spot. If you cancel 7 or more days before your session, we refund the $185 balance. If you cancel 48 hours or more before, we refund $92.50. Within 48 hours, there's no refund. Add-ons follow the same timing. If your baby is unwell, we'll move you to a new date within 60 days. If we cancel, you get a full refund.`);
+  assert.equal(fillRefundSummary(), `$100 of your $285 payment is a nonrefundable deposit that holds your spot. If you cancel 7 or more days before your session, we refund the $185 balance. If you cancel 48 hours or more before, we refund $92.50. Within 48 hours, there's no refund. Enhancements (crème upgrades, the Floral Milk Bath Bag and a second adult) are refunded on the same timing, including sales tax. If your baby is unwell, we'll move you to a new date within 60 days. If we cancel, you get a full refund.`);
   assert.equal(fillRefundSummary(28000, 10000), REFUND_SUMMARY.replaceAll('{deposit}', '$100').replaceAll('{price}', '$280').replaceAll('{balance}', '$180').replaceAll('{half}', '$90'));
   assert.equal(fillRefundSummary(28000, 10000).includes('$92.50'), false);
   assert.equal(fillDepositAck(), DEPOSIT_ACK.replaceAll('{deposit}', '$100'));
@@ -536,6 +536,22 @@ test('the pay button stays off until the birth date is valid and every required 
   deposit.dispatchEvent(new doc.defaultView.Event('change', {bubbles: true}));
   assert.equal(button.disabled, true);
   assert.equal(button.getAttribute('aria-disabled'), 'true');
+});
+test('enhancements are refunded on the same timing as the balance', async () => {
+  const sentence = 'Enhancements (crème upgrades, the Floral Milk Bath Bag and a second adult) are refunded on the same timing, including sales tax.';
+  assert.equal(fillRefundSummary().includes(sentence), true);
+  const book = await documentFor('book/index.html');
+  assert.equal(book.querySelector('[data-refund-summary]').textContent.includes(sentence), true);
+  assert.equal(book.querySelector('[data-refund-summary]').textContent.includes('$100 of your $285 payment is a nonrefundable deposit that holds your spot.'), true);
+  const faq = await documentFor('faq/index.html');
+  assert.equal(faq.body.textContent.includes(sentence), true);
+  const data = JSON.parse(faq.querySelector('script[type="application/ld+json"]').textContent);
+  const answer = data['@graph'].find(node => node['@type'] === 'FAQPage').mainEntity.find(item => item.name === 'What is your refund policy?').acceptedAnswer.text;
+  assert.equal(answer.includes(sentence), true);
+  const policy = await documentFor('book/policy/index.html');
+  assert.equal(policy.body.textContent.includes('Enhancements (crème upgrades, the Floral Milk Bath Bag and a second adult) are refunded on the same timing as the balance, including the sales tax.'), true);
+  assert.equal(policy.body.textContent.includes('If Lys Rose cancels, add-ons are refunded in full.'), true);
+  assert.equal(policy.body.textContent.includes('If Lys Rose cancels, you get a full refund, including the deposit.'), true);
 });
 test('checkout charges the full session plus enhancements', () => {
   const {document: doc} = parseHTML(`<!doctype html><html><body><form id="booking-form">

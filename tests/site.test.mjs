@@ -505,7 +505,7 @@ test('refund dollars come from the session price and the deposit', () => {
   assert.equal(fillRefundSummary(), "$100 of your $285 payment is nonrefundable and holds your spot. If you cancel 7 or more days before your session, we refund the remaining balance of $185. If you cancel less than 7 days but at least 48 hours before, we refund half of it ($92.50). Within 48 hours, the remaining balance isn't refunded. Add-ons are refundable if you cancel. If your baby is unwell, we'll move you to a new date within 60 days. If we cancel, you get a full refund.");
   assert.equal(fillRefundSummary(28000, 10000), REFUND_SUMMARY.replaceAll('{deposit}', '$100').replaceAll('{price}', '$280').replaceAll('{balance}', '$180').replaceAll('{half}', '$90'));
   assert.equal(fillRefundSummary(28000, 10000).includes('$92.50'), false);
-  assert.equal(fillDepositAck(), "I understand $100 of my payment is nonrefundable and holds my spot. It can go toward a new session for my family booked within 60 days, as long as my baby still meets the age rule (4 weeks to 12 months) on the new date.");
+  assert.equal(fillDepositAck(), "I understand $100 of my payment is nonrefundable and holds my spot. It can go toward a new session booked within 60 days, for my family or another family I pass it to, as long as the baby meets the age rule (4 weeks to 12 months) on the new date.");
   assert.equal(DEPOSIT_CONFIRM_ERROR, 'Please confirm the nonrefundable $100 before reserving.');
   assert.equal(ageMonthsAtSession('2026-09-01', '2026-12-06'), 3);
   assert.equal(ageMonthsAtSession('2025-12-06', '2026-12-06'), 12);
@@ -539,7 +539,7 @@ test('the pay button stays off until the birth date is valid and every required 
 });
 test('add-ons are refundable if you cancel, and the old tier sentence is gone', async () => {
   const line = fillRefundSummary();
-  const label = "I understand $100 of my payment is nonrefundable and holds my spot. It can go toward a new session for my family booked within 60 days, as long as my baby still meets the age rule (4 weeks to 12 months) on the new date.";
+  const label = "I understand $100 of my payment is nonrefundable and holds my spot. It can go toward a new session booked within 60 days, for my family or another family I pass it to, as long as the baby meets the age rule (4 weeks to 12 months) on the new date.";
   assert.equal(line, "$100 of your $285 payment is nonrefundable and holds your spot. If you cancel 7 or more days before your session, we refund the remaining balance of $185. If you cancel less than 7 days but at least 48 hours before, we refund half of it ($92.50). Within 48 hours, the remaining balance isn't refunded. Add-ons are refundable if you cancel. If your baby is unwell, we'll move you to a new date within 60 days. If we cancel, you get a full refund.");
   assert.equal(line.includes('same timing'), false);
   const book = await documentFor('book/index.html');
@@ -559,6 +559,10 @@ test('add-ons are refundable if you cancel, and the old tier sentence is gone', 
   assert.equal(answer.includes(line), true);
   assert.equal(answer.includes('same timing'), false);
   const policy = await documentFor('book/policy/index.html');
+  assert.equal(policy.body.textContent.includes('It can be used within 60 days by your family or passed to another family, as long as the baby is 4 weeks to 12 months on the new date.'), true);
+  assert.equal(policy.body.textContent.includes("can't be transferred to another family"), false);
+  assert.equal(book.body.textContent.includes("can't be transferred to another family"), false);
+  assert.equal(faq.body.textContent.includes("can't be transferred to another family"), false);
   assert.equal(policy.body.textContent.includes('Add-ons are refundable if you cancel.'), true);
   assert.equal(policy.body.textContent.includes('same timing'), false);
   assert.equal(policy.body.textContent.includes('If your baby is unwell or turned away, add-ons move with the booking, or become store credit if no date works.'), true);

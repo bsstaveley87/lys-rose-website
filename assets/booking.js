@@ -22,7 +22,7 @@ export const BIRTH_DATE_RETENTION_YEARS = 3;
 /** Approved by Christy, Nov 13. {deposit}, {price}, {balance} and {half} are filled from the price config. */
 export const REFUND_SUMMARY = "{deposit} of your {price} payment is nonrefundable and holds your spot. If you cancel 7 or more days before your session, we refund the remaining balance of {balance}. If you cancel less than 7 days but at least 48 hours before, we refund half of it ({half}). Within 48 hours, the remaining balance isn't refunded. Add-ons are refundable if you cancel. If your baby is unwell, we'll move you to a new date within 60 days. If we cancel, you get a full refund.";
 /** Approved by Christy, Nov 13. */
-export const DEPOSIT_ACK = "I understand $100 of my payment is nonrefundable and holds my spot. It can go toward a new session for my family booked within 60 days, as long as my baby still meets the age rule (4 weeks to 12 months) on the new date.";
+export const DEPOSIT_ACK = "I understand $100 of my payment is nonrefundable and holds my spot. It can go toward a new session booked within 60 days, for my family or another family I pass it to, as long as the baby meets the age rule (4 weeks to 12 months) on the new date.";
 export const DEPOSIT_CONFIRM_ERROR = 'Please confirm the nonrefundable $100 before reserving.';
 /** DRAFT pending Christy. */
 export const SICK_SYMPTOMS_ACK = 'In the 24 hours before the session, my baby has had no fever, vomiting or diarrhea, and has no green nasal mucus.';
